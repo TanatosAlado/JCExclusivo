@@ -1,0 +1,10 @@
+{
+  "hosting": {
+    "public": "dist/jcexclusivo",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ]
+  }
+}
