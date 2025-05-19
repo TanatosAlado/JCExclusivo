@@ -1,0 +1,13 @@
+.grid-productos {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+}
+
+.gestion-icon-container {
+    margin-top: 2rem;
+    font-size: 3rem;
+    color: #034f70;
+    /* Un color principal de tu paleta */
+    text-align: center;
+}

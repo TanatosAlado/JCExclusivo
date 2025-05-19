@@ -1,0 +1,16 @@
+.encabezado-container {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1.5rem;
+}
+
+.volver {
+  align-self: flex-start;
+}
+
+.titulo {
+  text-align: center;
+  font-size: 1.8rem;
+  font-weight: 600;
+  margin-top: 1rem;
+}

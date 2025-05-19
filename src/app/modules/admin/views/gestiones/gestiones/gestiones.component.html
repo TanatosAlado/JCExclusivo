@@ -1,0 +1,19 @@
+<div class="container mt-5">
+    <h2 class="mb-4">Gestiones</h2>
+    <div class="grid-productos">
+      <a
+        class="card item-card shadow-sm position-relative text-decoration-none"
+        *ngFor="let gestion of gestiones"
+        [routerLink]="gestion.ruta"
+      >
+        <div class="gestion-icon-container">
+          <i [class]="gestion.icono"></i>
+        </div>
+  
+        <div class="card-body text-center">
+          <h5 class="card-title fw-bold">{{ gestion.titulo }}</h5>
+          <p class="card-subtitle text-muted small">{{ gestion.descripcion }}</p>
+        </div>
+      </a>
+    </div>
+  </div>
