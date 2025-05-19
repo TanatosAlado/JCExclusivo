@@ -1,0 +1,9 @@
+@import 'src/assets/style.css';
+
+.color-circle {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: inline-block;
+  border: 1px solid #ccc;
+}

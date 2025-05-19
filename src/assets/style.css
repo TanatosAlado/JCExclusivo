@@ -1,0 +1,200 @@
+/* Contenedor general */
+.container-fluid {
+    padding: 0 15px;
+}
+
+/* Sidebar */
+.container-fluid > .row > .col-lg-3, 
+.container-fluid > .row > .col-md-4 {
+    background-color: #f8f9fa; /* ejemplo para el sidebar */
+    padding: 20px;
+    border-radius: 5px;
+}
+
+/* Títulos de secciones (Filter by price, color, size) */
+.container-fluid h5.section-title {
+    font-weight: bold;
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+}
+
+/* Fondo y padding para bloques */
+.container-fluid .bg-light {
+    background-color: #fefefe !important;
+    padding: 20px;
+    margin-bottom: 30px;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Checkbox con flex para alinear label, checkbox y badge */
+.container-fluid .custom-control {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+/* Labels */
+.container-fluid .custom-control-label {
+    cursor: pointer;
+    flex: 1;
+    padding-left: 10px;
+}
+
+/* Badges */
+.container-fluid .badge {
+    font-weight: 400;
+    border: 1px solid #ccc;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+}
+
+/* Shop Product section */
+.container-fluid > .row > .col-lg-9,
+.container-fluid > .row > .col-md-8 {
+    padding-left: 30px;
+}
+
+/* Botones de vista (grid y list) */
+.container-fluid .btn.btn-light {
+    border: 1px solid #ddd;
+    margin-right: 10px;
+}
+
+/* Dropdown button groups */
+.container-fluid .btn-group {
+    margin-left: 10px;
+}
+
+/* Productos individuales */
+.container-fluid .product-item {
+    border-radius: 6px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    overflow: hidden;
+    background-color: #fff;
+}
+
+/* Imagen del producto */
+.container-fluid .product-img {
+    position: relative;
+    overflow: hidden;
+}
+
+.container-fluid .product-img img {
+    width: 100%;
+    transition: transform 0.3s ease;
+}
+
+.container-fluid .product-img:hover img {
+    transform: scale(1.05);
+}
+
+/* Acciones del producto (iconos) */
+.container-fluid .product-action {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.container-fluid .product-img:hover .product-action {
+    opacity: 1;
+}
+
+.container-fluid .product-action .btn {
+    background-color: white;
+    border: 1px solid #ddd;
+    padding: 6px;
+    font-size: 14px;
+    color: #333;
+    border-radius: 4px;
+}
+
+/* Texto producto */
+.container-fluid .text-center.py-4 a.h6 {
+    display: block;
+    font-weight: 600;
+    color: #333;
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.container-fluid .text-center.py-4 a.h6:hover {
+    color: #007bff;
+}
+
+/* Precio */
+.container-fluid .text-center.py-4 h5 {
+    font-weight: 700;
+    color: #007bff;
+    margin-top: 10px;
+}
+
+/* Estrellas */
+.container-fluid .fa-star.text-primary {
+    color: #007bff;
+    margin-right: 4px;
+}
+
+/* Circulos de colores (variantes) */
+.container-fluid .color-circle {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1px solid #ccc;
+    cursor: pointer;
+}
+
+/* Paginación */
+.container-fluid .pagination {
+    margin-top: 30px;
+}
+
+.container-fluid .pagination .page-item.active .page-link {
+    background-color: #007bff;
+    border-color: #007bff;
+    color: white;
+}
+
+.container-fluid .pagination .page-link {
+    color: #007bff;
+    border-radius: 4px;
+}
+
+/* Opacidad al hacer hover sobre la imagen */
+.product-img img {
+  transition: opacity 0.3s ease;
+}
+
+.product-img:hover img {
+  opacity: 0.6;
+}
+
+/* Íconos sobre la imagen, en fila horizontal */
+.product-action {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  flex-direction: row; /* horizontal */
+  gap: 8px; /* espacio entre íconos */
+}
+
+/* Animación y estilo al hacer hover en los íconos */
+.product-action a i {
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.product-action a:hover i {
+  transform: scale(1.1);
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+}
