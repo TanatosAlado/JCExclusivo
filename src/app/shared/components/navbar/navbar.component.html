@@ -1,1 +1,146 @@
-<p>navbar works!</p>
+<nav class="navbar navbar-expand-lg navbar-custom">
+  <div class="container-fluid">
+    <button class="navbar-toggler d-lg-none text-white" type="button" data-bs-toggle="offcanvas"
+      data-bs-target="#offcanvasMenu" aria-controls="offcanvasMenu">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <a class="navbar-brand-query d-lg-none position-absolute top-45 start-50 translate-middle-x" href="#">
+      <img src="../../../../assets/logo.png" class="logo" alt="" />
+    </a>
+    <a class="navbar-brand d-none d-lg-block" href="#">
+      <img src="../../../../assets/logo.png" class="logo" alt="" />
+    </a>
+    <a href="#" class="d-lg-none nav-link ms-auto"></a>
+
+    <!-- Esta es la seccion de mobile -->
+    <div class="d-flex d-lg-none ms-auto gap-3 align-items-center">
+      <mat-icon *ngIf="!usuarioLogueado" (click)="openIngreso()" class="text-white cursor-pointer">person</mat-icon>
+
+      <mat-icon
+        *ngIf="usuarioLogueado"
+        class="text-white cursor-pointer"
+        (click)="abrirCarrito()"
+        matBadge="{{ cantidadProductos$ | async }}"
+        matBadgeColor="warn"
+        [matBadgeHidden]="(cantidadProductos$ | async) === 0"
+        data-bs-toggle="offcanvas"
+        data-bs-target="#offcanvasCarrito"
+        aria-controls="offcanvasCarrito">
+        shopping_cart
+      </mat-icon>
+
+      <mat-icon *ngIf="usuarioLogueado" (click)="closeSesion()" class="text-white cursor-pointer">logout</mat-icon>
+    </div>
+
+    <!-- Esta es la seccion de pantallas grandes -->
+    <div class="d-none d-lg-flex mx-auto align-items-center gap-3">
+      <span class="nombre-ecommerce text-white fw-semibold fs-5 ms-4">JC EXCLUSIVO IPHONE</span>
+      <div class="input-group custom-input-group w-50">
+        <input class="form-control custom-search-input" type="search" placeholder="¿Qué estás buscando?"
+          [(ngModel)]="searchTerm" (input)="autocompletar()" #inputBox aria-label="Buscar"
+          aria-describedby="search-addon">
+        <span class="input-group-text custom-search-icon" id="search-addon">
+          <i (click)="busquedaPedido(searchTerm)" class="fas fa-search"></i>
+        </span>
+      </div>
+    </div>
+
+    <div class="d-none d-lg-flex gap-3 nav-item">
+      <div class="ms-4 d-flex gap-4 align-items-center">
+        <mat-icon *ngIf="!usuarioLogueado" (click)="openIngreso()" class="text-white cursor-pointer">person</mat-icon>
+
+        <mat-icon
+          *ngIf="usuarioLogueado"
+          class="text-white cursor-pointer"
+          (click)="abrirCarrito()"
+          matBadge="{{ cantidadProductos$ | async }}"
+          matBadgeColor="warn"
+          [matBadgeHidden]="(cantidadProductos$ | async) === 0"
+          data-bs-toggle="offcanvas"
+          data-bs-target="#offcanvasCarrito"
+          aria-controls="offcanvasCarrito">
+          shopping_cart
+        </mat-icon>
+
+        <mat-icon *ngIf="usuarioLogueado" (click)="closeSesion()" class="text-white cursor-pointer">logout</mat-icon>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="second-row text-white py-2">
+  <div class="container">
+    <div class="row">
+      <div class="col-12 d-lg-none text-center dropdown-container">
+        <div class="d-flex">
+          <div class="input-group custom-input-group">
+            <input class="form-control custom-search-input" type="search" placeholder="Qué estás buscando?"
+              [(ngModel)]="searchTerm" (input)="autocompletar()" #inputBox aria-label="Buscar"
+              aria-describedby="search-addon">
+            <span class="input-group-text custom-search-icon" id="search-addon">
+              <i (click)="busquedaPedido(searchTerm)" class="fas fa-search"></i>
+            </span>
+          </div>
+        </div>
+        <ul *ngIf="resultados.length > 0" class="list-unstyled p-0 m-0 dropdown-list">
+          <li style="border-bottom: 1px solid rgba(221, 221, 221, 0.5)" *ngFor="let item of resultados"
+            (click)="seleccionar(item)" class="d-flex align-items-center">
+            <div class="result-item d-flex align-items-center w-100 p-2">
+              <img [src]="item.imagen" alt="{{ item.nombre }}" class="product-image img-fluid" />
+              <div class="ms-2 d-flex flex-column">
+                <span>{{ item.nombre }}</span>
+                <span>$ {{ item.precio }}</span>
+              </div>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+<div class="col-12 d-none d-lg-flex justify-content-between align-items-center style-menues">
+  
+  <!-- Menú central -->
+  <div class="d-flex gap-4">
+    <a routerLink="/inicio" data-bs-toggle="collapse" data-bs-target="#menuInicio" aria-expanded="false"
+      aria-controls="menuInicio">Inicio</a>
+    <a routerLink="/nosotros" data-bs-toggle="collapse" data-bs-target="#menuServicios" aria-expanded="false"
+      aria-controls="menuServicios">Nosotros</a>
+    <a routerLink="/contacto" data-bs-toggle="collapse" data-bs-target="#menuContacto" aria-expanded="false"
+      aria-controls="menuContacto">Contacto</a>
+    <a *ngIf="usrAdmin" routerLink="/gestiones" data-bs-toggle="collapse" data-bs-target="#menuContacto"
+      aria-expanded="false" aria-controls="menuContacto">Gestiones</a>
+  </div>
+
+  <!-- Acceso mayorista -->
+  <a routerLink="/contacto" class="btn btn-outline-warning fw-bold ms-auto px-3 py-1" 
+     data-bs-toggle="collapse" data-bs-target="#menuContacto" aria-expanded="false"
+     aria-controls="menuContacto">Acceso Mayorista</a>
+
+</div>
+    </div>
+  </div>
+</div>
+
+<!-- CARRITO OFFCANVAS -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasCarrito" aria-labelledby="offcanvasCarritoLabel">
+  <div class="offcanvas-header">
+    <h5 id="offcanvasCarritoLabel">Mi Carrito</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
+  </div>
+  <div class="offcanvas-body">
+    <!-- <app-carrito></app-carrito> -->
+  </div>
+</div>
+
+<!-- MENU OFFCANVAS PARA MÓVIL -->
+<div class="offcanvas offcanvas-start" tabindex="-1" id="offcanvasMenu" aria-labelledby="offcanvasMenuLabel">
+  <div class="offcanvas-header">
+    <h5 id="offcanvasMenuLabel">Menú</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
+  </div>
+  <div class="offcanvas-body d-flex flex-column gap-3">
+    <a routerLink="/inicio" class="nav-link">Inicio</a>
+    <a routerLink="/nosotros" class="nav-link">Nosotros</a>
+    <a routerLink="/contacto" class="nav-link">Contacto</a>
+    <a *ngIf="usrAdmin" routerLink="/gestiones" class="nav-link">Gestiones</a>
+  </div>
+</div>
