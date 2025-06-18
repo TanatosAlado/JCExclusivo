@@ -10,6 +10,8 @@ import { AltaProductoComponent } from './views/productos/components/alta-product
 import { ListaProductosComponent } from './views/productos/components/lista-productos/lista-productos.component';
 import { EdicionProductoComponent } from './views/productos/components/edicion-producto/edicion-producto.component';
 import { DetalleProductoComponent } from './views/productos/components/detalle-producto/detalle-producto.component';
+import { ClientesEditarComponent } from './views/clientes/components/clientes-editar/clientes-editar.component';
+import { ClientesDetallesComponent } from './views/clientes/components/clientes-detalles/clientes-detalles.component';
 
 
 
@@ -23,7 +25,9 @@ import { DetalleProductoComponent } from './views/productos/components/detalle-p
     AltaProductoComponent,
     ListaProductosComponent,
     EdicionProductoComponent,
-    DetalleProductoComponent
+    DetalleProductoComponent,
+    ClientesEditarComponent,
+    ClientesDetallesComponent
   ],
   imports: [
     CommonModule,
