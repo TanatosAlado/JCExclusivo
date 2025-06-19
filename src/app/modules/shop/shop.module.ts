@@ -5,6 +5,8 @@ import { LayoutShopComponent } from './components/layout-shop/layout-shop.compon
 import { DestacadosComponent } from './views/destacados/destacados.component';
 import { ItemComponent } from './views/item/item.component';
 import { GrillaItemComponent } from './views/grilla-item/grilla-item.component';
+import { SharedModule } from 'src/app/shared/shared.module';
+import { BannerComponent } from './views/banner/banner.component';
 
 
 
@@ -14,10 +16,12 @@ import { GrillaItemComponent } from './views/grilla-item/grilla-item.component';
     LayoutShopComponent,
     DestacadosComponent,
     ItemComponent,
-    GrillaItemComponent
+    GrillaItemComponent,
+    BannerComponent
   ],
   imports: [
-    CommonModule
+    CommonModule,
+    SharedModule
   ]
 })
 export class ShopModule { }

@@ -1,0 +1,31 @@
+/* Contenedor del banner con relación de aspecto */
+.banner-container {
+  margin-top: 25px;
+  margin-bottom: 30px;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+/* Usa aspect-ratio moderno para mantener proporción */
+.banner {
+  aspect-ratio: 3 / 1; /* 1200x400 por ejemplo */
+  background-color: black;
+  border-radius: 10px;
+}
+
+/* Imagen dentro del carousel */
+.carousel-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  border-radius: 10px;
+}
+
+/* Opcional: Ajuste visual de los controles */
+.carousel-control-prev-icon,
+.carousel-control-next-icon {
+  background-size: 100% 100%;
+  filter: brightness(0.8);
+}

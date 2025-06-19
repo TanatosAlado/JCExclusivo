@@ -1,32 +1,109 @@
-.item-card {
-  border-radius: 0.5rem;
+.product-item {
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
   overflow: hidden;
-  position: relative;
-}
-
-.logo-container {
-  position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  width: 40px;
-}
-
-.logo-ecommerce {
-  width: 100%;
-}
-
-.discount-badge {
-  position: absolute;
-  top: 0.5rem;
-  left: 0.5rem;
-  padding: 0.3rem 0.6rem;
-  font-size: 0.75rem;
+  background-color: #fff;
 }
 
 .product-img {
+  position: relative;
+  overflow: hidden;
+}
+
+.product-img img {
   width: 100%;
-  object-fit: cover;
-  height: 200px;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  display: block;
+  margin: 0.5rem auto;
+  max-height: 160px; /* antes 120px */
+  object-fit: contain;
+}
+
+.product-img:hover img {
+  transform: scale(1.05);
+  opacity: 0.6;
+}
+
+.product-action {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  gap: 12px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 2;
+}
+
+.product-img:hover .product-action {
+  opacity: 1;
+}
+
+.product-action a {
+  width: 40px;
+  height: 40px;
+  background-color: rgba(255, 255, 255, 0.8); /* semitransparente */
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  transition: transform 0.2s ease, background-color 0.2s ease;
+  color: #333;
+}
+
+.product-action .btn {
+  background-color: white;
+  border: 1px solid #ddd;
+  padding: 6px;
+  font-size: 14px;
+  color: #333;
+  border-radius: 4px;
+}
+
+.product-action a:nth-child(1) { background-color: #e3f2fd; } /* carrito */
+.product-action a:nth-child(2) { background-color: #fce4ec; } /* corazón */
+/* .product-action a:nth-child(3) { background-color: #e8f5e9; } refresh */
+.product-action a:nth-child(4) { background-color: #fff3e0; } /* lupa */
+
+.product-action a i {
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.product-action a:hover {
+  transform: scale(1.1);
+  background-color: rgba(255, 255, 255, 1); 
+}
+
+.product-action a i {
+  font-size: 16px;
+}
+
+.text-center a.h6 {
+  display: block;
+  font-weight: 600;
+  color: #333;
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.text-center a.h6:hover {
+  color: #007bff;
+}
+
+.text-center h5 {
+  font-weight: 700;
+  color: #007bff;
+  margin-top: 10px;
+}
+
+.fa-star.text-primary {
+  color: #007bff;
+  margin-right: 4px;
 }
 
 .color-circle {
@@ -34,4 +111,5 @@
   height: 20px;
   border-radius: 50%;
   border: 1px solid #ccc;
+  cursor: pointer;
 }

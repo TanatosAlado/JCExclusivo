@@ -1,46 +1,31 @@
-<div class="card item-card shadow-sm position-relative">
-
-  <!-- Descuento arriba a la izquierda -->
-  <div *ngIf="producto.oferta" class="badge bg-purple discount-badge">
-    -{{ calcularDescuento(producto) }}%
-  </div>
-
-  <!-- Logo arriba a la derecha -->
-  <div class="logo-container">
-    <img src="../../../../../assets/LogoDolzani.png" class="logo-ecommerce" alt="logo" />
-  </div>
-
-  <!-- Imagen del producto -->
-  <img [src]="producto.imagen" class="product-img" alt="{{ producto.nombre }}" />
-
-  <div class="card-body">
-    <!-- Nombre del producto -->
-    <h5 class="card-title fw-bold" style="min-height: 3rem;">{{ producto.nombre }}</h5>
-
-    <!-- Descripción breve -->
-    <p class="card-subtitle text-muted small">{{ producto.descripcion }}</p>
-
-    <!-- Precio anterior (tachado si hay oferta) -->
-    <p class="card-text mb-0" *ngIf="producto.oferta">
-      <span class="text-muted text-decoration-line-through">Antes ${{ producto.precioMinorista }}</span>
-    </p>
-
-    <!-- Precio actual -->
-    <p class="fs-4 fw-bold text-dark">
-      {{ producto.oferta ? ('$' + producto.precioOferta) : ('$' + producto.precioMinorista) }}
-    </p>
-
-    <!-- Colores de variantes -->
-    <div class="d-flex flex-wrap align-items-center mb-2" *ngIf="producto.tieneVariantes && producto.variantes?.length">
-      <div
-        *ngFor="let variante of producto.variantes"
-        class="color-circle me-1 mb-1"
-        [ngStyle]="{ 'background-color': variante.valor }"
-        title="{{ variante.valor }}"
-      ></div>
+<div class="product-item bg-light mb-4">
+    <div class="product-img position-relative overflow-hidden">
+        <img class="img-fluid w-100" [src]="producto.imagen" alt="">
+        <div class="product-action">
+            <a href=""><i class="fa fa-shopping-cart"></i></a>
+            <a href=""><i class="far fa-heart"></i></a>
+            <!-- <a href=""><i class="fa fa-sync-alt"></i></a> -->
+            <a href=""><i class="fa fa-search"></i></a>
+        </div>
     </div>
-
-    <!-- Botón -->
-    <button class="btn btn-primary w-100 mt-2">Agregar al carrito</button>
-  </div>
+    <div class="text-center py-4">
+        <a class="h6 text-decoration-none text-truncate" href="">{{producto.nombre}}</a>
+        <div class="d-flex align-items-center justify-content-center mt-2">
+            <h5>{{producto.precioMinorista | currency}}</h5>
+        </div>
+        <div class="d-flex align-items-center justify-content-center mb-1">
+            <small class="fa fa-star text-primary mr-1"></small>
+            <small class="fa fa-star text-primary mr-1"></small>
+            <small class="fa fa-star text-primary mr-1"></small>
+            <small class="fa fa-star text-primary mr-1"></small>
+            <small class="fa fa-star text-primary mr-1"></small>
+            <small>(99)</small>
+        </div>
+        <div class="d-flex align-items-center justify-content-center mb-1"
+            *ngIf="producto.tieneVariantes && producto.variantes?.length">
+            <div *ngFor="let variante of producto.variantes" class="color-circle me-1 mb-1"
+                [ngStyle]="{ 'background-color': variante.valor }" [title]="variante.valor">
+            </div>
+        </div>
+    </div>
 </div>
