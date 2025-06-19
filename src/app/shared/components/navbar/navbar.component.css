@@ -220,3 +220,40 @@ img.logo {
   border-width: 2px;
   font-size: 1.1rem;
 }
+
+
+
+
+.nombre-ecommerce {
+  color: white;
+  font-weight: bold;
+  font-size: 1.4rem;
+  white-space: nowrap;
+}
+
+.navbar-custom .navbar-brand {
+  margin-right: 1rem;
+}
+
+.style-menues a {
+  font-weight: bold;
+  color: white;
+  text-decoration: none;
+  padding: 0 1rem;
+  transition: color 0.3s;
+}
+
+.style-menues a:hover {
+  color: #c9e165;
+}
+
+.icono-header {
+  color: white;
+  cursor: pointer;
+  font-size: 26px;
+  transition: color 0.3s;
+}
+
+.icono-header:hover {
+  color: #c9e165;
+}

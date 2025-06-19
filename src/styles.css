@@ -4,3 +4,10 @@
     border-radius: 10px;
     padding: 1rem;
   }
+
+:root {
+  --color-primario: #204977;
+
+  /* --color-secundario: #6c757d;    No definido */
+  /* --color-acento: #ff5722;   No definido */
+}  

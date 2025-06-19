@@ -137,4 +137,21 @@ export class NavbarComponent {
     console.log('Carrito abierto');
     // Si usas Bootstrap para el offcanvas, puedes hacerlo con código JavaScript o Angular
   }
+
+  cerrarMenu() {
+  // const closeButton = document.querySelector('#offcanvasMenu .btn-close') as HTMLElement;
+  // if (closeButton) {
+  //   closeButton.click(); 
+  // }
+  }
+
+  async abrirHistorial() {
+  // const historial = await this.pedidosService.obtenerHistorialCompleto(this.clienteLogueado.historial);
+
+  // this.dialog.open(HistorialPedidosModalComponent, {
+  //   width: '600px',
+  //   data: historial,
+  // });
+}
+
 }
