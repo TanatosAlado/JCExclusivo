@@ -1,6 +1,5 @@
 <nav class="navbar navbar-expand-lg navbar-custom">
   <div class="container-fluid">
-
     <!-- Botón hamburguesa (solo mobile) -->
     <button class="navbar-toggler d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasMenu"
       aria-controls="offcanvasMenu">
@@ -12,56 +11,47 @@
       <img src="../../../../assets/logo.png" class="logo" alt="Logo Dolzani" />
     </a>
 
-    <!-- Íconos en mobile a la derecha -->
-    <div class="d-flex d-lg-none ms-auto gap-3 align-items-center">
+    <!-- Íconos en mobile -->
+    <div class="d-flex d-lg-none ms-auto gap-2 align-items-center">
       <mat-icon *ngIf="!usuarioLogueado" (click)="openIngreso()" class="text-white cursor-pointer">person</mat-icon>
-
-      <mat-icon
-        *ngIf="usuarioLogueado"
-        class="text-white cursor-pointer"
-        (click)="abrirCarrito()"
-        matBadge="{{ cantidadProductos$ | async }}"
-        matBadgeColor="warn"
-        [matBadgeHidden]="(cantidadProductos$ | async) === 0"
-        data-bs-toggle="offcanvas"
-        data-bs-target="#offcanvasCarrito"
-        aria-controls="offcanvasCarrito">
+      <mat-icon *ngIf="usuarioLogueado" class="text-white cursor-pointer" (click)="abrirCarrito()"
+        matBadge="{{ cantidadProductos$ | async }}" matBadgeColor="warn"
+        [matBadgeHidden]="(cantidadProductos$ | async) === 0" data-bs-toggle="offcanvas"
+        data-bs-target="#offcanvasCarrito" aria-controls="offcanvasCarrito">
         shopping_cart
       </mat-icon>
-
       <mat-icon *ngIf="usuarioLogueado" (click)="closeSesion()" class="text-white cursor-pointer">logout</mat-icon>
     </div>
 
-    <!-- Menú horizontal completo en desktop -->
+    <!-- Menú desktop -->
     <div class="d-none d-lg-flex align-items-center justify-content-between w-100">
-
       <!-- Izquierda: Logo + Nombre -->
       <div class="d-flex align-items-center">
         <a class="navbar-brand me-3" href="#">
           <img src="../../../../assets/logo.png" class="logo" alt="Logo Dolzani" />
         </a>
-        <span class="nombre-ecommerce ms-3">JC EXCLUSIVO IPHONE</span>
+        <span class="nombre-ecommerce ms-2">JC EXCLUSIVO IPHONE</span>
       </div>
 
-      <!-- Centro: Menú -->
-      <div class="d-flex gap-4 justify-content-center flex-grow-1 style-menues">
+      <!-- Centro: Links -->
+      <div class="d-flex justify-content-center flex-grow-1 style-menues flex-wrap gap-2">
         <a routerLink="/inicio">Inicio</a>
+        <a routerLink="/productos">Productos</a>
         <a routerLink="/nosotros">Nosotros</a>
         <a routerLink="/contacto">Contacto</a>
         <a *ngIf="usrAdmin" routerLink="/gestiones">Gestiones</a>
       </div>
 
-      <!-- Derecha: Botón + Iconos -->
-      <div class="d-flex align-items-center gap-3">
+      <!-- Derecha -->
+      <div class="d-flex align-items-center gap-2">
         <a routerLink="/contacto" class="btn btn-outline-warning fw-bold px-3 py-1">
           Acceso Mayorista
         </a>
         <mat-icon *ngIf="!usuarioLogueado" (click)="openIngreso()" class="icono-header">person</mat-icon>
         <mat-icon *ngIf="usuarioLogueado" (click)="abrirCarrito()" class="icono-header"
           matBadge="{{ cantidadProductos$ | async }}" matBadgeColor="warn"
-          [matBadgeHidden]="(cantidadProductos$ | async) === 0"
-          data-bs-toggle="offcanvas" data-bs-target="#offcanvasCarrito"
-          aria-controls="offcanvasCarrito">shopping_cart</mat-icon>
+          [matBadgeHidden]="(cantidadProductos$ | async) === 0" data-bs-toggle="offcanvas"
+          data-bs-target="#offcanvasCarrito" aria-controls="offcanvasCarrito">shopping_cart</mat-icon>
         <mat-icon *ngIf="usuarioLogueado && !usrAdmin" (click)="abrirHistorial()" class="icono-header">history</mat-icon>
         <mat-icon *ngIf="usuarioLogueado" (click)="closeSesion()" class="icono-header">logout</mat-icon>
       </div>
