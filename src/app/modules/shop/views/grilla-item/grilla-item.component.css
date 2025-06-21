@@ -1,9 +1,38 @@
-@import 'src/assets/style.css';
 
-.color-circle {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  display: inline-block;
-  border: 1px solid #ccc;
+app-item {
+  display: block;
+  height: 100%;
+}
+
+.filter-bar {
+  border-radius: 1rem;
+  background-color: #f8f9fa;
+}
+
+.col-5-per-row {
+  width: 20%;
+}
+
+@media (max-width: 1200px) {
+  .col-5-per-row {
+    width: 25%;
+  }
+}
+
+@media (max-width: 992px) {
+  .col-5-per-row {
+    width: 33.33%;
+  }
+}
+
+@media (max-width: 768px) {
+  .col-5-per-row {
+    width: 50%;
+  }
+}
+
+@media (max-width: 576px) {
+  .col-5-per-row {
+    width: 100%;
+  }
 }

@@ -17,6 +17,7 @@ export class BannerComponent {
 
   ngOnInit(): void {
     //this.cargarImagenes();
+    this.mediaItems = [{nombre: 'banner1.jpg', url: '../../../../../assets/imagenes/banner01.png', tipo: 'imagen'}]
   }
 
   private esVideo(ext: string): boolean {
