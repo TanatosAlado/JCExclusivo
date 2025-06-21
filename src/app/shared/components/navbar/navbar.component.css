@@ -138,9 +138,7 @@
 .navbar-custom {
   padding-left: 3%;
   padding-right: 3%;
-  /* background-color: #ff5577
-  */
-  background-color: black;
+  background-color: var(--color-primario);
   height: 100px;
 }
 

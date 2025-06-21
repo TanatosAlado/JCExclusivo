@@ -16,7 +16,7 @@ export class BannerComponent {
   constructor(private bannerService: BannerService) { }
 
   ngOnInit(): void {
-    this.cargarImagenes();
+    //this.cargarImagenes();
   }
 
   private esVideo(ext: string): boolean {
