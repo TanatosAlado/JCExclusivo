@@ -43,6 +43,7 @@
         <a routerLink="/mayoristas" class="btn btn-outline-warning">Mayoristas</a>
         <i (click)="openIngreso()" class="fas fa-user text-white"></i>
         <i class="fas fa-shopping-cart text-white"></i>
+        <mat-icon *ngIf="usuarioLogueado" (click)="closeSesion()" class="icono-header">logout</mat-icon>
       </div>
     </div>
   </div>

@@ -5,6 +5,8 @@ import { Firestore, collection, doc, setDoc, query, where, getDocs } from '@angu
 import { Router } from '@angular/router';
 import { Cliente } from '../../models/cliente.model'; 
 import { MatDialogRef } from '@angular/material/dialog';
+import { AuthService } from '../../services/auth.service';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 @Component({
   selector: 'app-registro',
@@ -21,6 +23,8 @@ export class RegistroComponent {
     private firestore: Firestore,
     private router: Router,
     private dialogRef: MatDialogRef<RegistroComponent>,
+    private authService: AuthService,
+    private snackBar: MatSnackBar
   ) {
     this.formRegistroCliente = this.fb.group({
       usuario: ['', [Validators.required, Validators.minLength(6), Validators.pattern('^[a-zA-Z0-9]+$')]],
@@ -34,49 +38,65 @@ export class RegistroComponent {
     });
   }
 
-  async crearCliente() {
-    this.error = null;
+async crearCliente() {
+  this.error = null;
+  const form = this.formRegistroCliente.value;
 
-    const form = this.formRegistroCliente.value;
+  // 1. Validar que el nombre de usuario no exista
+  const clientesRef = collection(this.firestore, 'Clientes');
+  const q = query(clientesRef, where('usuario', '==', form.usuario));
+  const existing = await getDocs(q);
 
-    // Validar que el nombre de usuario no exista
-    const clientesRef = collection(this.firestore, 'Clientes');
-    const q = query(clientesRef, where('usuario', '==', form.usuario));
-    const existing = await getDocs(q);
-
-    if (!existing.empty) {
-      this.error = 'El nombre de usuario ya está registrado.';
-      return;
-    }
-
-    try {
-      const cred = await createUserWithEmailAndPassword(this.auth, form.mail, form.contrasena);
-      const uid = cred.user.uid;
-
-      const nuevoCliente = new Cliente(
-        uid,
-        form.usuario,
-        '',
-        form.mail,
-        form.telefono,
-        form.direccion,
-        [],
-        true,
-        form.nombre,
-        form.apellido,
-        false,
-        [],
-        form.dni,
-        0,
-      );
-
-      await setDoc(doc(this.firestore, 'Clientes', uid), { ...nuevoCliente });
-    this.dialogRef.close(nuevoCliente);
-     // this.router.navigate(['/login']);
-    } catch (err: any) {
-      this.error = err.message;
-    }
+  if (!existing.empty) {
+    this.error = 'El nombre de usuario ya está registrado.';
+    return;
   }
+
+  try {
+    // 2. Crear en Firebase Auth
+    const cred = await createUserWithEmailAndPassword(this.auth, form.mail, form.contrasena);
+    const uid = cred.user.uid;
+
+    // 3. Crear nuevo cliente (modelo actualizado)
+    const nuevoCliente = new Cliente(
+      uid,
+      form.usuario,
+      form.mail,
+      form.telefono,
+      form.direccion,
+      [],
+      true,
+      form.nombre,
+      form.apellido,
+      false,
+      [],
+      form.dni,
+      0
+    );
+
+    // 4. Guardar en Firestore
+    await setDoc(doc(this.firestore, 'Clientes', uid), { ...nuevoCliente });
+
+    // 5. Login automático
+    const clienteLogueado = await this.authService.login(form.usuario, form.contrasena);
+
+    if (clienteLogueado) {
+      this.authService.setUsuarioActual(clienteLogueado);
+      this.snackBar.open('Registro exitoso. Bienvenido/a, ' + form.nombre + '!', 'Cerrar', {
+        duration: 4000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+        panelClass: ['snackbar-success']
+      });
+      this.dialogRef.close(clienteLogueado);
+    } else {
+      this.error = 'Registro correcto, pero hubo un error al iniciar sesión.';
+    }
+
+  } catch (err: any) {
+    this.error = err.message;
+  }
+}
 
   cerrar() {
     this.router.navigate(['/']);

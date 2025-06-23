@@ -32,8 +32,7 @@ export class AuthService {
   }
 
   async login(username: string, clave: string): Promise<Cliente | null> {
-    console.log('Intentando iniciar sesión con:', username, clave);
-    // Buscamos por username
+    
     const usuariosRef = collection(this.firestore, 'Clientes');
     const q = query(usuariosRef, where('usuario', '==', username));
     const snapshot = await getDocs(q);
@@ -43,9 +42,6 @@ export class AuthService {
       const email = data.mail; // email registrado
 
       const cred = await signInWithEmailAndPassword(this.auth, email, clave);
-
-      console.log('Datos de acceso:', email, clave);
-
 
       const ref = doc(this.firestore, 'Clientes', cred.user.uid);
       const userDoc = await getDoc(ref);
