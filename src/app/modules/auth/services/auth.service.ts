@@ -1,49 +1,24 @@
-import { inject, Injectable } from '@angular/core';
-import { LoginRequest } from '../models/loginRequest.model';
-import { from, map, Observable } from 'rxjs';
-import { Cliente } from '../models/cliente.model';
-import { collection, Firestore, getDocs, query, where } from '@angular/fire/firestore';
+import { Injectable } from '@angular/core';
+import { Observable } from 'rxjs';
 import { RegistroComponent } from '../views/registro/registro.component';
 import { MatDialog } from '@angular/material/dialog';
+import { Cliente } from '../models/cliente.model';
+import { Auth, signInWithEmailAndPassword } from '@angular/fire/auth';
+import { collection, doc, Firestore, getDoc, getDocs, query, where } from '@angular/fire/firestore';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
 
-  private firestore = inject(Firestore);
-  constructor(private dialog: MatDialog) { }
+  private clienteActual: Cliente | null = null;
+  private readonly STORAGE_KEY = 'clienteActual';
 
-  getClienteByLogin(ingresante: LoginRequest): Observable<Cliente> {
-    const clientesRef = collection(this.firestore, 'Clientes');
-    const q = query(clientesRef, where('usuario', '==', ingresante.user), where('contrasena', '==', ingresante.password));
-
-    return from(getDocs(q)).pipe(
-      map(snapshot => {
-        const clientes = snapshot.docs.map(doc => {
-          const data = doc.data() as Cliente;
-          return new Cliente(
-            doc.id,
-            data.usuario,
-            data.contrasena,
-            data.mail,
-            data.telefono,
-            data.direccion,
-            data.historial,
-            data.estado,
-            data.razonSocial,
-            data.nombre,
-            data.apellido,
-            data.administrador,
-            data.carrito,
-            data.dni,
-            data.cuit,
-            data.puntos
-          );
-        });
-        return clientes.length > 0 ? clientes[0] : null;
-      })
-    );
+  constructor(private dialog: MatDialog, private auth: Auth, private firestore: Firestore) {
+    const clienteGuardado = localStorage.getItem(this.STORAGE_KEY);
+    if (clienteGuardado) {
+      this.clienteActual = JSON.parse(clienteGuardado);
+    }
   }
 
   openRegistroModal(): Observable<any> {
@@ -52,7 +27,51 @@ export class AuthService {
       maxWidth: '950px',
       data: {},
     });
-  
-    return dialogRef.afterClosed(); 
+
+    return dialogRef.afterClosed();
   }
+
+  async login(username: string, clave: string): Promise<Cliente | null> {
+    console.log('Intentando iniciar sesión con:', username, clave);
+    // Buscamos por username
+    const usuariosRef = collection(this.firestore, 'Clientes');
+    const q = query(usuariosRef, where('usuario', '==', username));
+    const snapshot = await getDocs(q);
+
+    if (!snapshot.empty) {
+      const data = snapshot.docs[0].data() as Cliente;
+      const email = data.mail; // email registrado
+
+      const cred = await signInWithEmailAndPassword(this.auth, email, clave);
+
+      console.log('Datos de acceso:', email, clave);
+
+
+      const ref = doc(this.firestore, 'Clientes', cred.user.uid);
+      const userDoc = await getDoc(ref);
+
+      return userDoc.exists() ? userDoc.data() as Cliente : null;
+    } else {
+      throw new Error('Nombre de usuario no encontrado');
+    }
+  }
+
+  setUsuarioActual(usuario: Cliente): void {
+    this.clienteActual = usuario;
+    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(usuario));
+  }
+
+  getUsuarioActual(): Cliente | null {
+    return this.clienteActual;
+  }
+
+  estaLogueado(): boolean {
+    return !!this.clienteActual;
+  }
+
+  logout(): void {
+    this.clienteActual = null;
+    localStorage.removeItem(this.STORAGE_KEY);
+  }
+
 }

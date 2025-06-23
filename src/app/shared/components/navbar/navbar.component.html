@@ -1,5 +1,7 @@
-<nav class="navbar navbar-expand-lg navbar-custom">
+<!-- NAVBAR -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
   <div class="container-fluid">
+
     <!-- Botón hamburguesa (solo mobile) -->
     <button class="navbar-toggler d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasMenu"
       aria-controls="offcanvasMenu">
@@ -8,53 +10,55 @@
 
     <!-- Logo centrado en mobile -->
     <a class="navbar-brand d-lg-none position-absolute top-50 start-50 translate-middle" href="#">
-      <img src="../../../../assets/logo.png" class="logo" alt="Logo Dolzani" />
+      <img src="assets/logo.png" alt="Logo" style="height: 40px;" />
     </a>
 
-    <!-- Íconos en mobile -->
+    <!-- Íconos mobile -->
     <div class="d-flex d-lg-none ms-auto gap-2 align-items-center">
-      <mat-icon *ngIf="!usuarioLogueado" (click)="openIngreso()" class="text-white cursor-pointer">person</mat-icon>
-      <mat-icon *ngIf="usuarioLogueado" class="text-white cursor-pointer" (click)="abrirCarrito()"
-        matBadge="{{ cantidadProductos$ | async }}" matBadgeColor="warn"
-        [matBadgeHidden]="(cantidadProductos$ | async) === 0" data-bs-toggle="offcanvas"
-        data-bs-target="#offcanvasCarrito" aria-controls="offcanvasCarrito">
-        shopping_cart
-      </mat-icon>
-      <mat-icon *ngIf="usuarioLogueado" (click)="closeSesion()" class="text-white cursor-pointer">logout</mat-icon>
+      <i class="fas fa-user text-white"></i>
+      <i class="fas fa-shopping-cart text-white"></i>
     </div>
 
     <!-- Menú desktop -->
     <div class="d-none d-lg-flex align-items-center justify-content-between w-100">
-      <!-- Izquierda: Logo + Nombre -->
+      <!-- Logo + Nombre -->
       <div class="d-flex align-items-center">
         <a class="navbar-brand me-3" href="#">
-          <img src="../../../../assets/logo.png" class="logo" alt="Logo Dolzani" />
+          <img src="assets/logo.png" style="height: 40px;" alt="Logo" />
         </a>
-        <span class="nombre-ecommerce ms-2">JC EXCLUSIVO IPHONE</span>
+        <span class="text-white fw-bold">JC EXCLUSIVO IPHONE</span>
       </div>
 
-      <!-- Centro: Links -->
-      <div class="d-flex justify-content-center flex-grow-1 style-menues flex-wrap gap-2">
-        <a routerLink="/inicio">Inicio</a>
-        <a routerLink="/productos">Productos</a>
-        <a routerLink="/nosotros">Nosotros</a>
-        <a routerLink="/contacto">Contacto</a>
-        <a *ngIf="usrAdmin" routerLink="/gestiones">Gestiones</a>
+      <!-- Enlaces -->
+      <div class="d-flex gap-3">
+        <a routerLink="/inicio" class="nav-link text-white">Inicio</a>
+        <a routerLink="/productos" class="nav-link text-white">Productos</a>
+        <a routerLink="/nosotros" class="nav-link text-white">Nosotros</a>
+        <a routerLink="/contacto" class="nav-link text-white">Contacto</a>
+        <a *ngIf="usrAdmin" routerLink="/gestiones" class="nav-link" (click)="cerrarMenu()">Gestiones</a>
       </div>
 
-      <!-- Derecha -->
-      <div class="d-flex align-items-center gap-2">
-        <a routerLink="/contacto" class="btn btn-outline-warning fw-bold px-3 py-1">
-          Acceso Mayorista
-        </a>
-        <mat-icon *ngIf="!usuarioLogueado" (click)="openIngreso()" class="icono-header">person</mat-icon>
-        <mat-icon *ngIf="usuarioLogueado" (click)="abrirCarrito()" class="icono-header"
-          matBadge="{{ cantidadProductos$ | async }}" matBadgeColor="warn"
-          [matBadgeHidden]="(cantidadProductos$ | async) === 0" data-bs-toggle="offcanvas"
-          data-bs-target="#offcanvasCarrito" aria-controls="offcanvasCarrito">shopping_cart</mat-icon>
-        <mat-icon *ngIf="usuarioLogueado && !usrAdmin" (click)="abrirHistorial()" class="icono-header">history</mat-icon>
-        <mat-icon *ngIf="usuarioLogueado" (click)="closeSesion()" class="icono-header">logout</mat-icon>
+      <!-- Acciones -->
+      <div class="d-flex gap-2 align-items-center">
+        <a routerLink="/mayoristas" class="btn btn-outline-warning">Mayoristas</a>
+        <i (click)="openIngreso()" class="fas fa-user text-white"></i>
+        <i class="fas fa-shopping-cart text-white"></i>
       </div>
     </div>
   </div>
 </nav>
+
+<!-- OFFCANVAS MENU (solo mobile) -->
+<div class="offcanvas offcanvas-start" tabindex="-1" id="offcanvasMenu" aria-labelledby="offcanvasMenuLabel">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title" id="offcanvasMenuLabel">Menú</h5>
+    <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
+  </div>
+  <div class="offcanvas-body d-flex flex-column gap-2">
+    <a routerLink="/inicio" class="nav-link">Inicio</a>
+    <a routerLink="/productos" class="nav-link">Productos</a>
+    <a routerLink="/nosotros" class="nav-link">Nosotros</a>
+    <a routerLink="/contacto" class="nav-link">Contacto</a>
+    <a *ngIf="usrAdmin" routerLink="/gestiones" class="nav-link">Gestiones</a>
+  </div>
+</div>

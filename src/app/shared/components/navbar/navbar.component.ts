@@ -1,8 +1,9 @@
 import { Component } from '@angular/core';
 import {trigger, transition, style, animate} from '@angular/animations';
 import { CarritoService } from '../../services/carrito.service';
-import { MatDialog } from '@angular/material/dialog';
 import { LoginComponent } from 'src/app/modules/auth/views/login/login.component';
+import { MatDialog } from '@angular/material/dialog';
+import { Cliente } from 'src/app/modules/auth/models/cliente.model';
 import { GeneralService } from '../../services/general.service';
 import { ClientesService } from '../../services/clientes.service';
 
@@ -64,20 +65,21 @@ export class NavbarComponent {
       panelClass: 'custom-dialog'
     });
 
-    // // Escuchar el cierre del modal y obtener el cliente logueado
-    // dialogRef.afterClosed().subscribe((cliente: Cliente) => {
-    //   if (cliente) {
-    //     this.cantidadProductos= this.getCantidadProductos(cliente.carrito)
-    //     this.usuarioLogueado = true;
-    //     this.usrAdmin = cliente.administrador;
-    //     this.generalService.setCliente(cliente);
-    //     localStorage.setItem('cliente', cliente.id); // clienteId = 'ApdVnmooZNKXXhu5sL01'
+    // Escuchar el cierre del modal y obtener el cliente logueado
+
+    dialogRef.afterClosed().subscribe((cliente: Cliente) => {
+      if (cliente) {
+    //    this.cantidadProductos= this.getCantidadProductos(cliente.carrito)
+    //    this.usuarioLogueado = true;
+        this.usrAdmin = cliente.administrador;
+   //     this.generalService.setCliente(cliente);
+    //    localStorage.setItem('cliente', cliente.id); //
 
 
-    //   } else {
-    //     console.log('El usuario cerró el modal sin loguearse');
-    //   }
-    // });
+      } else {
+        console.log('El usuario cerró el modal sin loguearse');
+      }
+    });
   }
 
   getCantidadProductos(carrito: any[]): number {

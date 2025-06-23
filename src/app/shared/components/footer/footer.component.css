@@ -11,7 +11,7 @@
     width: 100%; 
     text-align: center;
     font-size: 15px;
-    background-color:black;
+    background-color: var(--color-primario);
     color: white;
     padding: 0.1rem;
 }

@@ -1,1 +1,44 @@
-<p>login works!</p>
+<div class="overlay">
+  <div class="modal-container fadeInDown ">
+    <div class="cerrar-modal fadeIn first">
+      <button mat-icon-button (click)="cerrar()">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    <div class="imagen-central fadeIn first">
+      <img src="../../../../../assets/logo.png" alt="Login" />
+    </div>
+
+
+    <form (ngSubmit)="onSubmit()" #loginForm="ngForm">
+      <mat-form-field class="fadeIn second" appearance="outline" color="accent">
+        <mat-label>Usuario</mat-label>
+        <input matInput type="text" name="usuario" [(ngModel)]="usuario" (ngModelChange)="resetLoginFail()" required />
+        <button *ngIf="usuario" matSuffix mat-icon-button (click)="usuario=''">
+          <mat-icon style="color: #666;">close</mat-icon>
+        </button>
+      </mat-form-field>
+
+      <mat-form-field class="fadeIn second" appearance="outline" color="accent">
+        <mat-label>Contraseña</mat-label>
+        <input matInput type="password" name="contrasena" [(ngModel)]="contrasena" (ngModelChange)="resetLoginFail()"
+          required />
+        <button *ngIf="contrasena" matSuffix mat-icon-button (click)="contrasena=''">
+          <mat-icon style="color: #666;">close</mat-icon>
+        </button>
+      </mat-form-field>
+
+      <mat-hint *ngIf="loginFail">Datos de accesos incorrectos</mat-hint>
+
+      <button class="fadeIn third" mat-raised-button type="submit" [disabled]="!loginForm.form.valid"
+        [ngClass]="loginForm.form.valid ? 'botonesRojos' : ''">
+        Ingresar
+      </button>
+    </form>
+
+    <div class="registro-link fadeIn third ">
+      <p>¿No tienes una cuenta? <a (click)="abrirRegistro()">Regístrate</a></p>
+    </div>
+  </div>
+</div>
