@@ -8,13 +8,13 @@ export class Cliente {
         public direccion: string,
         public historial: any[] = [],
         public estado: boolean,
-        public razonSocial: string,
         public nombre: string,
         public apellido: string,
         public administrador: boolean = false,
         public carrito: any[] = [],
         public dni: string = '', 
-        public cuit: string = '',
-        public puntos: number 
+        public puntos: number,
+        public razonSocial?: string,
+        public cuit?: string, 
     ) {}
 }

@@ -35,12 +35,13 @@
         <a routerLink="/productos" class="nav-link text-white">Productos</a>
         <a routerLink="/nosotros" class="nav-link text-white">Nosotros</a>
         <a routerLink="/contacto" class="nav-link text-white">Contacto</a>
+        <a *ngIf="usrAdmin" routerLink="/gestiones" class="nav-link" (click)="cerrarMenu()">Gestiones</a>
       </div>
 
       <!-- Acciones -->
       <div class="d-flex gap-2 align-items-center">
         <a routerLink="/mayoristas" class="btn btn-outline-warning">Mayoristas</a>
-        <i class="fas fa-user text-white"></i>
+        <i (click)="openIngreso()" class="fas fa-user text-white"></i>
         <i class="fas fa-shopping-cart text-white"></i>
       </div>
     </div>
