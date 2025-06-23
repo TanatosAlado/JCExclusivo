@@ -4,6 +4,7 @@ import { CarritoService } from '../../services/carrito.service';
 import { LoginComponent } from 'src/app/modules/auth/views/login/login.component';
 import { MatDialog } from '@angular/material/dialog';
 import { Cliente } from 'src/app/modules/auth/models/cliente.model';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-navbar',
@@ -29,7 +30,10 @@ export class NavbarComponent {
   cantidadProductos: number = 0;
   cantidadProductos$ = this.carritoService.cantidadProductos$;
   
-  constructor(private carritoService: CarritoService,  private dialog: MatDialog) {}
+  constructor(private carritoService: CarritoService,  
+              private dialog: MatDialog,
+              private router: Router,
+            ) {}
 
   ngOnInit() {
     // this.getProductos()
@@ -68,7 +72,7 @@ export class NavbarComponent {
     dialogRef.afterClosed().subscribe((cliente: Cliente) => {
       if (cliente) {
     //    this.cantidadProductos= this.getCantidadProductos(cliente.carrito)
-    //    this.usuarioLogueado = true;
+        this.usuarioLogueado = true;
         this.usrAdmin = cliente.administrador;
    //     this.generalService.setCliente(cliente);
     //    localStorage.setItem('cliente', cliente.id); //
@@ -95,9 +99,9 @@ export class NavbarComponent {
     //     message: '¿Está seguro que desea cerrar sesión?',
     //     confirmAction: () => {
     //       this.generalService.logout();
-    //       this.usuarioLogueado = false;
-    //       this.usrAdmin = false;
-    //       this.router.navigate(['/']); // redirigir al home
+           this.usuarioLogueado = false;
+           this.usrAdmin = false;
+           this.router.navigate(['/']); // redirigir al home
     //     }
     //   }
     // });

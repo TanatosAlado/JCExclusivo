@@ -3,6 +3,7 @@ import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { AuthService } from '../../services/auth.service';
 import { Router } from '@angular/router';
 import { LoginRequest } from '../../models/loginRequest.model';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 @Component({
   selector: 'app-login',
@@ -18,7 +19,8 @@ export class LoginComponent {
   constructor(private authService: AuthService, 
               private dialogRef: MatDialogRef<LoginComponent>, 
               private dialog: MatDialog,
-              private router: Router) { }
+              private router: Router,
+              private snackBar: MatSnackBar) { }
 
   abrirRegistro() {
     this.cerrar()
@@ -37,7 +39,11 @@ export class LoginComponent {
         // Redirigir al dashboard o página principal
         //this.router.navigate(['/home']); // Cambia según tu ruta
         this.authService.setUsuarioActual(cliente);
-        this.dialogRef.close(cliente);
+        this.snackBar.open('Login exitoso. ¡Bienvenido!', 'Cerrar', {
+          duration: 3000,
+          panelClass: ['snackbar-success'],
+      });
+      this.dialogRef.close(cliente);  
       } else {
         this.loginFail = true;
       }
