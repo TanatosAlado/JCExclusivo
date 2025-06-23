@@ -4,6 +4,7 @@ import { Auth, createUserWithEmailAndPassword } from '@angular/fire/auth';
 import { Firestore, collection, doc, setDoc, query, where, getDocs } from '@angular/fire/firestore';
 import { Router } from '@angular/router';
 import { Cliente } from '../../models/cliente.model'; 
+import { MatDialogRef } from '@angular/material/dialog';
 
 @Component({
   selector: 'app-registro',
@@ -18,7 +19,8 @@ export class RegistroComponent {
     private fb: FormBuilder,
     private auth: Auth,
     private firestore: Firestore,
-    private router: Router
+    private router: Router,
+    private dialogRef: MatDialogRef<RegistroComponent>,
   ) {
     this.formRegistroCliente = this.fb.group({
       usuario: ['', [Validators.required, Validators.minLength(6), Validators.pattern('^[a-zA-Z0-9]+$')]],
@@ -69,8 +71,8 @@ export class RegistroComponent {
       );
 
       await setDoc(doc(this.firestore, 'Clientes', uid), { ...nuevoCliente });
-
-      this.router.navigate(['/login']);
+    this.dialogRef.close(nuevoCliente);
+     // this.router.navigate(['/login']);
     } catch (err: any) {
       this.error = err.message;
     }

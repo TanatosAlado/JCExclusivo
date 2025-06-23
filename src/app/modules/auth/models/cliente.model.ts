@@ -13,8 +13,6 @@ export class Cliente {
         public administrador: boolean = false,
         public carrito: any[] = [],
         public dni: string = '', 
-        public puntos: number,
-        public razonSocial?: string,
-        public cuit?: string, 
+        public puntos: number
     ) {}
 }
