@@ -1,6 +1,10 @@
 import { Component } from '@angular/core';
 import {trigger, transition, style, animate} from '@angular/animations';
 import { CarritoService } from '../../services/carrito.service';
+import { MatDialog } from '@angular/material/dialog';
+import { LoginComponent } from 'src/app/modules/auth/views/login/login.component';
+import { GeneralService } from '../../services/general.service';
+import { ClientesService } from '../../services/clientes.service';
 
 @Component({
   selector: 'app-navbar',
@@ -26,39 +30,39 @@ export class NavbarComponent {
   cantidadProductos: number = 0;
   cantidadProductos$ = this.carritoService.cantidadProductos$;
   
-  constructor(private carritoService: CarritoService) {}
+  constructor(private carritoService: CarritoService, private dialog:MatDialog, private generalService:GeneralService,private clientesService:ClientesService) {}
 
   ngOnInit() {
     // this.getProductos()
-    // const clienteGuardado = localStorage.getItem('cliente');
-    // if (clienteGuardado) {
+    const clienteGuardado = localStorage.getItem('cliente');
+    if (clienteGuardado) {
 
-    //   this.clientesService.getClienteById(clienteGuardado).subscribe({
-    //     next: (cliente) => {
-    //       this.usuarioLogueado = true;
-    //       this.usrAdmin = cliente.administrador;
-    //       this.generalService.setCliente(cliente);
+      this.clientesService.getClienteById(clienteGuardado).subscribe({
+        next: (cliente) => {
+          this.usuarioLogueado = true;
+          this.usrAdmin = cliente.administrador;
+          this.generalService.setCliente(cliente);
 
-    //       this.carritoService.actualizarCantidadProductos(cliente);
-    //     },
-    //     error: (err) => {
-    //       console.error('Error al obtener cliente', err);
-    //       localStorage.removeItem('cliente');
-    //     }
-    //   });
-    // }
+          // this.carritoService.actualizarCantidadProductos(cliente);
+        },
+        error: (err) => {
+          console.error('Error al obtener cliente', err);
+          localStorage.removeItem('cliente');
+        }
+      });
+    }
 
   }
 
   // Métodos para abrir los modales
   openIngreso() {
-    // //this.authService.openIngresoModal();
-    // const dialogRef = this.dialog.open(IngresoComponent, {
-    //   width: '400px',
-    //   disableClose: true,
-    //   backdropClass: 'custom-backdrop',
-    //   panelClass: 'custom-dialog'
-    // });
+    //this.authService.openIngresoModal();
+    const dialogRef = this.dialog.open(LoginComponent, {
+      width: '400px',
+      disableClose: true,
+      backdropClass: 'custom-backdrop',
+      panelClass: 'custom-dialog'
+    });
 
     // // Escuchar el cierre del modal y obtener el cliente logueado
     // dialogRef.afterClosed().subscribe((cliente: Cliente) => {
