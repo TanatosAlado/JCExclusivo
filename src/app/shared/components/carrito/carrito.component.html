@@ -1,0 +1,46 @@
+<div *ngIf="cliente" class="offcanvas-body">
+  <div *ngFor="let producto of cliente.carrito" class="card mb-3 shadow-sm border-0">
+    <div class="row g-0 align-items-center">
+      <div class="col-4">
+        <img [src]="producto.imagen" alt="{{ producto.nombre }}" class="img-fluid rounded-start imagen-maxima">
+      </div>
+
+      <div class="col-7">
+        <div class="card-body py-2 px-3 text-center">
+          <h6 class="card-title mb-2">{{ producto.nombre }}</h6>
+          <div class="contenedor-productos">
+            <button class="btn-menos" (click)="disminuirCantidad(producto)">−</button>
+            <input class="input-productos" type="text" [(ngModel)]="producto.cantidad" readonly>
+            <button [disabled]="producto.cantidad==producto.stock" class="btn-mas" (click)="aumentarCantidad(producto)">+</button>
+          </div>
+          <div class="info-precios mt-2">
+             <label>Stock:{{ producto.stock }}</label>
+            <strong class="precio-final">{{ producto.precioFinal * producto.cantidad |currency}}</strong>
+          </div>
+        </div>
+      </div>
+      <div class="col-1 d-flex justify-content-center align-items-start pt-3">
+        <button class="delete-btn" style="padding: 0.4rem 0.5rem;">
+          <i (click)="eliminarDelCarrito(producto.id)" class="fa-solid fa-trash fa-lg"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="resumen-carrito mt-3" *ngIf="cliente.carrito && cliente.carrito.length > 0">
+    <div class="resumen-linea">
+      <span>Total a pagar:</span>
+      <span>{{ this.generalService.getTotalPrecio(cliente)|currency }}</span>
+    </div>
+  </div>
+
+  <div class="contenedor-compra" *ngIf="cliente.carrito && cliente.carrito.length > 0">
+    <button (click)="navigateCheckout()">FINALIZAR COMPRA</button>
+    <span data-bs-dismiss="offcanvas">Ver Más Productos</span>
+  </div>
+
+  <p class="text-center mt-4" *ngIf="cliente.carrito && cliente.carrito.length === 0">
+    Aún no hay productos en el Carrito.
+  </p>
+
+
+</div>

@@ -2,7 +2,7 @@
     <div class="product-img position-relative overflow-hidden">
         <img class="img-fluid w-100" [src]="producto.imagen" alt="">
         <div class="product-action">
-            <a href=""><i class="fa fa-shopping-cart"></i></a>
+            <a (click)="agregarCarrito(producto)"><i class="fa fa-shopping-cart"></i></a>
             <a href=""><i class="far fa-heart"></i></a>
             <!-- <a href=""><i class="fa fa-sync-alt"></i></a> -->
             <a href=""><i class="fa fa-search"></i></a>

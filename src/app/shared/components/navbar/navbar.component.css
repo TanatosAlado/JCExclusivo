@@ -79,6 +79,11 @@
   z-index: 9999;
 }
 
+h5{
+  color: white;
+  font-weight: bold;
+}
+
 .icono-header {
   color: white;
   cursor: pointer;

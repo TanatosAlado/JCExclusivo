@@ -21,13 +21,15 @@ import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { CarritoComponent } from './components/carrito/carrito.component';
 
 
 @NgModule({
   declarations: [
     NavbarComponent,
     FooterComponent,
-    DashboardComponent
+    DashboardComponent,
+    CarritoComponent
   ],
   imports: [
     CommonModule,
