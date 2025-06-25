@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { collection, doc, Firestore, getDoc } from '@angular/fire/firestore';
+import { collection, doc, Firestore, getDoc, updateDoc } from '@angular/fire/firestore';
 import { from, map, Observable } from 'rxjs';
 import { Cliente } from 'src/app/modules/auth/models/cliente.model';
 
@@ -27,5 +27,11 @@ private firestore = inject(Firestore);
         } as Cliente;
       })
     );
+  }
+
+   actualizarCliente(id: string, datosParciales: Partial<Cliente>): Promise<void> {
+    const clienteDocRef = doc(this.firestore, 'Clientes', id);
+    const datosPlano = JSON.parse(JSON.stringify(datosParciales)); // 🔧 conversión segura
+    return updateDoc(clienteDocRef, datosPlano);
   }
 }

@@ -1,0 +1,178 @@
+.offcanvas-title {
+  color: white;
+  font-weight: bold;
+  text-align: center;
+
+}
+
+.offcanvas-header {
+  background-color: var(--color-primario);
+}
+
+.offcanvas-ancho {
+  width: 500px;
+  /* Podés ajustar el valor como quieras (ej. 600px, 700px...) */
+}
+.offcanvas-start {
+  width: 250px;
+  background-color: var(--color-primario);
+  color: white;
+  font-weight: bold;
+}
+
+.contenedor-productos {
+  position: relative;
+  display: inline-block;
+}
+
+.contenedor-productos input{
+  border-radius: 50px;
+  background-color: transparent;
+  border-color: lightgray;
+  width: 55%;
+  height: 40px;
+}
+.contenedor-productos:hover .input-productos {
+  border-color: var(--color-primario);
+  box-shadow: 0 0 4px var(--color-primario);
+  cursor: pointer;
+}
+
+.btn-menos,
+.btn-mas {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-70%);
+  background-color: transparent;
+  border: none;
+  font-size: 15px;
+  cursor: pointer;
+  color:var(--color-primario);
+  width: 25px;
+  height: 25px;
+  padding: 0;
+  line-height: 1;
+}
+
+button {
+  background-color:var(--color-primario);
+  font-weight: bold;
+  border: none;
+  color: white;
+  padding: 15px 80px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  text-transform: uppercase;
+  font-size: 13px;
+  -webkit-border-radius: 5px 5px 5px 5px;
+  border-radius: 5px 5px 5px 5px;
+  margin: 5px 20px 10px 20px;
+  -webkit-transition: all 0.3s ease-in-out;
+  -moz-transition: all 0.3s ease-in-out;
+  -ms-transition: all 0.3s ease-in-out;
+  -o-transition: all 0.3s ease-in-out;
+  transition: all 0.3s ease-in-out;
+}
+
+.btn-menos {
+  left: 30px;
+
+}
+
+.btn-mas {
+  right: 30px;
+
+}
+
+.input-productos {
+  width: 100px;
+  height: 40px;
+  text-align: center;
+  font-size: 16px;
+  padding: 5px 30px; /* espacio lateral para los botones */
+  border-radius: 50px;
+  border: 1px solid lightgray;
+  background-color: transparent;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+.contenedor-productos:hover .input-productos {
+  border-color: var(--color-primario);
+  box-shadow: 0 0 4px var(--color-primario);
+  cursor: pointer;
+}
+
+
+.fila-oferta {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.oferta-tachada {
+  color:var(--color-primario);
+  font-size: 0.9rem;
+  margin-top: 10%;
+}
+
+.info-precios {
+  display: flex;
+  flex-direction: column;
+}
+
+.precio-oferta {
+  color:  #999;
+  font-weight: 500;
+  text-decoration: line-through;
+  margin-top: 10%;
+}
+.precio-final {
+  font-size: 1.3rem;
+  font-weight: bold;
+  color:var(--color-primario)
+  /* margin-top: 10%; */
+}
+
+.delete-btn {
+  background-color: transparent;
+  color: var(--color-primario);
+  border: none;
+  transition: all 0.2s ease-in-out;
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+.resumen-carrito {
+  padding-top: 1rem;
+  font-size: 1.6rem;
+ 
+}
+
+.resumen-linea {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  margin-top: 5%;
+  color: var(--color-primario);
+  font-weight: bolder;
+}
+
+.contenedor-compra {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 10%; 
+  cursor: pointer;
+}
+
+.contenedor-compra button{
+  border-radius: 50px;
+}
+
+.imagen-maxima {
+  max-width: 100%;
+  max-height: 120px;
+  object-fit: contain;
+  
+  display: block;
+  margin: 0 auto;
+}
