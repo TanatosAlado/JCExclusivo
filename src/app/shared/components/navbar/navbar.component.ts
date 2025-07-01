@@ -63,9 +63,10 @@ export class NavbarComponent {
   }
 
   // Métodos para abrir los modales
-  openIngreso() {
+  openIngreso(intencionMayorista: boolean = false) {
     //this.authService.openIngresoModal();
     const dialogRef = this.dialog.open(LoginComponent, {
+      data: { esMayorista: intencionMayorista },
       width: '400px',
       disableClose: true,
       backdropClass: 'custom-backdrop',

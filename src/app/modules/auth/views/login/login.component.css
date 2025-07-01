@@ -190,3 +190,17 @@ background-color: var(--color-primario);
   -moz-animation-delay: 0.7s;
   animation-delay: 0.7s;
 }
+
+.banner-mayorista {
+  background-color: #204977;
+  color: white;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: bold;
+  box-shadow: 0px 2px 6px rgba(0,0,0,0.2);
+}

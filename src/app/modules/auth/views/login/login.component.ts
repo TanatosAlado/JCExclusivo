@@ -1,5 +1,5 @@
-import { Component } from '@angular/core';
-import { MatDialog, MatDialogRef } from '@angular/material/dialog';
+import { Component, Inject } from '@angular/core';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { AuthService } from '../../services/auth.service';
 import { Router } from '@angular/router';
 import { LoginRequest } from '../../models/loginRequest.model';
@@ -15,12 +15,19 @@ export class LoginComponent {
   usuario: string = '';
   contrasena: string = '';
   loginFail: boolean = false
+  public loginMayorista: boolean = false;
 
   constructor(private authService: AuthService, 
               private dialogRef: MatDialogRef<LoginComponent>, 
               private dialog: MatDialog,
               private router: Router,
-              private snackBar: MatSnackBar) { }
+              private snackBar: MatSnackBar,
+              @Inject(MAT_DIALOG_DATA) public data: { esMayorista: boolean }
+            ) { }
+
+  ngOnInit() {
+    this.loginMayorista = this.data?.esMayorista ?? false;
+  }          
 
   abrirRegistro() {
     this.cerrar()

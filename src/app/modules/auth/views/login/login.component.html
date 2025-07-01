@@ -10,6 +10,10 @@
       <img src="../../../../../assets/logo.png" alt="Login" />
     </div>
 
+    <div *ngIf="loginMayorista" class="banner-mayorista fadeIn second">
+      <mat-icon>storefront</mat-icon>
+      <span>Acceso exclusivo para clientes mayoristas</span>
+    </div>
 
     <form (ngSubmit)="onSubmit()" #loginForm="ngForm">
       <mat-form-field class="fadeIn second" appearance="outline" color="accent">
