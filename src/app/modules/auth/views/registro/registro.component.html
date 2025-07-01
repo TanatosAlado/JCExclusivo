@@ -102,6 +102,34 @@
           </mat-error>
         </mat-form-field>
 
+        <!-- Checkbox mayorista -->
+        <mat-checkbox formControlName="esMayorista" class="fadeIn fourth">¿Sos mayorista?</mat-checkbox>
+
+        <!-- Campos condicionales -->
+        <div *ngIf="formRegistroCliente.get('esMayorista')?.value" class="fadeIn fourth">
+          <!-- Razon Social -->
+          <mat-form-field appearance="outline" color="accent">
+            <mat-label>Razón Social</mat-label>
+            <input matInput formControlName="razonSocial" />
+            <mat-error *ngIf="formRegistroCliente.get('razonSocial')?.hasError('required')">
+              Razón Social es obligatoria
+            </mat-error>
+          </mat-form-field>
+
+          <!-- CUIT -->
+          <mat-form-field appearance="outline" color="accent">
+            <mat-label>CUIT</mat-label>
+            <input matInput formControlName="cuit" />
+            <mat-error *ngIf="formRegistroCliente.get('cuit')?.hasError('required')">
+              CUIT es obligatorio
+            </mat-error>
+            <mat-error *ngIf="formRegistroCliente.get('cuit')?.hasError('pattern')">
+              Debe tener 11 números
+            </mat-error>
+          </mat-form-field>
+        </div>
+
+
       </div>
 
       <mat-divider></mat-divider>

@@ -11,7 +11,10 @@ export class Cliente {
         public apellido: string,
         public administrador: boolean = false,
         public carrito: any[] = [],
-        public dni: string = '', 
-        public puntos: number
-    ) {}
+        public dni: string = '',
+        public puntos: number,
+        public esMayorista: boolean = false,
+        public razonSocial: string = '',
+        public cuit: string = ''
+    ) { }
 }

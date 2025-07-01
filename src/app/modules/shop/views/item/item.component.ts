@@ -15,6 +15,7 @@ import { Cliente } from 'src/app/modules/auth/models/cliente.model';
 export class ItemComponent {
 
   @Input() producto!: Producto;
+  @Input() esMayorista: boolean = false;
   loadingCarrito: { [id: string]: boolean } = {};
 
   constructor(private generalService:GeneralService,private toastService: ToastService,private dialog: MatDialog){
