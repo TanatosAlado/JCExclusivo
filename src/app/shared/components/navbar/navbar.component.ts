@@ -7,6 +7,7 @@ import { Cliente } from 'src/app/modules/auth/models/cliente.model';
 import { Router } from '@angular/router';
 import { GeneralService } from '../../services/general.service';
 import { ClientesService } from '../../services/clientes.service';
+import { AuthService } from 'src/app/modules/auth/services/auth.service';
 
 @Component({
   selector: 'app-navbar',
@@ -35,7 +36,9 @@ export class NavbarComponent {
   constructor(private carritoService: CarritoService,  
              private dialog:MatDialog,
               private router: Router,
-             private generalService:GeneralService,private clientesService:ClientesService) {}
+             private generalService:GeneralService,
+             private clientesService:ClientesService,
+             private authService: AuthService) {}
 
   ngOnInit() {
     // this.getProductos()
@@ -103,6 +106,7 @@ export class NavbarComponent {
     //       this.generalService.logout();
            this.usuarioLogueado = false;
            this.usrAdmin = false;
+           this.authService.logout();
            this.router.navigate(['/']); // redirigir al home
     //     }
     //   }

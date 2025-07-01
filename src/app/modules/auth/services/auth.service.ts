@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { BehaviorSubject, Observable } from 'rxjs';
 import { RegistroComponent } from '../views/registro/registro.component';
 import { MatDialog } from '@angular/material/dialog';
 import { Cliente } from '../models/cliente.model';
@@ -13,12 +13,11 @@ export class AuthService {
 
   private clienteActual: Cliente | null = null;
   private readonly STORAGE_KEY = 'clienteActual';
+  private clienteActualSubject = new BehaviorSubject<Cliente | null>(null);
 
   constructor(private dialog: MatDialog, private auth: Auth, private firestore: Firestore) {
-    const clienteGuardado = localStorage.getItem(this.STORAGE_KEY);
-    if (clienteGuardado) {
-      this.clienteActual = JSON.parse(clienteGuardado);
-    }
+    const data = localStorage.getItem(this.STORAGE_KEY);
+    if (data) this.clienteActualSubject.next(JSON.parse(data));
   }
 
   openRegistroModal(): Observable<any> {
@@ -52,13 +51,17 @@ export class AuthService {
     }
   }
 
-  setUsuarioActual(usuario: Cliente): void {
-    this.clienteActual = usuario;
-    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(usuario));
+  setUsuarioActual(cliente: Cliente): void {
+    this.clienteActualSubject.next(cliente);
+    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(cliente));
   }
 
-  getUsuarioActual(): Cliente | null {
-    return this.clienteActual;
+  getUsuarioActual(): Observable<Cliente | null> {
+    return this.clienteActualSubject.asObservable();
+  }
+
+  getClienteActualValor(): Cliente | null {
+    return this.clienteActualSubject.value;
   }
 
   estaLogueado(): boolean {
@@ -66,7 +69,7 @@ export class AuthService {
   }
 
   logout(): void {
-    this.clienteActual = null;
+    this.clienteActualSubject.next(null);
     localStorage.removeItem(this.STORAGE_KEY);
   }
 
