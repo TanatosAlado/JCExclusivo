@@ -3,6 +3,8 @@ import { BehaviorSubject, Observable } from 'rxjs';
 import { Cliente } from 'src/app/modules/auth/models/cliente.model';
 import { ClientesService } from './clientes.service';
 import { CarritoService } from './carrito.service';
+import { doc, Firestore, getDoc } from '@angular/fire/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 
 @Injectable({
   providedIn: 'root'
@@ -10,7 +12,7 @@ import { CarritoService } from './carrito.service';
 export class GeneralService {
 
   private clienteSubject = new BehaviorSubject<Cliente | null>(null);
-  constructor(private clientesService:ClientesService, private carritoService:CarritoService) { }
+  constructor(private clientesService:ClientesService, private carritoService:CarritoService,private firestore: Firestore) { }
 
 
   //SERVICE PARA GUARDAR EL CLIENTE LOGUEADO EN EL LS
@@ -31,6 +33,32 @@ export class GeneralService {
    getTotalPrecio(cliente: any): number {
     return cliente.carrito.reduce((total: number, prod: any) => total + (prod.precioFinal * prod.cantidad), 0);
   }
+
+    //SERVICE PARA TRAER CLIENTE POR ID
+  async getProductoById(id: string) {
+    const productoRef = doc(this.firestore, `productos/${id}`);
+    const productoSnap = await getDoc(productoRef);
+    if (productoSnap.exists()) {
+      return [{ id: productoSnap.id, ...productoSnap.data() }];
+    }
+    return [];
+  }
+
+
+
+async getProductoByNombre(nombre: string) {
+  const productosRef = collection(this.firestore, 'productos');
+  const q = query(productosRef, where('nombre', '==', nombre));
+  const querySnapshot = await getDocs(q);
+
+  const productos: any[] = [];
+  querySnapshot.forEach((doc) => {
+    productos.push({ id: doc.id, ...doc.data() });
+  });
+
+  return productos;
+}
+
 
   //SERVICIO PARA CARGAR EN EL CARRITO EL PRODUCTO
   cargarProductoCarrito(producto: any, cantidad: number = 1): Promise<boolean> {

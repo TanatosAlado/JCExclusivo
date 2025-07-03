@@ -1,0 +1,64 @@
+<div class="container" *ngFor="let producto of detalleProducto">
+  <div class="left">
+    <div class="image-container">
+      <!-- <div *ngIf="producto.porcentajeOferta" class="precio-circulo">{{ producto.porcentajeOferta }}% OFF</div> -->
+      <img [src]="producto.imagen" class="card-img-top" [alt]="producto.nombre">
+    </div>
+  </div>
+  <div class="right">
+    <div class="breadcrumb">
+      <a >Inicio> </a>
+      <a>Marca > </a>
+      <a>{{ producto.marca }}</a>
+    </div>
+    <h2 class="card-title">{{ producto.nombre }}</h2>
+    <div class="precios">
+      <!-- <p class="precio-regular"   [class.oculto]="!producto.precioOferta"> -->
+        <p class="precio-oferta">${{ producto.precioMinorista }}</p>
+          
+        <!-- </p> -->
+
+        <!-- Precio de oferta o precio final sin tachar -->
+        <!-- <p class="precio-oferta">
+          ${{ producto.precioOferta || producto.precioFinal }}
+        </p> -->
+    </div>
+    <div class="carrito">
+      <div class="cantidad-container">
+        <button style="color:#068c89"  (click)="disminuirCantidad()">-</button>
+        <input type="text" [(ngModel)]="cantidad" readonly>
+        <button style="color:#068c89; ;" (click)="aumentarCantidad()">+</button>
+      </div>
+      <button (click)="cargaCarrito(producto)" class="agregar-carrito">AGREGAR AL CARRITO</button>
+    </div>
+    <h4 class="pagos">Medios de pago</h4>
+    <div class="iconos-container">
+      <img src="../../../assets/icons/argencard.png" alt="Icono 1" class="icono">
+      <img src="../../../assets/icons/cabal.png" alt="Icono 2" class="icono">
+      <img src="../../../assets/icons/cencosud.png" alt="Icono 3" class="icono">
+      <img src="../../../assets/icons/mastercard.png" alt="Icono 4" class="icono">
+      <img src="../../../assets/icons/mercadopago.png" alt="Icono 5" class="icono">
+      <img src="../../../assets/icons/naranja.png" alt="Icono 6" class="icono">
+      <img src="../../../assets/icons/nativa.png" alt="Icono 7" class="icono">
+      <img src="../../../assets/icons/visa.png" alt="Icono 8" class="icono">
+    </div>
+    <hr class="linea-divisoria-mobile" />
+  </div>
+</div>
+<div class="container">
+  <div class="descripciones" *ngFor="let producto of detalleProducto">
+    <div *ngIf="producto.tituloDescripcion || producto.descripcion">
+        <h5>DESCRIPCION:</h5>
+      <h2 class="card-title" *ngIf="producto.tituloDescripcion">{{ producto.tituloDescripcion }}</h2>
+      <div class="card-title" *ngIf="producto.descripcion">{{ producto.descripcion }}</div>
+    </div>
+    <div *ngIf="producto.modoUsoDescripcion">
+      <h5>MODO USO:</h5>
+      <div class="card-title">{{ producto.modoUsoDescripcion }}</div>
+    </div>
+    <div *ngIf="producto.beneficiosDescripcion">
+      <h5>BENEFICIOS:</h5>
+      <div class="card-title">{{ producto.beneficiosDescripcion }}</div>
+    </div>
+  </div>
+</div>

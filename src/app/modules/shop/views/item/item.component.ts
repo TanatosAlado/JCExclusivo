@@ -5,6 +5,7 @@ import { ToastService } from 'src/app/shared/services/toast.service';
 import { MatDialog } from '@angular/material/dialog';
 import { LoginComponent } from 'src/app/modules/auth/views/login/login.component';
 import { Cliente } from 'src/app/modules/auth/models/cliente.model';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-item',
@@ -18,7 +19,7 @@ export class ItemComponent {
   @Input() esMayorista: boolean = false;
   loadingCarrito: { [id: string]: boolean } = {};
 
-  constructor(private generalService:GeneralService,private toastService: ToastService,private dialog: MatDialog){
+  constructor(private generalService:GeneralService,private toastService: ToastService,private dialog: MatDialog,private router: Router){
 
   }
 
@@ -78,6 +79,13 @@ agregarCarrito(producto: any) {
       console.error(err);
     })
     .finally(finalizar);
+}
+
+//FUNCION PARA BUSCAR PRODUCTO POR NOMBRE Y NAVEGAR AL DETALLE
+buscarPorNombre(nombre:string){
+ this.router.navigate([`producto/${nombre}`])
+ console.log(this.producto)
+
 }
 
 

@@ -7,6 +7,8 @@ import { ItemComponent } from './views/item/item.component';
 import { GrillaItemComponent } from './views/grilla-item/grilla-item.component';
 import { SharedModule } from 'src/app/shared/shared.module';
 import { BannerComponent } from './views/banner/banner.component';
+import { DetalleProductoComponent } from './views/detalle-producto/detalle-producto.component';
+import { CheckoutComponent } from './views/checkout/checkout.component';
 
 
 
@@ -17,7 +19,9 @@ import { BannerComponent } from './views/banner/banner.component';
     DestacadosComponent,
     ItemComponent,
     GrillaItemComponent,
-    BannerComponent
+    BannerComponent,
+    DetalleProductoComponent,
+    CheckoutComponent
   ],
   imports: [
     CommonModule,

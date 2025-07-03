@@ -7,6 +7,7 @@ import { AdminLayoutComponent } from './modules/admin/components/admin-layout/ad
 import { GestionesComponent } from './modules/admin/views/gestiones/gestiones/gestiones.component';
 import { LayoutShopComponent } from './modules/shop/components/layout-shop/layout-shop.component';
 import { GrillaItemComponent } from './modules/shop/views/grilla-item/grilla-item.component';
+import { DetalleProductoComponent } from './modules/shop/views/detalle-producto/detalle-producto.component';
 
 const routes: Routes = [
     { path: '', redirectTo: 'inicio', pathMatch: 'prefix' },
@@ -24,6 +25,7 @@ const routes: Routes = [
     ]
   },
   {path:'productos',component: GrillaItemComponent},
+  {path:'producto/:id',component:DetalleProductoComponent}
 ];
 
 @NgModule({
