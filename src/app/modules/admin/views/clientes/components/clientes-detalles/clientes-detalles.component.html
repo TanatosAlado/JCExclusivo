@@ -1,1 +1,24 @@
-<p>clientes-detalles works!</p>
+<h2 mat-dialog-title>Detalle del Cliente</h2>
+
+<mat-dialog-content>
+  <div *ngIf="cliente.esMayorista; else minorista">
+    <p><strong>Razón Social:</strong> {{ cliente.razonSocial }}</p>
+    <p><strong>CUIT:</strong> {{ cliente.cuit }}</p>
+  </div>
+
+  <ng-template #minorista>
+    <p><strong>Nombre:</strong> {{ cliente.nombre }} {{ cliente.apellido }}</p>
+    <p><strong>DNI:</strong> {{ cliente.dni }}</p>
+  </ng-template>
+
+  <p><strong>Usuario:</strong> {{ cliente.usuario }}</p>
+  <p><strong>Email:</strong> {{ cliente.mail }}</p>
+  <p><strong>Teléfono:</strong> {{ cliente.telefono }}</p>
+  <p><strong>Dirección:</strong> {{ cliente.direccion }}</p>
+  <p><strong>Estado:</strong> {{ cliente.estado ? 'Activo' : 'Inactivo' }}</p>
+  <p><strong>Puntos:</strong> {{ cliente.puntos }}</p>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close>Cerrar</button>
+</mat-dialog-actions>

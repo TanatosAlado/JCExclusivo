@@ -22,6 +22,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { CarritoComponent } from './components/carrito/carrito.component';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 
 
 @NgModule({
@@ -51,7 +52,8 @@ import { CarritoComponent } from './components/carrito/carrito.component';
     MatSnackBarModule,
     MatTooltipModule,
     MatBadgeModule,
-    MatAutocompleteModule
+    MatAutocompleteModule,
+    MatButtonToggleModule
   ],
   exports: [
     NavbarComponent,
@@ -75,7 +77,8 @@ import { CarritoComponent } from './components/carrito/carrito.component';
     MatSnackBarModule,
     MatTooltipModule,
     MatBadgeModule,
-    MatAutocompleteModule
+    MatAutocompleteModule,
+    MatButtonToggleModule
   ]
 })
 export class SharedModule { }
