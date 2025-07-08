@@ -1,1 +1,138 @@
-<p>checkout works!</p>
+<div class="contenedor">
+    <div class="columna izquierda">
+        <h2>FINALIZACION COMPRA</h2>
+        <div class="alerta">
+            <span class="alerta-icono">⚠️</span>
+            <span class="alerta-texto">Los pedidos pueden tener una demora de hasta 48 hs. Por cualquier consulta
+                comunicarse a nuestro WhatsApp</span>
+        </div>
+        <h3>Entrega de Pedido</h3>
+        <div class="opciones-envio">
+            <label>
+                <input type="radio" name="envio" [(ngModel)]="radioButtonSeleccionado" value="domicilio"
+                    (change)="showEnvio()" />
+                <span class="texto-opcion">Envío a domicilio</span>
+                <span class="info-opcion">A acordar</span>
+            </label>
+            <label>
+                <input type="radio" name="envio" [(ngModel)]="radioButtonSeleccionado" value="farmacia"
+                    (change)="showEnvio()" />
+                <span class="texto-opcion">Retiro en sucursal</span>
+                <span class="info-opcion">Gratis</span>
+            </label>
+            <div class="error-message" *ngIf="envioTocado && !radioButtonSeleccionado">
+                <span>Debe seleccionar una opción de entrega</span>
+            </div>
+        </div>
+        <div *ngIf="showOpcionesPago">
+            <h3>Opciones de Pago</h3>
+            <div class="opciones-envio">
+                <label>
+                    <input type="radio" name="efectivo" [(ngModel)]="opcionPagoSeleccionada" value="efectivo" />
+                    <span class="texto-opcion">Efectivo</span>
+                </label>
+
+                <label>
+                    <input type="radio" name="efectivo" [(ngModel)]="opcionPagoSeleccionada" value="transferencia" />
+                    <span class="texto-opcion">Transferencia</span>
+                </label>
+                <div class="error-message" *ngIf="pagoTocado && !opcionPagoSeleccionada && showOpcionesPago">
+                    <span>Debe seleccionar una forma de pago</span>
+                </div>
+            </div>
+        </div>
+        <div class="alerta" *ngIf="showAlertaPago">
+            <span class="alerta-icono">✅</span>
+            <span class="alerta-texto">Contamos con todos los medios de pagos </span>
+        </div>
+        <div *ngIf="facturacionEnvio">
+            <h3>Datos de Envío</h3>
+            <form [formGroup]="formCheckout" class="form-container">
+                <div class="form-grid-carga-clientes" *ngIf="clienteEncontrado as cliente">
+                    <div class="form-field">
+                        <input type="text" formControlName="user" placeholder="{{ cliente.usuario}}" readonly />
+                    </div>
+                    <div class="form-field">
+                        <input type="text" formControlName="mail" placeholder="{{ cliente.mail }}" readonly />
+                    </div>
+                    <div class="form-field">
+                        <input type="text" formControlName="telefono" placeholder="{{ cliente.telefono }}" readonly />
+                    </div>
+                    <div class="form-field" style="display: flex; flex-direction: column; gap: 5px;">
+                        <input type="text" formControlName="domicilioEntrega" [readonly]="!direccionEditable"
+                            [placeholder]="direccionEditable ? '' : cliente.direccion"
+                            [value]="direccionEditable ? formCheckout.get('direccion')?.value : cliente.direccion"
+                            [ngStyle]="{ 'color': direccionEditable ? 'black' : 'gray', 'placeholder-color': direccionEditable ? 'black' : 'gray' }" />
+
+                        <label style="font-size: 0.9rem; margin-top: 5px;">
+                            <input type="checkbox" (change)="toggleDireccionEditable($event, cliente.direccion)" />
+                            Ingrese otra dirección de envío
+                        </label>
+                        <div class="error-message"
+                            *ngIf="direccionEditable && formCheckout.get('domicilioEntrega')?.invalid && mostrarErrores">
+                            <span>El domicilio de entrega es obligatorio</span>
+                        </div>
+
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="contenedor-boton">
+            <button (click)="registroCheckout()" type="submit">Finalizar pedido</button>
+        </div>
+    </div>
+
+    <div class="columna derecha">
+        <div *ngIf="clienteEncontrado as cliente">
+            <div *ngFor="let producto of cliente.carrito" class="card mb-3 shadow-sm border-0">
+                <div class="row g-0 align-items-center">
+                    <div class="col-4">
+                        <img style="width: 60%;" [src]="producto.imagen" alt="{{ producto.nombre }}" class="img-fluid rounded-start">
+                    </div>
+                    <div class="col-7">
+                        <div class="card-body py-2 px-3 text-center">
+                            <h6 class="card-title mb-2">
+                                <h6 class="card-title mb-2">
+                                    {{ producto.nombre }} x
+                                    <span style="color: #e71634;">{{ producto.cantidad }}u.</span>
+                                </h6>
+                            </h6>
+                            <div class="contenedor-productos">
+                            </div>
+                            <div class="info-precios mt-2">
+                                <strong class="precio-final">{{ producto.precioFinal * producto.cantidad | currency}}</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-1 d-flex justify-content-center align-items-start pt-3">
+                    </div>
+                </div>
+            </div>
+            <div class="resumen-carrito mt-3" *ngIf="cliente.carrito && cliente.carrito.length > 0">
+                <div class="resumen-linea">
+                    <h4>Total a pagar:</h4>
+                    <h4>{{ this.generalService.getTotalPrecio(cliente)|currency }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DE COMPRA FINALIZADA -->
+<div *ngIf="mostrarModal" class="modal-overlay">
+    <div class="modal-content">
+        <h2>¡Gracias por su compra! Nro Pedido:{{this.contador[0].contador}}</h2>
+        <p>Su pedido ha sido procesado con éxito.</p>
+        <button (click)="cerrarModal()">Cerrar</button>
+    </div>
+</div>
+<!-- MODAL DE COMPRA FINALIZADA -->
+<div *ngIf="mostrarModal" class="modal-overlay">
+    <div class="modal-content">
+        <h2>¡Gracias por su compra! Nro Pedido:{{this.contador[0].contador}}</h2>
+        <p>Su pedido ha sido procesado con éxito.</p>
+        <button (click)="cerrarModal()">Cerrar</button>
+    </div>
+</div>
+<!-- <app-whatsapp></app-whatsapp> -->
+<app-footer></app-footer>

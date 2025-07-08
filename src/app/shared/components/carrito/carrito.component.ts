@@ -78,9 +78,10 @@ export class CarritoComponent {
     // Forzar cierre manual quitando clases de Bootstrap
   document.body.classList.remove('offcanvas-backdrop', 'show');
   document.body.style.overflow = 'auto';
-
+document.body.style.paddingRight = '0px';
+ this.cerrarCarrito();
   this.router.navigate(['checkout']);
-  this.cerrarCarrito();
+  
   }
 
   cerrarCarrito() {

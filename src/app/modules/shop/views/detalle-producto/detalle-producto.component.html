@@ -25,9 +25,9 @@
     </div>
     <div class="carrito">
       <div class="cantidad-container">
-        <button style="color:#068c89"  (click)="disminuirCantidad()">-</button>
+        <button style="color:var(--color-primario)"  (click)="disminuirCantidad()">-</button>
         <input type="text" [(ngModel)]="cantidad" readonly>
-        <button style="color:#068c89; ;" (click)="aumentarCantidad()">+</button>
+        <button style="color:var(--color-primario); ;" (click)="aumentarCantidad()">+</button>
       </div>
       <button (click)="cargaCarrito(producto)" class="agregar-carrito">AGREGAR AL CARRITO</button>
     </div>
