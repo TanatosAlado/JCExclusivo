@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, firstValueFrom, Observable } from 'rxjs';
 import { Cliente } from 'src/app/modules/auth/models/cliente.model';
 import { ClientesService } from './clientes.service';
 import { CarritoService } from './carrito.service';
@@ -12,14 +12,59 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 export class GeneralService {
 
   private clienteSubject = new BehaviorSubject<Cliente | null>(null);
-  constructor(private clientesService:ClientesService, private carritoService:CarritoService,private firestore: Firestore) { }
+
+  constructor(private clientesService:ClientesService, private carritoService:CarritoService,private firestore: Firestore) { 
+    this.inicializarClienteDesdeStorage();
+  }
+
+private async inicializarClienteDesdeStorage() {
+  const clienteId = localStorage.getItem('cliente');
+
+  if (clienteId === 'invitado') {
+    const carritoRaw = localStorage.getItem('carritoInvitado');
+    const carrito = carritoRaw ? JSON.parse(carritoRaw) : [];
+
+    const clienteInvitado = new Cliente(
+      'invitado',
+      'invitado',
+      '',
+      '',
+      '',
+      [],
+      true,
+      'Invitado',
+      '',
+      false,
+      carrito,
+      '',
+      0,
+      false,
+      '',
+      ''
+    );
+    this.clienteSubject.next(clienteInvitado);
+  } else if (clienteId) {
+    try {
+      const cliente = await firstValueFrom(this.clientesService.getClienteById(clienteId));
+      this.clienteSubject.next(cliente);
+    } catch (e) {
+      console.error('Error al obtener cliente logueado:', e);
+    }
+  }
+}
+
 
 
   //SERVICE PARA GUARDAR EL CLIENTE LOGUEADO EN EL LS
-    setCliente(cliente: Cliente) {
-    this.clienteSubject.next(cliente);
+setCliente(cliente: Cliente | null) {
+  this.clienteSubject.next(cliente);
+
+  if (cliente) {
     localStorage.setItem('cliente', cliente.id);
+  } else {
+    localStorage.removeItem('cliente');
   }
+}
 
    getCliente(): Observable<Cliente | null> {
     return this.clienteSubject.asObservable();
@@ -61,44 +106,100 @@ async getProductoByNombre(nombre: string) {
 
 
   //SERVICIO PARA CARGAR EN EL CARRITO EL PRODUCTO
-  cargarProductoCarrito(producto: any, cantidad: number = 1): Promise<boolean> {
-  return new Promise((resolve, reject) => {
-    this.getCliente().subscribe({
-      next: (clienteEncontrado) => {
-        if (!clienteEncontrado) {
-          reject('No se encontró el cliente');
-          return;
-        }
 
-        const productoExistente = clienteEncontrado.carrito.find(item => item.id === producto.id);
+cargarProductoCarrito(producto: any, cantidad: number = 1): Promise<boolean> {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const clienteEncontrado = await firstValueFrom(this.getCliente());
 
-        if (productoExistente) {
-          productoExistente.cantidad += cantidad;
-        } else {
-          clienteEncontrado.carrito.push({
-            id: producto.id,
-            imagen: producto.imagen,
-            nombre: producto.nombre,
-            cantidad: cantidad,
-            precioOferta: producto.oferta,
-            stock:producto.stock,
-            precioFinal:producto.oferta? producto.precioOferta: producto.precioMinorista,
-          });
-        }
-
-        const datosLimpios = JSON.parse(JSON.stringify(clienteEncontrado));
-        this.clientesService.actualizarCliente(clienteEncontrado.id, datosLimpios)
-          .then(() => {
-            this.carritoService.actualizarCantidadProductos(clienteEncontrado);
-            resolve(true);
-          })
-          .catch((err) => reject('Error al actualizar cliente: ' + err));
-      },
-      error: (err) => {
-        reject('Error al obtener cliente: ' + err);
+      if (!clienteEncontrado) {
+        reject('No se encontró el cliente');
+        return;
       }
-    });
+
+      // 🟡 INVITADO: guardar en localStorage
+      if (clienteEncontrado.id === 'invitado') {
+        try {
+          const carritoRaw = localStorage.getItem('carritoInvitado');
+          let carrito = carritoRaw ? JSON.parse(carritoRaw) : [];
+
+          const index = carrito.findIndex(item => item.id === producto.id);
+          if (index > -1) {
+            carrito[index].cantidad += cantidad;
+          } else {
+            carrito.push({
+              id: producto.id,
+              imagen: producto.imagen,
+              nombre: producto.nombre,
+              cantidad: cantidad,
+              precioOferta: producto.oferta,
+              stock: producto.stock,
+              precioFinal: producto.oferta ? producto.precioOferta : producto.precioMinorista,
+            });
+          }
+
+          localStorage.setItem('carritoInvitado', JSON.stringify(carrito));
+          this.carritoService.actualizarCantidadProductosDesdeLocalStorage();
+
+          // 🔄 Refrescar clienteSubject con el nuevo carrito
+          const clienteActualizado = new Cliente(
+            'invitado',
+            'invitado',
+            '',
+            '',
+            '',
+            [],
+            true,
+            'Invitado',
+            '',
+            false,
+            carrito,
+            '',
+            0,
+            false,
+            '',
+            ''
+          );
+          this.clienteSubject.next(clienteActualizado);
+
+          resolve(true);
+        } catch (e) {
+          reject('Error al guardar carrito del invitado: ' + e);
+        }
+
+        return;
+      }
+
+      // 🟢 CLIENTE LOGUEADO: actualizar Firebase
+      const productoExistente = clienteEncontrado.carrito.find(item => item.id === producto.id);
+
+      if (productoExistente) {
+        productoExistente.cantidad += cantidad;
+      } else {
+        clienteEncontrado.carrito.push({
+          id: producto.id,
+          imagen: producto.imagen,
+          nombre: producto.nombre,
+          cantidad: cantidad,
+          precioOferta: producto.oferta,
+          stock: producto.stock,
+          precioFinal: producto.oferta ? producto.precioOferta : producto.precioMinorista,
+        });
+      }
+
+      const datosLimpios = JSON.parse(JSON.stringify(clienteEncontrado));
+      await this.clientesService.actualizarCliente(clienteEncontrado.id, datosLimpios);
+
+      this.carritoService.actualizarCantidadProductos(clienteEncontrado);
+      this.clienteSubject.next(clienteEncontrado);
+
+      resolve(true);
+
+    } catch (error) {
+      reject('Error general en cargarProductoCarrito: ' + error);
+    }
   });
 }
+
 
 }

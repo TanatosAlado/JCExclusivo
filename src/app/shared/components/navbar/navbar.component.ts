@@ -8,6 +8,7 @@ import { Router } from '@angular/router';
 import { GeneralService } from '../../services/general.service';
 import { ClientesService } from '../../services/clientes.service';
 import { AuthService } from 'src/app/modules/auth/services/auth.service';
+import { Observable } from 'rxjs';
 
 @Component({
   selector: 'app-navbar',
@@ -32,39 +33,37 @@ export class NavbarComponent {
   productos:any[]=[]
   cantidadProductos: number = 0;
   cantidadProductos$ = this.carritoService.cantidadProductos$;
+  clienteActual$: Observable<Cliente | null>;
+
   
   constructor(private carritoService: CarritoService,  
              private dialog:MatDialog,
               private router: Router,
              private generalService:GeneralService,
              private clientesService:ClientesService,
-             private authService: AuthService) {}
+             private authService: AuthService) {
 
-  ngOnInit() {
-    // this.getProductos()
-    const clienteGuardado = localStorage.getItem('cliente');
-    if (clienteGuardado) {
+              this.clienteActual$ = this.generalService.getCliente();
+             }
 
-      this.clientesService.getClienteById(clienteGuardado).subscribe({
+  ngOnInit(): void {
+    const clienteId = localStorage.getItem('cliente');
+    if (clienteId) {
+      this.clientesService.getClienteById(clienteId).subscribe({
         next: (cliente) => {
-          this.usuarioLogueado = true;
-          this.usrAdmin = cliente.administrador;
           this.generalService.setCliente(cliente);
-
-          // this.carritoService.actualizarCantidadProductos(cliente);
+          this.usrAdmin = cliente.administrador;
+          this.carritoService.actualizarCantidadProductos(cliente);
         },
-        error: (err) => {
-          console.error('Error al obtener cliente', err);
+        error: () => {
+          console.warn('Cliente no válido en localStorage');
           localStorage.removeItem('cliente');
         }
       });
     }
-
   }
-
   // Métodos para abrir los modales
   openIngreso(intencionMayorista: boolean = false) {
-    //this.authService.openIngresoModal();
     const dialogRef = this.dialog.open(LoginComponent, {
       data: { esMayorista: intencionMayorista },
       width: '400px',
@@ -73,19 +72,13 @@ export class NavbarComponent {
       panelClass: 'custom-dialog'
     });
 
-    // Escuchar el cierre del modal y obtener el cliente logueado
-
     dialogRef.afterClosed().subscribe((cliente: Cliente) => {
       if (cliente) {
-    //    this.cantidadProductos= this.getCantidadProductos(cliente.carrito)
-        this.usuarioLogueado = true;
+        this.generalService.setCliente(cliente);
         this.usrAdmin = cliente.administrador;
-   //     this.generalService.setCliente(cliente);
-    //    localStorage.setItem('cliente', cliente.id); //
-
-
+        this.carritoService.actualizarCantidadProductos(cliente);
       } else {
-        console.log('El usuario cerró el modal sin loguearse');
+        console.log('Modal cerrado sin login');
       }
     });
   }
@@ -98,20 +91,15 @@ export class NavbarComponent {
     // this.authService.openRegistroModal();
   }
 
-  closeSesion(){
-    // this.dialog.open(ConfirmDialogComponent, {
-    //   width: '400px',
-    //   data: {
-    //     message: '¿Está seguro que desea cerrar sesión?',
-    //     confirmAction: () => {
-    //       this.generalService.logout();
-           this.usuarioLogueado = false;
-           this.usrAdmin = false;
-           this.authService.logout();
-           this.router.navigate(['/']); // redirigir al home
-    //     }
-    //   }
-    // });
+  closeSesion() {
+    this.generalService.setCliente(null);
+    this.authService.logout(); // en caso de que uses firebase auth
+    localStorage.removeItem('cliente');
+    localStorage.removeItem('carritoInvitado');
+    this.usrAdmin = false;
+    this.carritoService.actualizarCantidadProductos(null);
+
+    this.router.navigate(['/']);
   }
 
     //FUNCION PARA BUSCAR PRODUCTOS EN EL CUADRO DE BUSQUEDA Y APAREZCAN LA LISTA DE LOS ENCONTRADOS
@@ -147,17 +135,13 @@ export class NavbarComponent {
     
   }
 
-    abrirCarrito() {
-    // Lógica para abrir el offcanvas o cualquier acción que necesites
+  abrirCarrito() {
     console.log('Carrito abierto');
-    // Si usas Bootstrap para el offcanvas, puedes hacerlo con código JavaScript o Angular
   }
 
   cerrarMenu() {
-  // const closeButton = document.querySelector('#offcanvasMenu .btn-close') as HTMLElement;
-  // if (closeButton) {
-  //   closeButton.click(); 
-  // }
+    const closeButton = document.querySelector('#offcanvasMenu .btn-close') as HTMLElement;
+    closeButton?.click();
   }
 
   async abrirHistorial() {

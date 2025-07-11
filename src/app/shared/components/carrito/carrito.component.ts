@@ -50,14 +50,21 @@ export class CarritoComponent {
 
   
   //ACTUALIZAR CAMBIOS EN EL CARRITO DEL CLINETE
-  guardarCambiosCarrito() {
-     const cliente = this.cliente
-     if (cliente) {
-       this.clienteService.actualizarCliente(cliente.id, cliente)
-         .then(() => (''))
-         .catch(err => console.error( err));
-     }
+guardarCambiosCarrito() {
+  const cliente = this.cliente;
+  if (!cliente) return;
+
+  if (cliente.id === 'invitado') {
+    // Actualizar carrito en localStorage para invitado
+    localStorage.setItem('carritoInvitado', JSON.stringify(cliente.carrito));
+    this.carritoService.actualizarCantidadProductosDesdeLocalStorage();
+  } else {
+    // Cliente logueado: actualizar en Firebase
+    this.clienteService.actualizarCliente(cliente.id, cliente)
+      .then(() => '')
+      .catch(err => console.error(err));
   }
+}
 
 
  eliminarDelCarrito(productoId: string) {
