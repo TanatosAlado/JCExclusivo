@@ -42,7 +42,7 @@
       <div class="d-flex gap-2 align-items-center">
         <a (click)="openIngreso(true)" class="btn btn-outline-warning">Mayoristas</a>
         <i (click)="openIngreso(false)" class="fas fa-user text-white"></i>
-        <div *ngIf="usuarioLogueado" class="carrito-icono" (click)="abrirCarrito()" data-bs-toggle="offcanvas"
+        <div class="carrito-icono" (click)="abrirCarrito()" data-bs-toggle="offcanvas"
           data-bs-target="#offcanvasCarrito" aria-controls="offcanvasCarrito">
           <i class="fas fa-shopping-cart text-white"></i>
           <span class="badge-cantidad" *ngIf="(cantidadProductos$ | async) as cantidad" [class.oculto]="cantidad === 0">
