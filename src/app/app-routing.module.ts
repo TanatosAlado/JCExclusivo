@@ -9,6 +9,7 @@ import { LayoutShopComponent } from './modules/shop/components/layout-shop/layou
 import { GrillaItemComponent } from './modules/shop/views/grilla-item/grilla-item.component';
 import { DetalleProductoComponent } from './modules/shop/views/detalle-producto/detalle-producto.component';
 import { CheckoutComponent } from './modules/shop/views/checkout/checkout.component';
+import { PedidosComponent } from './modules/admin/views/pedidos/pedidos.component';
 
 const routes: Routes = [
     { path: '', redirectTo: 'inicio', pathMatch: 'prefix' },
@@ -23,6 +24,7 @@ const routes: Routes = [
       { path: '', component: GestionesComponent }, 
       { path: 'clientes', component: ClientesComponent },
       { path: 'productos', component: ProductosComponent },
+      { path: 'pedidos', component: PedidosComponent },
     ]
   },
   {path:'productos',component: GrillaItemComponent},

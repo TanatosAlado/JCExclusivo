@@ -1,0 +1,522 @@
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.tabla-container {
+  margin: 20px auto;
+  max-width: 1200px;
+  /*overflow-x: auto;  Permite scroll horizontal en la tabla entera */
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  padding: 16px;
+}
+.tabs-container {
+   width: 100%;
+  /* max-width: 600px; */
+  margin: 0 auto; 
+  padding: 20px;
+}
+
+.tabs {
+  display: flex;
+  cursor: pointer;
+   justify-content: center; 
+   /* transform: translateX(-5%); */
+}
+
+.tab {
+  padding: 10px;
+  font-size: 16px;
+}
+
+.tab.active {
+  color: var( --color-primario);
+  font-weight: bolder;
+  border-bottom: 2px solid var( --color-primario);
+}
+.tab-content {
+  padding: 20px;
+  border-radius: 8px;
+  margin-top: 10px;
+}
+
+.content {
+  display: none; 
+  /* transform: translateX(-5%); */
+}
+.tab-content .content {
+  display: block;
+}
+
+.table-container {
+  width: 100%;
+ border-collapse: 0;
+  margin-bottom: 10px;
+  /* transform: translateX(-5%); */
+}
+
+.search-input {
+  padding: 8px;
+  width: 100%;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  box-sizing: border-box;
+}
+
+.responsive-table th,
+  .responsive-table td {
+    font-size: 0.9rem;
+}
+
+.cabecera {
+  background-color: var(--color-primario) !important;
+  color: white !important;
+  font-weight: bold !important;
+  text-align: center !important;
+}
+
+.pointer {
+  cursor: pointer;
+  margin-left: 2%;
+  margin-right: 2%;
+  color: var( --color-primario);
+}
+
+/* .paginator-container {
+  display: flex;
+  justify-content: right;
+  background-color: var( --color-primario);
+  font-weight: bold;
+  color: white;
+  
+} */
+
+table {
+  width: 100%;
+  margin-top: 1%;
+  border-collapse: collapse;
+  /* border: 1px solid black */
+}
+
+th,
+td {
+  /* border: 1px solid black; */
+  padding: 8px;
+  text-align: center;
+}
+
+table{
+  /* overflow-x: auto; */
+}
+
+th {
+  background-color: #068c89;
+  color: white;
+  font-weight: bold;
+}
+
+.container-section {
+  display: flex;
+}
+
+.carrito-container {
+  width: 90%;
+  max-width: 900px;
+  margin: 40px auto;
+  padding: 20px;
+  border-radius: 10px;
+  background-color: #f9f9f9;
+  box-shadow: 0 0 15px rgba(0,0,0,0.1);
+}
+
+.add-icon-pedido {
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+ align-content: flex-end;
+ text-align: right;
+ margin-left: 100%;
+  font-size: 20px
+}
+
+.producto {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 15px;
+  margin-bottom: 15px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  flex-wrap: wrap; /* permite mejor respuesta en mobile */
+}
+
+.producto img {
+  width: 80px;
+  height: 80px;
+  border-radius: 5px;
+}
+
+.detalle {
+  flex: 1;
+  margin-left: 15px;
+}
+
+.precio {
+  font-weight: bold;
+  font-size: 18px;
+  color: #333;
+}
+
+.total{
+  margin-top: 2%;
+  margin-bottom: 2%;
+  color: var( --color-primario);
+  font-weight: bolder;
+  font-size: 1.7rem;
+}
+
+a{
+  color: var( --color-primario);
+}
+
+.contenedor-imagen-pedido {
+  width: auto;  /* o un valor mayor si querés */
+  max-width: 150px;
+  height: auto;
+  max-height: 150px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: visible; /* para no cortar */
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+}
+.imagen-pedido {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+.tabla-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+/* Responsive para pantallas pequeñas */
+@media (max-width: 768px) {
+
+  th,
+  td {
+    padding: 8px;
+    font-size: 14px;
+  }
+
+  .paginator-container {
+    flex-direction: row;
+    align-items: right;
+  }
+}
+
+@media (max-width: 768px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .responsive-table th,
+  .responsive-table td {
+    font-size: 0.9rem;
+  }
+
+  .cabecera {
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 1024px) {
+  .container-section-left {
+    width: 50px;
+  }
+
+  .left {
+    opacity: 0;
+    visibility: visible; 
+    transition: opacity 0.3s ease, visibility 0.3s ease, width 0.3s ease;
+  }
+
+  .toggle-button {
+    visibility: visible;
+  }
+
+  #formContent {
+    margin-left: 0%;
+  }
+}
+
+/* Responsividad para pantallas medianas (tablets) */
+@media (max-width: 1024px) {
+  .form-grid {
+    grid-template-columns: repeat(2, 1fr);
+    /* 2 columnas en pantallas medianas */
+  }
+}
+
+
+/* Responsividad para pantallas pequeñas (móviles) */
+@media (max-width: 768px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+    /* 1 columna en pantallas pequeñas */
+  }
+
+  .button-container {
+    flex-direction: column;
+  }
+
+  input[type="submit"] {
+    width: 100%;
+    /* Los botones ocupan el 100% del ancho */
+  }
+}
+
+
+/* Pantallas pequeñas (celulares) */
+@media (max-width: 600px) {
+  /* .paginator-container {
+    transform: translateX(-2%) 
+  }
+    .search-container {
+      transform: translateX(-2%);
+    }
+    .table-container {
+      transform: translateX(-2%);
+    }
+    h4 {
+      transform: translateX(-2%);
+    }
+    #formContent {
+      transform: translateX(-2%);
+    }
+    #formContent-cargaClientes {
+      transform: translateX(-2%);
+      width: 100%;
+    } */
+    /* #formContentPass{
+      transform: translateX(-2%);
+      width: 100%;
+    } */
+  }
+
+
+/* Pantallas medianas (tablets) */
+@media (min-width: 601px) and (max-width: 1024px) {
+  /* .paginator-container {
+    transform: translateX(8%);
+  }
+  .search-container {
+    transform: translateX(8%);
+  }
+  .table-container {
+    transform: translateX(8%);
+  }
+  h4 {
+    transform: translateX(8%);
+  }
+  #formContent {
+    transform: translateX(8%);
+  }
+  #formContent-cargaClientes {
+    transform: translateX(8%);
+    width: 100%;
+  }
+  #formContentPass{
+     transform: translateX(15%);
+    width: 100%; 
+  } */
+}
+
+@media (max-width: 768px) {
+  body {
+    align-items: flex-start;
+  }
+
+  .carrito-container {
+    width: 100%;
+    margin-top: 20px;
+  }
+
+  .producto {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .detalle {
+    margin: 10px 0;
+  }
+
+  .precio {
+    margin: 10px 0;
+  }
+
+  .contenedor-imagen-pedido {
+    width: 80px;
+    height: 80px;
+  }
+}
+
+.container-section-rigth {
+  flex-grow: 1;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 20px;
+}
+
+.container-section-right {
+  width: 100%;
+
+  box-sizing: border-box;
+}
+
+.title-section {
+  text-align: center;
+  margin-top: 20px;
+
+}
+
+
+
+
+
+
+
+.container-section-left {
+  display: flex;
+  height: 100vh;
+  transition: width 0.3s ease;
+  width: 20%;
+}
+
+
+/* Fondo overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+/* Contenido del modal */
+.modal-contenido {
+  background-color: #fff;
+  padding: 25px 35px;
+  border-radius: 8px;
+  width: 80%;
+  max-width: 600px;
+  box-shadow: 0 8px 20px rgba(236, 19, 62, 0.25);
+}
+
+/* Título - reutilizamos clase dialog-title */
+.dialog-title {
+  font-weight: 700;
+  font-size: 1.5rem;
+  color: var( --color-primario);
+  border-bottom: 2px solid var( --color-primario);
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+/* Tabla */
+.tabla-impresion {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+}
+
+.tabla-impresion th,
+.tabla-impresion td {
+  border: 1px solid #ccc;
+  padding: 10px;
+  text-align: left;
+  font-size: 1rem;
+  color: #333;
+}
+
+.tabla-impresion th {
+  background-color: #f9f9f9;
+}
+
+/* Contenedor de botones */
+.acciones-modal {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+/* Botón Cancelar - reutilizamos clase btn-cancel */
+.btn-cancel {
+  color: #777;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 8px 16px;
+  font-size: 1rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+.btn-cancel:hover {
+  color: var( --color-primario);
+}
+
+/* Botón Confirmar (Imprimir) - reutilizamos clase btn-confirm */
+.btn-confirm {
+  background-color: var( --color-primario);
+  color: white;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 8px 16px;
+  font-size: 1rem;
+  border: none;
+  border-radius: 4px;
+  box-shadow: 0 4px 8px rgba(236, 19, 62, 0.4);
+  cursor: pointer;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+.btn-confirm:hover {
+  background-color: #b10e2b;
+  box-shadow: 0 6px 12px rgba(177, 14, 43, 0.6);
+}
+
+/* Media print */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .contenido-imprimir, .contenido-imprimir * {
+    visibility: visible;
+  }
+
+  .contenido-imprimir {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+
+  .no-imprimir {
+    display: none !important;
+  }
+}

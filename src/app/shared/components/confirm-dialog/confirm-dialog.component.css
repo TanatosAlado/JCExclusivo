@@ -1,0 +1,47 @@
+/* Título */
+.dialog-title {
+  font-weight: 700;
+  font-size: 1.5rem;
+  color: var( --color-primario);
+  border-bottom: 2px solid var( --color-primario);
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+/* Mensaje */
+.dialog-message {
+  font-size: 1.1rem;
+  color: #333;
+  margin: 0 0 1.5rem 0;
+  line-height: 1.4;
+}
+
+/* Contenedor de botones */
+.dialog-actions {
+  gap: 1rem;
+}
+
+/* Botón Cancelar */
+.btn-cancel {
+  color: #777;
+  font-weight: 600;
+  text-transform: uppercase;
+  transition: color 0.3s ease;
+}
+.btn-cancel:hover {
+  color: var( --color-primario);
+}
+
+/* Botón Confirmar */
+.btn-confirm {
+  background-color: var( --color-primario);
+  color: white;
+  font-weight: 700;
+  text-transform: uppercase;
+  box-shadow: 0 4px 8px rgba(236, 19, 62, 0.4);
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+.btn-confirm:hover {
+  background-color: #b10e2b;
+  box-shadow: 0 6px 12px rgba(177, 14, 43, 0.6);
+}

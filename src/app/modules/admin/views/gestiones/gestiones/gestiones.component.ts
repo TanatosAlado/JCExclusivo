@@ -27,6 +27,7 @@ export class GestionesComponent {
       icono: 'fas fa-shopping-cart',
       ruta: '/gestiones/pedidos',
     },
+    
   ];
 
   constructor(private router: Router) { }

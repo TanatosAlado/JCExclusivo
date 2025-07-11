@@ -23,6 +23,7 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { CarritoComponent } from './components/carrito/carrito.component';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { ConfirmDialogComponent } from './components/confirm-dialog/confirm-dialog.component';
 
 
 @NgModule({
@@ -30,7 +31,8 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
     NavbarComponent,
     FooterComponent,
     DashboardComponent,
-    CarritoComponent
+    CarritoComponent,
+    ConfirmDialogComponent
   ],
   imports: [
     CommonModule,

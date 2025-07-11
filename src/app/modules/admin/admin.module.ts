@@ -12,6 +12,7 @@ import { EdicionProductoComponent } from './views/productos/components/edicion-p
 import { DetalleProductoComponent } from './views/productos/components/detalle-producto/detalle-producto.component';
 import { ClientesEditarComponent } from './views/clientes/components/clientes-editar/clientes-editar.component';
 import { ClientesDetallesComponent } from './views/clientes/components/clientes-detalles/clientes-detalles.component';
+import { PedidosComponent } from './views/pedidos/pedidos.component';
 
 
 
@@ -27,7 +28,8 @@ import { ClientesDetallesComponent } from './views/clientes/components/clientes-
     EdicionProductoComponent,
     DetalleProductoComponent,
     ClientesEditarComponent,
-    ClientesDetallesComponent
+    ClientesDetallesComponent,
+    PedidosComponent
   ],
   imports: [
     CommonModule,
