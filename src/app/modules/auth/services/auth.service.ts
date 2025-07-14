@@ -51,10 +51,10 @@ export class AuthService {
     }
   }
 
-  setUsuarioActual(cliente: Cliente): void {
-    this.clienteActualSubject.next(cliente);
-    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(cliente));
-  }
+setUsuarioActual(cliente: Cliente): void {
+  this.clienteActualSubject.next(cliente);
+  localStorage.setItem(this.STORAGE_KEY, JSON.stringify(cliente));
+}
 
   getUsuarioActual(): Observable<Cliente | null> {
     return this.clienteActualSubject.asObservable();

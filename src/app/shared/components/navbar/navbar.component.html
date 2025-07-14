@@ -40,16 +40,27 @@
 
       <!-- Acciones -->
       <div class="d-flex gap-2 align-items-center">
-        <a (click)="openIngreso(true)" class="btn btn-outline-warning">Mayoristas</a>
-        <i (click)="openIngreso(false)" class="fas fa-user text-white"></i>
-        <div *ngIf="usuarioLogueado" class="carrito-icono" (click)="abrirCarrito()" data-bs-toggle="offcanvas"
+
+        <!-- Mostrar login solo si NO hay cliente -->
+        <ng-container *ngIf="(clienteActual$ | async) === null">
+          <a (click)="openIngreso(true)" class="btn btn-outline-warning">Mayoristas</a>
+          <i (click)="openIngreso(false)" class="fas fa-user text-white"></i>
+        </ng-container>
+
+        <!-- Mostrar logout solo si HAY cliente -->
+        <ng-container *ngIf="(clienteActual$ | async) as cliente">
+          <span class="text-white me-2">{{ cliente.nombre }}</span>
+          <mat-icon (click)="closeSesion()" class="icono-header">logout</mat-icon>
+        </ng-container>
+
+        <!-- Icono carrito -->
+        <div class="carrito-icono" (click)="abrirCarrito()" data-bs-toggle="offcanvas"
           data-bs-target="#offcanvasCarrito" aria-controls="offcanvasCarrito">
           <i class="fas fa-shopping-cart text-white"></i>
           <span class="badge-cantidad" *ngIf="(cantidadProductos$ | async) as cantidad" [class.oculto]="cantidad === 0">
             {{ cantidad }}
           </span>
         </div>
-        <mat-icon *ngIf="usuarioLogueado" (click)="closeSesion()" class="icono-header">logout</mat-icon>
       </div>
     </div>
   </div>

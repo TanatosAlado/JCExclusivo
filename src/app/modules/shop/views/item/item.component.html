@@ -15,14 +15,6 @@
                 {{ esMayorista ? producto.precioMayorista : producto.precioMinorista | currency }}
             </h5>
         </div>
-        <!-- <div class="d-flex align-items-center justify-content-center mb-1">
-            <small class="fa fa-star text-primary mr-1"></small>
-            <small class="fa fa-star text-primary mr-1"></small>
-            <small class="fa fa-star text-primary mr-1"></small>
-            <small class="fa fa-star text-primary mr-1"></small>
-            <small class="fa fa-star text-primary mr-1"></small>
-            <small>(99)</small>
-        </div> -->
         <div class="d-flex align-items-center justify-content-center mb-1"
             *ngIf="producto.tieneVariantes && producto.variantes?.length">
             <div *ngFor="let variante of producto.variantes" class="color-circle me-1 mb-1"

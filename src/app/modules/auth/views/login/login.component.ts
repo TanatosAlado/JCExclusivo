@@ -4,6 +4,7 @@ import { AuthService } from '../../services/auth.service';
 import { Router } from '@angular/router';
 import { LoginRequest } from '../../models/loginRequest.model';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { Cliente } from '../../models/cliente.model';
 
 @Component({
   selector: 'app-login',
@@ -67,5 +68,29 @@ export class LoginComponent {
   resetLoginFail(): void {
     this.loginFail = false;
   }
+
+  continuarComoInvitado(): void {
+  const clienteInvitado = new Cliente(
+    'invitado',        // id
+    'invitado',        // usuario
+    '',                // mail
+    '',                // telefono
+    '',                // direccion
+    [],                // historial
+    true,              // estado
+    'Invitado',        // nombre
+    '',                // apellido
+    false,             // administrador
+    [],                // carrito
+    '',                // dni
+    0,                 // puntos
+    false,             // esMayorista
+    '',                // razonSocial
+    ''                 // cuit
+  );
+
+  this.authService.setUsuarioActual(clienteInvitado); 
+  this.dialogRef.close(clienteInvitado);
+}
 
 }

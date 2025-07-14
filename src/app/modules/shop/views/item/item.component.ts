@@ -34,11 +34,11 @@ export class ItemComponent {
 
 agregarCarrito(producto: any) {
   const cliente = this.generalService.getClienteActual();
-
   this.loadingCarrito[producto.id] = true;
 
   const finalizar = () => this.loadingCarrito[producto.id] = false;
 
+  // Si NO hay cliente logueado ni invitado → abrir login opcional
   if (!cliente) {
     const dialogRef = this.dialog.open(LoginComponent, {
       width: '400px',
@@ -50,18 +50,11 @@ agregarCarrito(producto: any) {
     dialogRef.afterClosed().subscribe((clienteLogueado: Cliente) => {
       if (clienteLogueado) {
         this.generalService.setCliente(clienteLogueado);
-        localStorage.setItem('cliente', clienteLogueado.id);
-        
-        this.generalService.cargarProductoCarrito(producto, 1)
-          .then(() => {
-            this.toastService.toastMessage('Producto agregado al carrito', 'green', 2000);
-          })
-          .catch(err => {
-            this.toastService.toastMessage('El producto no pudo agregarse', 'red', 2000);
-            console.error(err);
-          });
+        localStorage.setItem('cliente', JSON.stringify(clienteLogueado)); // guardás todo el objeto para recuperar
+        this.procesarProductoEnCarrito(clienteLogueado, producto, finalizar);
       } else {
-        this.toastService.toastMessage('Debe iniciar sesión para agregar productos al carrito', 'orange', 3000);
+        // Usuario cerró el modal sin loguear ni continuar como invitado
+        this.toastService.toastMessage('Debes iniciar sesión o continuar como invitado para agregar productos al carrito.', 'orange', 3000);
         finalizar();
       }
     });
@@ -69,7 +62,11 @@ agregarCarrito(producto: any) {
     return;
   }
 
-  // Usuario ya logueado
+  // Cliente ya logueado o invitado
+  this.procesarProductoEnCarrito(cliente, producto, finalizar);
+}
+
+private procesarProductoEnCarrito(cliente: Cliente, producto: any, finalizar: () => void) {
   this.generalService.cargarProductoCarrito(producto, 1)
     .then(() => {
       this.toastService.toastMessage('Producto agregado al carrito', 'green', 2000);
