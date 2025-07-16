@@ -145,7 +145,7 @@
 
 
 
-  input[type=text],select
+  input[type=text],input[type=email],select
  {
  
   border: 2px solid #ccc;
@@ -195,7 +195,8 @@
   margin-top: 8%; 
 }
 
-button[type=submit]
+button[type=submit],
+button[type=button]
 {
   background-color: var(--color-primario);
   font-weight: bold;
