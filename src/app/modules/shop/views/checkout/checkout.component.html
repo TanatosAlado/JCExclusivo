@@ -139,11 +139,30 @@
       </div>
 
       <div class="resumen-carrito mt-3" *ngIf="cliente.carrito && cliente.carrito.length > 0">
-        <div class="resumen-linea">
+        <div class="resumen-linea mt-3 container" style="max-width: 400px; margin: auto;">
+          <div style="flex: 1;">
+            <div class="d-flex flex-column">
+              <strong>Canjeá tus puntos</strong>
+              <span>Puntos disponibles: {{ cliente.puntos }}</span>
+            </div>
+          </div>
+
+          <mat-slide-toggle color="primary" [(ngModel)]="usarPuntos" (change)="onTogglePuntos()"
+            [disabled]="cliente.puntos === 0"></mat-slide-toggle>
+        </div>
+
+        <div class="resumen-linea mt-3">
           <h4>Total a pagar:</h4>
-          <h4>{{ generalService.getTotalPrecio(cliente) | currency }}</h4>
+          <h4>{{ generalService.getTotalPrecio(cliente, usarPuntos) | currency }}</h4>
+        </div>
+
+        <div *ngIf="usarPuntos && cliente.puntos > 0">
+          <small class="text-success">
+            Descuento por puntos: {{ cliente.puntos * 50 | currency }}
+          </small>
         </div>
       </div>
+
     </div>
   </div>
 </div>

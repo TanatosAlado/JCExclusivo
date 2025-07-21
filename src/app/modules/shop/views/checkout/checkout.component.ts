@@ -34,7 +34,7 @@ mail = localStorage.getItem('mail')
   direccionEditable = false;
   mostrarModal = false;
   contador: Contador[] = []
-
+  usarPuntos: boolean = false;
 
   constructor(private firestore: Firestore, private fb: FormBuilder, private clienteService: ClientesService, public pedidoService: PedidosService, public generalService: GeneralService, private contadorService: ContadorService, private router: Router, private carritoService: CarritoService) {
 
@@ -294,5 +294,11 @@ cerrarModal() {
       this.contador[0].contador += 1;
     }
   }
+
+onTogglePuntos() {
+  if (this.usarPuntos) {
+    console.log(`Puntos disponibles: ${this.clienteEncontrado.puntos}`);
+  }
+}  
 
 }
