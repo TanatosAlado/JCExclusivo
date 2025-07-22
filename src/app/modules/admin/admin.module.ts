@@ -13,6 +13,8 @@ import { DetalleProductoComponent } from './views/productos/components/detalle-p
 import { ClientesEditarComponent } from './views/clientes/components/clientes-editar/clientes-editar.component';
 import { ClientesDetallesComponent } from './views/clientes/components/clientes-detalles/clientes-detalles.component';
 import { PedidosComponent } from './views/pedidos/pedidos.component';
+import { EmpresaComponent } from './views/empresa/empresa.component';
+import { GiftsComponent } from './views/gifts/gifts.component';
 
 
 
@@ -29,7 +31,9 @@ import { PedidosComponent } from './views/pedidos/pedidos.component';
     DetalleProductoComponent,
     ClientesEditarComponent,
     ClientesDetallesComponent,
-    PedidosComponent
+    PedidosComponent,
+    EmpresaComponent,
+    GiftsComponent
   ],
   imports: [
     CommonModule,

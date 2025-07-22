@@ -99,6 +99,12 @@ document.body.style.paddingRight = '0px';
     }
   }
 
+ getPuntosPorCompra(): number {
+  const total = this.generalService.getTotalPrecio(this.cliente);
+  return Math.floor(total / 200);
+} 
+
+
 }
 
   

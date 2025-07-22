@@ -75,9 +75,25 @@ setCliente(cliente: Cliente | null) {
   }
 
    //FUNCION PARA OBTENER LA CANTIDAD TOTAL A PAGAR DEL CARRITO DEL CLIENTE
-   getTotalPrecio(cliente: any): number {
-    return cliente.carrito.reduce((total: number, prod: any) => total + (prod.precioFinal * prod.cantidad), 0);
+  //  getTotalPrecio(cliente: any): number {
+  //   return cliente.carrito.reduce((total: number, prod: any) => total + (prod.precioFinal * prod.cantidad), 0);
+  // }
+getTotalPrecio(cliente: any, usarPuntos: boolean = false): number {
+  const total = cliente.carrito.reduce(
+    (sum: number, prod: any) => sum + (prod.precioFinal * prod.cantidad),
+    0
+  );
+
+  if (usarPuntos && cliente.puntos > 0) {
+    const valorPunto = 50;
+    const maxPuntosPorMonto = Math.floor(total / valorPunto);
+    const puntosUsables = Math.min(cliente.puntos, maxPuntosPorMonto);
+    const descuento = puntosUsables * valorPunto;
+    return Math.max(total - descuento, 0);
   }
+
+  return total;
+}
 
     //SERVICE PARA TRAER CLIENTE POR ID
   async getProductoById(id: string) {

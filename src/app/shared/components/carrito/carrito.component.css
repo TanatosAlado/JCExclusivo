@@ -176,3 +176,10 @@ button {
   display: block;
   margin: 0 auto;
 }
+
+.resumen-carrito h6 {
+  color: var(--color-primario);
+  font-weight: bold;
+  margin-top: 1rem;
+  text-align: center;
+}

@@ -120,13 +120,19 @@
 ::ng-deep input:not([readonly])::placeholder {
   color: black !important;
 }
-.resumen-linea {
+/* .resumen-linea {
   display: flex;
   flex-direction: column;
-  align-items: center; /* centra el contenido horizontalmente */
+  align-items: center; 
   justify-content: center;
   gap: 10px;
   margin-top: 20px;
+} */
+
+.resumen-linea {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .fila-resumen {
@@ -145,7 +151,7 @@
 
 
 
-  input[type=text],select
+  input[type=text],input[type=email],select
  {
  
   border: 2px solid #ccc;
@@ -195,7 +201,8 @@
   margin-top: 8%; 
 }
 
-button[type=submit]
+button[type=submit],
+button[type=button]
 {
   background-color: var(--color-primario);
   font-weight: bold;
@@ -316,4 +323,3 @@ button[type=submit]
   }
 }
 
-  

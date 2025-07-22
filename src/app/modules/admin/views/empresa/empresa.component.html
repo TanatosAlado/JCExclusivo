@@ -1,0 +1,29 @@
+<app-encabezado>
+  Gestión de información de la empresa
+</app-encabezado>
+
+<div class="contenedor-form" *ngIf="!cargando">
+  <form [formGroup]="infoForm" (ngSubmit)="guardar()">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>WhatsApp</mat-label>
+      <input matInput formControlName="whatsapp" placeholder="Ej: 5493411234567">
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>CVU</mat-label>
+      <input matInput formControlName="cvu" placeholder="Ej: 0000003100000000000000">
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Alias</mat-label>
+      <input matInput formControlName="alias" placeholder="Ej: alias.bancario">
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Email de contacto</mat-label>
+      <input matInput type="email" formControlName="email" placeholder="Ej: contacto@empresa.com">
+    </mat-form-field>
+
+    <button mat-raised-button color="primary" type="submit" [disabled]="infoForm.invalid">Guardar cambios</button>
+  </form>
+</div>
