@@ -34,3 +34,81 @@
     --mdc-snackbar-supporting-text-color: #fff !important;
    
   }
+
+  /* Paginador */
+mat-paginator {
+  margin-top: 16px;
+    display: flex;
+  justify-content: right;
+  background-color:var(--color-primario) !important;
+  font-weight: bold !important;
+  color: white !important;
+}
+
+/* Estilo general del paginator */
+mat-paginator {
+  background-color: var(--color-primario) !important;
+  color: white !important;
+  font-weight: bold;
+}
+
+/* Contenedor del paginator */
+.mat-mdc-paginator-container {
+  color: white !important;
+}
+
+/* Flechas (iconos de navegación) */
+.mat-mdc-icon-button svg {
+  fill: white !important;
+}
+
+/* Textos como "1–10 of 100" */
+.mat-mdc-paginator-range-label {
+  color: white !important;
+}
+
+/* Select de cantidad por página */
+.mat-mdc-select-value {
+  color: white !important;
+}
+
+
+/* Icono de desplegable del select */
+.mat-mdc-select-arrow svg {
+  fill: white !important;
+}
+
+/* Tooltip y overlay (opcional) */
+.mat-mdc-option {
+  color: black !important; /* si querés que el menú desplegable siga siendo legible */
+}
+/* Elimina bordes y fondo oscuros del contenedor del select */
+.mat-mdc-select {
+  background-color: white !important;
+  border: 1px solid white !important;
+  border-radius: 4px !important;
+  color: black !important;
+}
+
+/* Cambia el icono de flecha a negro o blanco según tu fondo */
+.mat-mdc-select-arrow svg {
+  fill: black !important; /* blanco si tu fondo es oscuro */
+}
+
+/* Texto del valor seleccionado */
+.mat-mdc-select-value {
+  color: black !important;
+}
+
+/* Panel desplegable */
+.mat-mdc-select-panel {
+  background-color: white !important;
+  color: black !important;
+  border: 1px solid #ccc !important;
+}
+
+.mat-mdc-paginator .mdc-notched-outline__leading,
+.mat-mdc-paginator .mdc-notched-outline__notch,
+.mat-mdc-paginator .mdc-notched-outline__trailing {
+  border-color: transparent !important;
+}
