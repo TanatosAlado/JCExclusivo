@@ -1,40 +1,49 @@
 <div class="container mt-5">
-
   <div class="tabla-container">
     <div class="button-container">
-      <button mat-raised-button color="primary" (click)="abrirModalAltaProducto()">Nuevo</button>
+       <button mat-raised-button class="boton-nuevo" (click)="abrirModalAltaProducto()">Nuevo</button>
     </div>
-    <table mat-table [dataSource]="productos" class="mat-elevation-z8" style="width: 100%;">
-      <ng-container matColumnDef="nombre">
-        <mat-header-cell *matHeaderCellDef> Nombre </mat-header-cell>
-        <mat-cell *matCellDef="let producto"> {{producto.nombre}} </mat-cell>
-      </ng-container>
-  
-      <ng-container matColumnDef="descripcion">
-        <mat-header-cell *matHeaderCellDef> Descripción </mat-header-cell>
-        <mat-cell *matCellDef="let producto"> {{producto.descripcion}} </mat-cell>
-      </ng-container>
+    <input class="search-input" (keyup)="applyFilter($event,datasourceProductos)" placeholder="Búsqueda Productos"
+      #input>
+    <div class="tabla-scroll">
+      <table mat-table [dataSource]="datasourceProductos" class="mat-elevation-z8" style="width: 100%;">
+        <!-- Nombre Column -->
+        <ng-container matColumnDef="nombre">
+          <th mat-header-cell *matHeaderCellDef class="cabecera"> Nombre </th>
+          <td mat-cell *matCellDef="let element"> {{element.nombre}} </td>
+        </ng-container>
 
+        <!-- Razon Social Column -->
+        <ng-container matColumnDef="descripcion">
+          <th mat-header-cell *matHeaderCellDef class="cabecera"> Descripción </th>
+          <td mat-cell *matCellDef="let element"> {{element.descripcion}} </td>
+        </ng-container>
 
-      <!-- Acciones Column -->
-      <ng-container matColumnDef="acciones">
-        <th mat-header-cell *matHeaderCellDef> Acciones </th>
-        <td mat-cell *matCellDef="let producto">
-          <button mat-icon-button color="primary" (click)="verProducto(producto)">
-            <mat-icon>remove_red_eye</mat-icon>
-          </button>
-          <button mat-icon-button color="primary" (click)="editarProducto(producto)">
-            <mat-icon>edit</mat-icon>
-          </button>
-          <button mat-icon-button color="warn" (click)="openConfirmDialog(producto)">
-            <mat-icon>delete</mat-icon>
-          </button>
-        </td>
-      </ng-container>
-  
-      <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
-      <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
-    </table>
+        <!-- Acciones Column -->
+        <ng-container matColumnDef="acciones">
+          <th mat-header-cell *matHeaderCellDef class="cabecera"> Acciones </th>
+          <td mat-cell *matCellDef="let element">
+            <a class="pointer" title="Ver Producto" (click)="verProducto(element)">
+              <i class="fa-solid fa-eye"></i>
+            </a>
+            <a class="pointer" title="Editar Producto" (click)="editarProducto(element)">
+              <i class="fa-solid fa-pen"></i>
+            </a>
+            <a class="pointer" title="Eliminar Producto" (click)="openConfirmDialog(element)">
+              <i class="fa-solid fa-trash"></i>
+            </a>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+
+      </table>
+    </div>
+    <div class="paginator-container">
+      <mat-paginator #paginatorPendientes [pageSizeOptions]="[5, 10, 15]" [pageSize]="10" showFirstLastButtons
+        aria-label="Select page of productos">
+      </mat-paginator>
+    </div>
   </div>
 </div>
-  
