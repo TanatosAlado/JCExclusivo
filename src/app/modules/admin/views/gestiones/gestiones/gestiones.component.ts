@@ -27,6 +27,18 @@ export class GestionesComponent {
       icono: 'fas fa-shopping-cart',
       ruta: '/gestiones/pedidos',
     },
+    {
+      titulo: 'Vouchers y membresía',
+      descripcion: 'Gestión de puntos por membresía y vouchers',
+      icono: 'fa-solid fa-gift',
+      ruta: '/gestiones/gifts',
+    },
+    {
+      titulo: 'Información de la Empresa',
+      descripcion: 'Gestión de información de la empresa',
+      icono: 'fa-solid fa-building',
+      ruta: '/gestiones/empresa',
+    },
     
   ];
 

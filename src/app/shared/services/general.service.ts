@@ -79,13 +79,17 @@ setCliente(cliente: Cliente | null) {
   //   return cliente.carrito.reduce((total: number, prod: any) => total + (prod.precioFinal * prod.cantidad), 0);
   // }
 getTotalPrecio(cliente: any, usarPuntos: boolean = false): number {
-  const total = cliente.carrito.reduce((sum: number, prod: any) => 
-    sum + (prod.precioFinal * prod.cantidad), 0
+  const total = cliente.carrito.reduce(
+    (sum: number, prod: any) => sum + (prod.precioFinal * prod.cantidad),
+    0
   );
 
   if (usarPuntos && cliente.puntos > 0) {
-    const descuento = cliente.puntos * 50;
-    return Math.max(total - descuento, 0); // evita negativo
+    const valorPunto = 50;
+    const maxPuntosPorMonto = Math.floor(total / valorPunto);
+    const puntosUsables = Math.min(cliente.puntos, maxPuntosPorMonto);
+    const descuento = puntosUsables * valorPunto;
+    return Math.max(total - descuento, 0);
   }
 
   return total;

@@ -31,6 +31,7 @@
       <span>Total a pagar:</span>
       <span>{{ this.generalService.getTotalPrecio(cliente)|currency }}</span>
     </div>
+    <h6 *ngIf = "cliente.nombre != 'Invitado'" >Esta compra sumará {{ getPuntosPorCompra() }} puntos</h6>
   </div>
 
   <div class="contenedor-compra" *ngIf="cliente.carrito && cliente.carrito.length > 0">

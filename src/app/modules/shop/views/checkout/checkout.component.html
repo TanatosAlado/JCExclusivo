@@ -111,7 +111,7 @@
 
 
     <div class="contenedor-boton">
-      <button (click)="registroCheckout()" type="button">Finalizar pedido</button>
+      <button (click)="registroCheckout(getPuntosAplicados(clienteEncontrado), (generalService.getTotalPrecio(clienteEncontrado, usarPuntos) / 200))" type="button">Finalizar pedido</button>
     </div>
   </div>
 
@@ -158,8 +158,14 @@
 
         <div *ngIf="usarPuntos && cliente.puntos > 0">
           <small class="text-success">
-            Descuento por puntos: {{ cliente.puntos * 50 | currency }}
+            Descuento por {{ getPuntosAplicados(cliente) }} puntos utilizados: {{ getPuntosAplicados(cliente) * 50 | currency }}
           </small>
+        </div>
+        <div>
+          <span>Esta compra sumará {{ (generalService.getTotalPrecio(cliente, usarPuntos) / 200) | number:'1.0-0' }}
+            puntos</span>
+
+
         </div>
       </div>
 

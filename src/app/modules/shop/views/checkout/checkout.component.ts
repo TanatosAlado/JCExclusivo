@@ -145,7 +145,7 @@ showEnvio() {
 
 
   //FUNCION PARA REALIZAR EL REGISTRO DEL PEDIDO
-  registroCheckout() {
+  registroCheckout(puntoRestar: number, puntosSumar: number) {
     this.envioTocado = true;
     this.pagoTocado = true;
     this.mostrarErrores = true;
@@ -160,12 +160,9 @@ showEnvio() {
     const envioSeleccionado = !!this.radioButtonSeleccionado;
     const pagoSeleccionado = !this.showOpcionesPago || !!this.opcionPagoSeleccionada;
 
-    console.log('VALIDEZ FORMULARIO:', this.formCheckout.valid);
-console.log('VALORES:', this.formCheckout.value);
-console.log('ESTADOS:', this.formCheckout.status);
     if (formularioValido && envioSeleccionado && pagoSeleccionado) {
       console.log('Formulario válido, se procede a crear el pedido');
-      this.createPedido()
+      this.createPedido(puntoRestar, puntosSumar);
       this.sumarContador()
       this.contadorService.updateContador(this.contador[0].id, { contador: this.contador[0].contador });
       this.abrirModal()
@@ -173,7 +170,7 @@ console.log('ESTADOS:', this.formCheckout.status);
   }
 
   //FUNCION PARA CREAR EL PEDIDO
-createPedido() {
+createPedido(puntoRestar: number, puntosSumar: number) {
   const carritoCliente = this.clienteEncontrado.carrito;
   const total = this.generalService.getTotalPrecio(this.clienteEncontrado);
   let direccion = 'S/E';
@@ -218,6 +215,9 @@ const unPedido: Pedido = {
       };
       this.clienteEncontrado.historial.push(historico);
       this.clienteEncontrado.carrito = [];
+      const puntosGanados = Math.floor(puntosSumar);
+      const puntosGastados = Math.floor(puntoRestar);
+      this.clienteEncontrado.puntos = this.clienteEncontrado.puntos - puntosGastados + puntosGanados;
 
       await this.clienteService.actualizarCliente(this.clienteEncontrado.id, this.clienteEncontrado);
     } else {
@@ -300,5 +300,21 @@ onTogglePuntos() {
     console.log(`Puntos disponibles: ${this.clienteEncontrado.puntos}`);
   }
 }  
+
+ getPuntosPorCompra(): number {
+  const total = this.generalService.getTotalPrecio(this.clienteEncontrado);
+  return Math.floor(total / 200);
+} 
+
+getPuntosAplicados(cliente: any): number {
+  const total = cliente.carrito.reduce(
+    (sum: number, prod: any) => sum + (prod.precioFinal * prod.cantidad),
+    0
+  );
+
+  const valorPunto = 50;
+  const maxPuntosPorMonto = Math.floor(total / valorPunto);
+  return Math.min(cliente.puntos, maxPuntosPorMonto);
+}
 
 }

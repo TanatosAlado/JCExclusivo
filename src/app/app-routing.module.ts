@@ -10,6 +10,8 @@ import { GrillaItemComponent } from './modules/shop/views/grilla-item/grilla-ite
 import { DetalleProductoComponent } from './modules/shop/views/detalle-producto/detalle-producto.component';
 import { CheckoutComponent } from './modules/shop/views/checkout/checkout.component';
 import { PedidosComponent } from './modules/admin/views/pedidos/pedidos.component';
+import { EmpresaComponent } from './modules/admin/views/empresa/empresa.component';
+import { GiftsComponent } from './modules/admin/views/gifts/gifts.component';
 
 const routes: Routes = [
     { path: '', redirectTo: 'inicio', pathMatch: 'prefix' },
@@ -25,6 +27,8 @@ const routes: Routes = [
       { path: 'clientes', component: ClientesComponent },
       { path: 'productos', component: ProductosComponent },
       { path: 'pedidos', component: PedidosComponent },
+      { path: 'empresa', component: EmpresaComponent },
+      { path: 'gifts', component: GiftsComponent },
     ]
   },
   {path:'productos',component: GrillaItemComponent},
