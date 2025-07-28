@@ -160,7 +160,7 @@
       <label class="form-label"><strong>¿Tenés un cupón de descuento?</strong></label>
       <div class="input-group">
         <input type="text" [formControl]="cuponControl" placeholder="Ingresá tu cupón" class="form-control" />
-        <button class="btn btn-outline-secondary" type="button" (click)="aplicarCupon()">Aplicar</button>
+        <button [disabled]="cuponAplicado || cuponControl.disabled" class="btn btn-outline-secondary" type="button" (click)="aplicarCupon()">Aplicar</button>
       </div>
 
       <!-- Cupón aplicado -->
@@ -178,6 +178,9 @@
           Quitar ❌
         </button>
       </div>
+<mat-hint *ngIf="cuponInvalido" class="error">
+  {{ mensajeCupon }}
+</mat-hint>
 
       <!-- Error de cupón -->
       <div *ngIf="errorCupon" class="text-danger mt-2">

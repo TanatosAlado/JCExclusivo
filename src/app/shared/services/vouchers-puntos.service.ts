@@ -105,7 +105,6 @@ async  marcarCuponComoUsado(id: string) {
 
 obtenerCuponPorCodigo(codigo: string): Promise<Cupon | null> {
 
-  console.log('Buscando cupón por código:', codigo);
   const ref = collection(this.firestore, 'Cupones');
   const q = query(ref, where('codigo', '==', codigo), where('activo', '==', true));
 

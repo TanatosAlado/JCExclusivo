@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Cliente } from 'src/app/modules/auth/models/cliente.model';
-import { Firestore } from '@angular/fire/firestore';
+import { Firestore, getDocs, query, where } from '@angular/fire/firestore';
 import { ClientesService } from 'src/app/shared/services/clientes.service';
 import { PedidosService } from 'src/app/shared/services/pedidos.service';
 import { GeneralService } from 'src/app/shared/services/general.service';
@@ -12,6 +12,7 @@ import { Pedido } from '../../models/pedido.model';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { ContadorService } from 'src/app/shared/services/contador.service';
 import { VouchersPuntosService } from 'src/app/shared/services/vouchers-puntos.service';
+import { collection } from 'firebase/firestore/lite';
 
 @Component({
   selector: 'app-checkout',
@@ -49,6 +50,8 @@ export class CheckoutComponent {
   mensajeCupon: string = '';
   productos: any[] = [];  // asumimos que ya lo estás cargando en el carrito
   total: number = 0;
+  cuponInvalido: boolean = false;
+
 
   constructor(private firestore: Firestore, private fb: FormBuilder, private clienteService: ClientesService, public pedidoService: PedidosService, public generalService: GeneralService, private contadorService: ContadorService, private router: Router, private carritoService: CarritoService, private puntosService: VouchersPuntosService) {
 
@@ -64,7 +67,12 @@ export class CheckoutComponent {
     this.getCliente()
     this.getContadorPedidos()
     await this.inicializarValoresPuntos();
-
+      this.cuponControl.valueChanges.subscribe(() => {
+    if (this.cuponInvalido) {
+      this.cuponInvalido = false;
+      this.mensajeCupon = '';
+    }
+  });
   }
 
   async inicializarValoresPuntos() {
@@ -333,23 +341,27 @@ export class CheckoutComponent {
   }
 
   aplicarCupon() {
-    const codigo = this.cuponControl.value?.trim();
-    if (!codigo) return;
+  const codigo = this.cuponControl.value?.trim();
+  if (!codigo) return;
 
-    this.puntosService.obtenerCuponPorCodigo(codigo).then((cupon) => {
-      if (cupon) {
-        this.cuponAplicado = cupon;
-        this.mensajeCupon = 'Cupón aplicado ✅';
-      } else {
-        console.error('Cupón no encontrado o no válido');
-        this.mensajeCupon = 'Cupón inválido o no disponible';
-      }
-    });
+  this.puntosService.obtenerCuponPorCodigo(codigo).then((cupon) => {
+    if (cupon) {
+      this.cuponAplicado = cupon;
+      this.cuponInvalido = false;
+      this.mensajeCupon = '';
+      this.cuponControl.disable(); // Deshabilitamos si es válido
+    } else {
+      this.cuponAplicado = null;
+      this.cuponInvalido = true;
+      this.mensajeCupon = 'Cupón inválido o no disponible ❌';
+    }
+  });
   }
 
   eliminarCupon() {
     this.cuponAplicado = null;
     this.errorCupon = '';
+    this.cuponControl.enable();
     this.cuponControl.setValue('');
   }
 
