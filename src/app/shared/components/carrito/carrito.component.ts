@@ -27,9 +27,14 @@ export class CarritoComponent {
   await this.cargarConfiguracionYCalculos();
   }
 
-  async cargarConfiguracionYCalculos() {
+async cargarConfiguracionYCalculos() {
   const config = await this.puntosService.obtenerValoresPuntos();
-  this.valorParaSumarPunto = config.valorParaSumarPunto;
+
+  if (config && config.valorParaSumarPunto) {
+    this.valorParaSumarPunto = config.valorParaSumarPunto;
+  } else {
+    console.warn('⚠️ No se encontró configuración de puntos en Firestore. Usando valor por defecto.');
+  }
 }
 
   getCliente(){

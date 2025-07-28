@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Cliente } from 'src/app/modules/auth/models/cliente.model';
 import { Firestore } from '@angular/fire/firestore';
 import { ClientesService } from 'src/app/shared/services/clientes.service';
@@ -41,6 +41,15 @@ export class CheckoutComponent {
   valorMonetarioPorPunto: number = 50;
   valorParaSumarPunto: number = 200;
 
+  codigoCupon: string = '';
+  cuponAplicado: any = null;
+  errorCupon: string = '';
+
+  cuponControl = new FormControl('');
+  mensajeCupon: string = '';
+  productos: any[] = [];  // asumimos que ya lo estás cargando en el carrito
+  total: number = 0;
+
   constructor(private firestore: Firestore, private fb: FormBuilder, private clienteService: ClientesService, public pedidoService: PedidosService, public generalService: GeneralService, private contadorService: ContadorService, private router: Router, private carritoService: CarritoService, private puntosService: VouchersPuntosService) {
 
     this.formCheckout = this.fb.group({
@@ -69,21 +78,22 @@ export class CheckoutComponent {
   getCliente() {
     this.generalService.getCliente().subscribe(cliente => {
       this.clienteEncontrado = cliente;
-
-      if (cliente.id === 'invitado') {
-        this.formCheckout.patchValue({
-          user: '',
-          mail: '',
-          telefono: '',
-          domicilioEntrega: '',
-        });
-      } else {
-        this.formCheckout.patchValue({
-          user: cliente.usuario,
-          mail: cliente.mail,
-          telefono: cliente.telefono,
-          domicilioEntrega: cliente.direccion,
-        });
+      if (cliente) {
+        if (cliente.id === 'invitado') {
+          this.formCheckout.patchValue({
+            user: '',
+            mail: '',
+            telefono: '',
+            domicilioEntrega: '',
+          });
+        } else {
+          this.formCheckout.patchValue({
+            user: cliente.usuario,
+            mail: cliente.mail,
+            telefono: cliente.telefono,
+            domicilioEntrega: cliente.direccion,
+          });
+        }
       }
     });
   }
@@ -177,6 +187,9 @@ export class CheckoutComponent {
     if (formularioValido && envioSeleccionado && pagoSeleccionado) {
       console.log('Formulario válido, se procede a crear el pedido');
       this.createPedido(puntoRestar, puntosSumar);
+      if (this.cuponAplicado) {
+        this.puntosService.marcarCuponComoUsado(this.cuponAplicado.id);
+      }
       this.sumarContador()
       this.contadorService.updateContador(this.contador[0].id, { contador: this.contador[0].contador });
       this.abrirModal()
@@ -186,7 +199,7 @@ export class CheckoutComponent {
   //FUNCION PARA CREAR EL PEDIDO
   createPedido(puntoRestar: number, puntosSumar: number) {
     const carritoCliente = this.clienteEncontrado.carrito;
-    const total = this.generalService.getTotalPrecio(this.clienteEncontrado);
+    const total = this.generalService.getTotalPrecio(this.clienteEncontrado, this.usarPuntos, this.valorMonetarioPorPunto, this.cuponAplicado);
     let direccion = 'S/E';
     let pago = 'S/P';
     const envio = this.radioButtonSeleccionado === 'domicilio' ? 'Envío' : 'Retiro';
@@ -309,19 +322,6 @@ export class CheckoutComponent {
     }
   }
 
-  onTogglePuntos() {
-    if (this.usarPuntos) {
-      console.log(`Puntos disponibles: ${this.clienteEncontrado.puntos}`);
-    }
-  }
-
-  getPuntosPorCompra(): number {
-    const total = this.generalService.getTotalPrecio(this.clienteEncontrado, this.usarPuntos, this.valorMonetarioPorPunto);
-
-   // const total = this.generalService.getTotalPrecio(this.clienteEncontrado);
-    return Math.floor(total / this.valorParaSumarPunto);
-  }
-
   getPuntosAplicados(cliente: any): number {
     const total = cliente.carrito.reduce(
       (sum: number, prod: any) => sum + (prod.precioFinal * prod.cantidad),
@@ -332,17 +332,25 @@ export class CheckoutComponent {
     return Math.min(cliente.puntos, maxPuntosPorMonto);
   }
 
-  // getPuntosAplicados(cliente: any): number {
-  //   const total = cliente.carrito.reduce(
-  //     (sum: number, prod: any) => sum + (prod.precioFinal * prod.cantidad),
-  //     0
-  //   );
+  aplicarCupon() {
+    const codigo = this.cuponControl.value?.trim();
+    if (!codigo) return;
 
-  //   const valorPunto = 50;
-  //   const maxPuntosPorMonto = Math.floor(total / valorPunto);
-  //   return Math.min(cliente.puntos, maxPuntosPorMonto);
-  // }
+    this.puntosService.obtenerCuponPorCodigo(codigo).then((cupon) => {
+      if (cupon) {
+        this.cuponAplicado = cupon;
+        this.mensajeCupon = 'Cupón aplicado ✅';
+      } else {
+        console.error('Cupón no encontrado o no válido');
+        this.mensajeCupon = 'Cupón inválido o no disponible';
+      }
+    });
+  }
 
-
+  eliminarCupon() {
+    this.cuponAplicado = null;
+    this.errorCupon = '';
+    this.cuponControl.setValue('');
+  }
 
 }

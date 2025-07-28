@@ -3,19 +3,92 @@
 </app-encabezado>
 
 <div class="container mt-4">
-  <h2>Configuración de Puntos</h2>
-
-  <form [formGroup]="formPuntos" (ngSubmit)="guardar()">
-    <div class="mb-3">
-      <label class="form-label">Monto para sumar 1 punto ($)</label>
-      <input type="number" class="form-control" formControlName="valorParaSumarPunto">
+  <!-- Card de configuración de puntos -->
+  <div class="card mb-4">
+    <div class="card-header bg-light">
+      <h5 class="mb-0">⚙️ Configuración de Puntos</h5>
     </div>
+    <div class="card-body">
+      <form [formGroup]="formPuntos" (ngSubmit)="guardar()">
+        <div class="mb-3">
+          <label class="form-label">Monto para sumar 1 punto ($)</label>
+          <input type="number" class="form-control" formControlName="valorParaSumarPunto">
+        </div>
 
-    <div class="mb-3">
-      <label class="form-label">Valor monetario por punto ($)</label>
-      <input type="number" class="form-control" formControlName="valorMonetarioPorPunto">
+        <div class="mb-3">
+          <label class="form-label">Valor monetario por punto ($)</label>
+          <input type="number" class="form-control" formControlName="valorMonetarioPorPunto">
+        </div>
+
+        <button type="submit" class="btn btn-success" [disabled]="formPuntos.invalid">
+          💾 Guardar configuración
+        </button>
+      </form>
     </div>
+  </div>
 
-    <button type="submit" class="btn btn-primary" [disabled]="formPuntos.invalid">Guardar</button>
-  </form>
+  <!-- Card de cupones -->
+  <div class="card">
+    <div class="card-header bg-light">
+      <h5 class="mb-0">🎟️ Cupones de descuento</h5>
+    </div>
+    <div class="card-body">
+      <form [formGroup]="cuponForm" (ngSubmit)="crearCupon()" class="mb-4">
+        <div class="row g-2">
+          <div class="col-md-4">
+            <input type="text" formControlName="codigo" class="form-control" placeholder="Código del cupón">
+          </div>
+
+          <div class="col-md-3">
+            <select formControlName="tipo" class="form-select">
+              <option value="monto">Monto fijo</option>
+              <option value="porcentaje">Porcentaje</option>
+            </select>
+          </div>
+
+          <div class="col-md-2">
+            <input type="number" formControlName="valor" class="form-control" placeholder="Valor">
+          </div>
+
+          <div class="col-md-2">
+            <input type="number" formControlName="cantidadDisponible" class="form-control" placeholder="Usos">
+          </div>
+
+          <div class="col-md-1 d-grid">
+            <button type="submit" class="btn btn-primary">➕</button>
+          </div>
+        </div>
+      </form>
+
+      <!-- Tabla de cupones existentes -->
+      <div *ngIf="cupones.length > 0">
+        <table class="table table-striped table-sm">
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Tipo</th>
+              <th>Valor</th>
+              <th>Usos disponibles</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let c of cupones">
+              <td><b>{{ c.codigo }}</b></td>
+              <td>{{ c.tipo }}</td>
+              <td>{{ c.tipo === 'porcentaje' ? c.valor + '%' : '$' + c.valor }}</td>
+              <td>{{ c.cantidadDisponible ?? '∞' }}</td>
+              <td>
+                <button class="btn btn-sm btn-danger" (click)="eliminarCupon(c)">🗑 Eliminar</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div *ngIf="cupones.length === 0" class="text-muted">
+        No hay cupones cargados aún.
+      </div>
+    </div>
+  </div>
 </div>

@@ -112,7 +112,7 @@
 
     <div class="contenedor-boton">
       <button
-        (click)="registroCheckout(getPuntosAplicados(clienteEncontrado), (generalService.getTotalPrecio(clienteEncontrado, usarPuntos) / 200))"
+        (click)="registroCheckout(getPuntosAplicados(clienteEncontrado), (generalService.getTotalPrecio(clienteEncontrado, usarPuntos) / valorParaSumarPunto ))"
         type="button">Finalizar pedido</button>
     </div>
   </div>
@@ -140,38 +140,86 @@
         </div>
       </div>
 
-      <div class="resumen-carrito mt-3" *ngIf="cliente.carrito && cliente.carrito.length > 0">
-        <div class="resumen-linea mt-3 container" style="max-width: 400px; margin: auto;">
-          <div style="flex: 1;">
-            <div class="d-flex flex-column">
-              <strong>Canjeá tus puntos</strong>
-              <span>Puntos disponibles: {{ cliente.puntos }}</span>
-            </div>
-          </div>
+<div class="resumen-carrito mt-3" *ngIf="cliente.carrito && cliente.carrito.length > 0">
 
-          <mat-slide-toggle color="primary" [(ngModel)]="usarPuntos" (change)="onTogglePuntos()"
-            [disabled]="cliente.puntos === 0"></mat-slide-toggle>
-        </div>
-
-        <div class="resumen-linea mt-3">
-          <h4>Total a pagar:</h4>
-          <h4>{{ generalService.getTotalPrecio(cliente, usarPuntos, this.valorMonetarioPorPunto) | currency }}</h4>
-        </div>
-
-        <div *ngIf="usarPuntos && cliente.puntos > 0">
-          <small class="text-success">
-            Descuento por {{ puntosAplicados }} puntos utilizados:
-            {{ puntosAplicados * valorMonetarioPorPunto | currency }}
-          </small>
-        </div>
-        <div>
-          <span>
-            Esta compra sumará
-            {{ (generalService.getTotalPrecio(cliente, usarPuntos) / valorParaSumarPunto) | number:'1.0-0' }}
-            puntos
-          </span>
-        </div>
+  <!-- Sección: Canjear Puntos -->
+  <div *ngIf="cliente.id != 'invitado'" class="card mb-3" style="max-width: 500px; margin: auto;">
+    <div class="card-body d-flex justify-content-between align-items-center">
+      <div>
+        <strong>Canjeá tus puntos</strong><br />
+        <small class="text-muted">Puntos disponibles: {{ cliente.puntos }}</small>
       </div>
+      <mat-slide-toggle color="primary" [(ngModel)]="usarPuntos" [disabled]="cliente.puntos === 0">
+      </mat-slide-toggle>
+    </div>
+  </div>
+
+  <!-- Sección: Ingresar Cupón -->
+  <div class="card mb-3" style="max-width: 500px; margin: auto;">
+    <div class="card-body">
+      <label class="form-label"><strong>¿Tenés un cupón de descuento?</strong></label>
+      <div class="input-group">
+        <input type="text" [formControl]="cuponControl" placeholder="Ingresá tu cupón" class="form-control" />
+        <button class="btn btn-outline-secondary" type="button" (click)="aplicarCupon()">Aplicar</button>
+      </div>
+
+      <!-- Cupón aplicado -->
+      <div *ngIf="cuponAplicado" class="text-success mt-3 d-flex align-items-center">
+        <span>
+          ✅ Cupón aplicado: <strong>{{ cuponAplicado.codigo }}</strong> -
+          <ng-container *ngIf="cuponAplicado.tipo === 'porcentaje'">
+            {{ cuponAplicado.valor }}% OFF
+          </ng-container>
+          <ng-container *ngIf="cuponAplicado.tipo === 'monto'">
+            ${{ cuponAplicado.valor }} OFF
+          </ng-container>
+        </span>
+        <button type="button" class="btn btn-sm btn-link text-danger ms-2 p-0" (click)="eliminarCupon()">
+          Quitar ❌
+        </button>
+      </div>
+
+      <!-- Error de cupón -->
+      <div *ngIf="errorCupon" class="text-danger mt-2">
+        {{ errorCupon }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Sección: Descuento por puntos -->
+  <div *ngIf="usarPuntos && cliente.puntos > 0" class="card mb-3" style="max-width: 500px; margin: auto;">
+    <div class="card-body">
+      <small class="text-success">
+        Descuento por {{ puntosAplicados }} puntos utilizados:
+        {{ puntosAplicados * valorMonetarioPorPunto | currency }}
+      </small>
+    </div>
+  </div>
+
+  <!-- Sección: Total a pagar -->
+  <div class="card mb-3" style="max-width: 500px; margin: auto;">
+    <div class="card-body d-flex justify-content-between align-items-center">
+      <h5 class="m-0">Total a pagar:</h5>
+      <h5 class="m-0 text-primary">
+        {{ generalService.getTotalPrecio(cliente, usarPuntos, valorMonetarioPorPunto, cuponAplicado) | currency }}
+      </h5>
+    </div>
+  </div>
+
+  <!-- Sección: Puntos a sumar -->
+  <div *ngIf="cliente.id != 'invitado'" class="card mb-3" style="max-width: 500px; margin: auto;">
+    <div class="card-body">
+      <small>
+        Esta compra sumará
+        <strong>
+          {{ (generalService.getTotalPrecio(cliente, usarPuntos) / valorParaSumarPunto) | number:'1.0-0' }}
+        </strong>
+        puntos
+      </small>
+    </div>
+  </div>
+
+</div>
 
     </div>
   </div>
