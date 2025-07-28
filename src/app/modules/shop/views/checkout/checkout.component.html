@@ -111,7 +111,9 @@
 
 
     <div class="contenedor-boton">
-      <button (click)="registroCheckout(getPuntosAplicados(clienteEncontrado), (generalService.getTotalPrecio(clienteEncontrado, usarPuntos) / 200))" type="button">Finalizar pedido</button>
+      <button
+        (click)="registroCheckout(getPuntosAplicados(clienteEncontrado), (generalService.getTotalPrecio(clienteEncontrado, usarPuntos) / 200))"
+        type="button">Finalizar pedido</button>
     </div>
   </div>
 
@@ -153,19 +155,21 @@
 
         <div class="resumen-linea mt-3">
           <h4>Total a pagar:</h4>
-          <h4>{{ generalService.getTotalPrecio(cliente, usarPuntos) | currency }}</h4>
+          <h4>{{ generalService.getTotalPrecio(cliente, usarPuntos, this.valorMonetarioPorPunto) | currency }}</h4>
         </div>
 
         <div *ngIf="usarPuntos && cliente.puntos > 0">
           <small class="text-success">
-            Descuento por {{ getPuntosAplicados(cliente) }} puntos utilizados: {{ getPuntosAplicados(cliente) * 50 | currency }}
+            Descuento por {{ puntosAplicados }} puntos utilizados:
+            {{ puntosAplicados * valorMonetarioPorPunto | currency }}
           </small>
         </div>
         <div>
-          <span>Esta compra sumará {{ (generalService.getTotalPrecio(cliente, usarPuntos) / 200) | number:'1.0-0' }}
-            puntos</span>
-
-
+          <span>
+            Esta compra sumará
+            {{ (generalService.getTotalPrecio(cliente, usarPuntos) / valorParaSumarPunto) | number:'1.0-0' }}
+            puntos
+          </span>
         </div>
       </div>
 

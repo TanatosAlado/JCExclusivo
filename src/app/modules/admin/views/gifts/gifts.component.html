@@ -2,3 +2,20 @@
   Gestión de vouchers y puntos por membresía
 </app-encabezado>
 
+<div class="container mt-4">
+  <h2>Configuración de Puntos</h2>
+
+  <form [formGroup]="formPuntos" (ngSubmit)="guardar()">
+    <div class="mb-3">
+      <label class="form-label">Monto para sumar 1 punto ($)</label>
+      <input type="number" class="form-control" formControlName="valorParaSumarPunto">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Valor monetario por punto ($)</label>
+      <input type="number" class="form-control" formControlName="valorMonetarioPorPunto">
+    </div>
+
+    <button type="submit" class="btn btn-primary" [disabled]="formPuntos.invalid">Guardar</button>
+  </form>
+</div>
