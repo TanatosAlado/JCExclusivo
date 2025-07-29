@@ -32,8 +32,8 @@ export class GiftsComponent implements OnInit {
     this.cuponForm = this.fb.group({
       codigo: ['', Validators.required],
       tipo: ['monto', Validators.required],
-      valor: [0, [Validators.required, Validators.min(1)]],
-      cantidadDisponible: [1, [Validators.required, Validators.min(1)]],
+      valor: [null, [Validators.required, Validators.min(1)]],
+      cantidadDisponible: [null, [Validators.required, Validators.min(1)]],
       activo: [true],
     });
   }
