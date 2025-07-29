@@ -5,6 +5,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { Cliente } from '../models/cliente.model';
 import { Auth, signInWithEmailAndPassword } from '@angular/fire/auth';
 import { collection, doc, Firestore, getDoc, getDocs, query, where } from '@angular/fire/firestore';
+import { GeneralService } from 'src/app/shared/services/general.service';
 
 @Injectable({
   providedIn: 'root'
@@ -15,7 +16,7 @@ export class AuthService {
   private readonly STORAGE_KEY = 'clienteActual';
   private clienteActualSubject = new BehaviorSubject<Cliente | null>(null);
 
-  constructor(private dialog: MatDialog, private auth: Auth, private firestore: Firestore) {
+  constructor(private dialog: MatDialog, private auth: Auth, private firestore: Firestore, private generalService: GeneralService) {
     const data = localStorage.getItem(this.STORAGE_KEY);
     if (data) this.clienteActualSubject.next(JSON.parse(data));
   }
@@ -69,8 +70,10 @@ setUsuarioActual(cliente: Cliente): void {
   }
 
   logout(): void {
+    this.generalService.setCliente(null);
     this.clienteActualSubject.next(null);
     localStorage.removeItem(this.STORAGE_KEY);
+    localStorage.removeItem('cliente');
   }
 
 }

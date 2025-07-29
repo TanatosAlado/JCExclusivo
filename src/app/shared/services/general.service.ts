@@ -17,54 +17,70 @@ export class GeneralService {
     this.inicializarClienteDesdeStorage();
   }
 
-  private async inicializarClienteDesdeStorage() {
-    const clienteId = localStorage.getItem('cliente');
+private async inicializarClienteDesdeStorage() {
+  const clienteId = localStorage.getItem('cliente');
 
-    if (clienteId === 'invitado') {
-      const carritoRaw = localStorage.getItem('carritoInvitado');
-      const carrito = carritoRaw ? JSON.parse(carritoRaw) : [];
+  if (clienteId === 'invitado') {
+    const carritoRaw = localStorage.getItem('carritoInvitado');
+    const carrito = carritoRaw ? JSON.parse(carritoRaw) : [];
 
-      const clienteInvitado = new Cliente(
-        'invitado',
-        'invitado',
-        '',
-        '',
-        '',
-        [],
-        true,
-        'Invitado',
-        '',
-        false,
-        carrito,
-        '',
-        0,
-        false,
-        '',
-        ''
-      );
-      this.clienteSubject.next(clienteInvitado);
-    } else if (clienteId) {
-      try {
-        const cliente = await firstValueFrom(this.clientesService.getClienteById(clienteId));
-        this.clienteSubject.next(cliente);
-      } catch (e) {
-        console.error('Error al obtener cliente logueado:', e);
-      }
+    const clienteInvitado = new Cliente(
+      'invitado',
+      'invitado',
+      '',
+      '',
+      '',
+      [],
+      true,
+      'Invitado',
+      '',
+      false,
+      carrito,
+      '',
+      0,
+      false,
+      '',
+      ''
+    );
+    this.clienteSubject.next(clienteInvitado);
+
+    // ✅ Asegurarse de que no haya residuos
+    localStorage.setItem('cliente', 'invitado');
+    return; // ⛔ Salir antes de buscar en Firebase
+  }
+
+  // Solo si no es invitado
+  if (clienteId) {
+    try {
+      const cliente = await firstValueFrom(this.clientesService.getClienteById(clienteId));
+      this.clienteSubject.next(cliente);
+    } catch (e) {
+      console.error('Error al obtener cliente logueado:', e);
     }
   }
+}
 
 
 
   //SERVICE PARA GUARDAR EL CLIENTE LOGUEADO EN EL LS
-  setCliente(cliente: Cliente | null) {
-    this.clienteSubject.next(cliente);
-    if (cliente) {
-      console.log('Guardando cliente en localStorage:', cliente.id);
-      localStorage.setItem('cliente', cliente.id);
-    } else {
-      localStorage.removeItem('cliente');
-    }
+setCliente(cliente: Cliente | null): void {
+  const actual = this.clienteSubject.value;
+
+  // Si ya está como 'invitado' y me quieren pisar con otro, lo ignoro
+if (actual?.id === 'invitado' && cliente && cliente.id !== 'invitado') {
+  console.debug('[IGNORADO] Ya está como invitado. Ignorando nuevo cliente:', cliente?.id);
+  return;
+}
+  this.clienteSubject.next(cliente);
+
+  if (cliente && cliente.id !== 'invitado') {
+    localStorage.setItem('cliente', cliente.id);
+    localStorage.setItem('clienteActual', JSON.stringify(cliente));
+  } else {
+    localStorage.removeItem('cliente');
+    localStorage.setItem('clienteActual', JSON.stringify(cliente));
   }
+}
 
   getCliente(): Observable<Cliente | null> {
     return this.clienteSubject.asObservable();

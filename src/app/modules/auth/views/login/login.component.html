@@ -15,7 +15,7 @@
       <span>Acceso exclusivo para clientes mayoristas</span>
     </div>
 
-    <form (ngSubmit)="onSubmit()" #loginForm="ngForm">
+    <form #loginForm="ngForm">
       <mat-form-field class="fadeIn second" appearance="outline" color="accent">
         <mat-label>Usuario</mat-label>
         <input matInput type="text" name="usuario" [(ngModel)]="usuario" (ngModelChange)="resetLoginFail()" required />
@@ -35,7 +35,7 @@
 
       <mat-hint *ngIf="loginFail">Datos de accesos incorrectos</mat-hint>
 
-      <button class="fadeIn third" mat-raised-button type="submit" [disabled]="!loginForm.form.valid"
+      <button class="fadeIn third" mat-raised-button type="button" (click)="login()" [disabled]="!loginForm.form.valid"
         [ngClass]="loginForm.form.valid ? 'botonesRojos' : ''">
         Ingresar
       </button>
