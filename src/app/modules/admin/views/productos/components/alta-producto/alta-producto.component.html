@@ -1,43 +1,46 @@
+<div class="imagen-central fadeIn first">
+  <img src="../../../../../assets/logo.png" alt="Login" />
+</div>
 <mat-card class="producto-form-card">
-  <mat-card-title>Nuevo Producto</mat-card-title>
+  <!-- <mat-card-title>Nuevo Producto</mat-card-title> -->
   <mat-card-content>
     <form [formGroup]="productoForm" (ngSubmit)="onSubmit()">
 
       <!-- Sección básica -->
       <div class="form-grid">
-        <mat-form-field appearance="outline" class="form-field">
+        <mat-form-field appearance="outline" class="form-field fadeIn first">
           <mat-label>Nombre</mat-label>
           <input matInput formControlName="nombre" required>
         </mat-form-field>
 
-        <mat-form-field appearance="outline" class="form-field">
+        <mat-form-field appearance="outline" class="form-field fadeIn first">
           <mat-label>Rubro</mat-label>
           <input matInput formControlName="rubro">
         </mat-form-field>
 
-        <mat-form-field appearance="outline" class="form-field">
+        <mat-form-field appearance="outline" class="form-field fadeIn second">
           <mat-label>Subrubro</mat-label>
           <input matInput formControlName="subrubro">
         </mat-form-field>
 
-        <mat-form-field appearance="outline" class="form-field">
+        <mat-form-field appearance="outline" class="form-field fadeIn second">
           <mat-label>Marca</mat-label>
           <input matInput formControlName="marca">
         </mat-form-field>
       </div>
 
-      <mat-form-field appearance="outline" class="form-field full-width">
+      <mat-form-field appearance="outline" class="form-field full-width fadeIn second">
         <mat-label>Descripción</mat-label>
         <textarea matInput rows="3" formControlName="descripcion"></textarea>
       </mat-form-field>
 
-      <mat-form-field appearance="outline" class="form-field full-width">
+      <mat-form-field appearance="outline" class="form-field full-width fadeIn second">
         <mat-label>URL de Imagen</mat-label>
         <input matInput type="url" formControlName="imagen" placeholder="https://...">
       </mat-form-field>
 
       <!-- Sección precios y stock -->
-      <div class="form-grid">
+      <div class="form-grid fadeIn third">
         <mat-checkbox formControlName="ventaMinorista">¿Se vende en Minorista?</mat-checkbox>
         <mat-form-field appearance="outline" class="form-field" *ngIf="productoForm.get('ventaMinorista')?.value">
           <mat-label>Precio Minorista</mat-label>
@@ -52,7 +55,7 @@
       </div>
 
       <!-- Oferta y destacado -->
-      <div class="form-grid">
+      <div class="form-grid fadeIn third">
         <mat-checkbox formControlName="oferta">¿Está en oferta?</mat-checkbox>
         <mat-form-field appearance="outline" class="form-field" *ngIf="productoForm.get('oferta')?.value">
           <mat-label>Precio de Oferta</mat-label>
@@ -63,7 +66,7 @@
       </div>
 
       <!-- Variantes -->
-      <div class="form-grid">
+      <div class="form-grid fadeIn fourth">
         <mat-checkbox formControlName="tieneVariantes">¿Tiene variantes de colores?</mat-checkbox>
         <mat-form-field *ngIf="!productoForm.get('tieneVariantes')?.value" appearance="outline" class="form-field">
           <mat-label>Stock</mat-label>
@@ -103,7 +106,7 @@
       </div>
 
       <!-- Botón Guardar -->
-      <div class="acciones">
+      <div class="acciones fadeIn fou">
         <button mat-raised-button color="primary" type="submit" [disabled]="productoForm.invalid">
           Guardar Producto
         </button>

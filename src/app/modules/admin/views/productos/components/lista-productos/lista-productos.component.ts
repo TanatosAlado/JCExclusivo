@@ -8,6 +8,7 @@ import { MatPaginator } from '@angular/material/paginator';
 import { EdicionProductoComponent } from '../edicion-producto/edicion-producto.component';
 import { ConfirmDialogComponent } from 'src/app/shared/components/confirm-dialog/confirm-dialog.component';
 import { DetalleProductoComponent } from '../detalle-producto/detalle-producto.component';
+import { ToastService } from 'src/app/shared/services/toast.service';
 
 @Component({
   selector: 'app-lista-productos',
@@ -25,7 +26,7 @@ export class ListaProductosComponent {
   paginator!: MatPaginator;
   public productoAEliminar: string = ''; 
 
-  constructor(public dialog: MatDialog, private productosService: ProductosService,){
+  constructor(public dialog: MatDialog, private productosService: ProductosService,private toastService:ToastService){
 
   }
 
@@ -121,8 +122,10 @@ editarProducto(producto: Producto): void {
     });
   }
 
-  eliminarProducto(id: string): void {
-
+ eliminarProducto(id: string): void {
+    this.productosService.eliminarProducto(id).then(() => {
+     this.toastService.toastMessage('Producto eliminado con éxito', 'green', 2000);
+    })
   }
 
     openConfirmDialog(producto: any): void {

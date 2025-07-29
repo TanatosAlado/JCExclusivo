@@ -1,78 +1,111 @@
 <div class="imagen-central fadeIn first">
-      <img src="../../../../../assets/LogoDolzani.png" alt="Login" />
-    </div>
+  <img src="../../../../../assets/logo.png" alt="Login" />
+</div>
 
 
 <mat-dialog-content [formGroup]="formProducto" class="contenido-modal">
 
-  <mat-form-field appearance="fill" class="full-width fadeIn first">
-    <mat-label>Nombre</mat-label>
-    <input matInput formControlName="nombre">
-  </mat-form-field>
+  <div class="form-grid">
 
-  <mat-form-field appearance="fill" class="full-width fadeIn first">
+    <mat-form-field appearance="outline" class="form-field fadeIn first">
+      <mat-label>Nombre</mat-label>
+      <input matInput formControlName="nombre" required>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="form-field fadeIn first">
+      <mat-label>Rubro</mat-label>
+      <input matInput formControlName="rubro">
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="form-field fadeIn second">
+      <mat-label>Subrubro</mat-label>
+      <input matInput formControlName="subrubro">
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="form-field fadeIn second">
+      <mat-label>Marca</mat-label>
+      <input matInput formControlName="marca">
+    </mat-form-field>
+  </div>
+
+  <mat-form-field appearance="outline" class="full-width fadeIn first">
     <mat-label>Descripción</mat-label>
     <textarea matInput formControlName="descripcion" rows="3"></textarea>
   </mat-form-field>
 
-  <mat-form-field appearance="fill" class="full-width fadeIn first">
-    <mat-label>Rubro</mat-label>
-    <input matInput formControlName="rubro">
-  </mat-form-field>
+  <div class="form-grid">
+    <mat-checkbox formControlName="ventaMinorista" class="fadeIn second">¿Se vende en Minorista?</mat-checkbox>
+    <mat-form-field appearance="outline" class="form-field fadeIn second">
+      <mat-label>Precio Minorista</mat-label>
+      <input matInput type="number" formControlName="precioMinorista">
+    </mat-form-field>
 
-  <mat-form-field appearance="fill" class="full-width fadeIn second">
-    <mat-label>Subrubro</mat-label>
-    <input matInput formControlName="subrubro">
-  </mat-form-field>
+    <mat-checkbox formControlName="ventaMayorista" class="fadeIn second">¿Se vende en Mayorista?</mat-checkbox>
+    <mat-form-field appearance="outline" class="form-field fadeIn second">
+      <mat-label>Precio Mayorista</mat-label>
+      <input matInput type="number" formControlName="precioMayorista">
+    </mat-form-field>
 
-  <mat-form-field appearance="fill" class="full-width fadeIn second">
-    <mat-label>Marca</mat-label>
-    <input matInput formControlName="marca">
-  </mat-form-field>
+    <mat-checkbox class="fadeIn third" formControlName="destacado">Destacado</mat-checkbox>
 
-  <mat-form-field appearance="fill" class="full-width fadeIn second">
-    <mat-label>Precio</mat-label>
-    <input matInput type="number" formControlName="precio">
-  </mat-form-field>
+    <mat-form-field appearance="outline" class="form-field fadeIn third">
+      <mat-label>Stock</mat-label>
+      <input matInput type="number" formControlName="stock">
+    </mat-form-field>
 
-  <mat-form-field appearance="fill" class="full-width fadeIn third">
-    <mat-label>Stock</mat-label>
-    <input matInput type="number" formControlName="stock">
-  </mat-form-field>
+    <mat-form-field appearance="outline" class="full-width fadeIn third">
+      <mat-label>Imagen (URL o base64)</mat-label>
+      <input matInput formControlName="imagen">
+    </mat-form-field>
 
-  
-  <mat-form-field appearance="fill" class="full-width fadeIn third">
-    <mat-label>Imagen (URL o base64)</mat-label>
-    <input matInput formControlName="imagen">
-  </mat-form-field>
+    <mat-checkbox class="fadeIn third" formControlName="oferta">En Oferta</mat-checkbox>
 
-  <mat-slide-toggle class="fadeIn third" formControlName="destacado">Destacado</mat-slide-toggle>
-
-  <mat-slide-toggle class="fadeIn third" formControlName="oferta">En Oferta</mat-slide-toggle>
-
-  <div *ngIf="formProducto.get('oferta')?.value">
-    <mat-form-field appearance="fill" class="full-width fadeIn fourth">
+    <mat-form-field appearance="outline" class="form-field fadeIn second">
       <mat-label>Precio Oferta</mat-label>
       <input matInput type="number" formControlName="precioOferta">
     </mat-form-field>
+
+    <mat-checkbox formControlName="tieneVariantes" class="fadeIn fourth">¿Tiene Variantes?</mat-checkbox>
+
+    <!-- Aquí va el formArray variantes, sin mat-form-field que envuelva el div -->
+    <div *ngIf="formProducto.get('tieneVariantes')?.value" formArrayName="variantes" class="variante-lista fadeIn fourth">
+      <h4>Variantes</h4>
+
+      <div *ngFor="let variante of variantes.controls; let i = index" [formGroupName]="i" class="variante-row">
+        <mat-form-field appearance="outline" class="form-field variante-input">
+          <mat-label>Nombre del color</mat-label>
+          <input matInput formControlName="nombre" required>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="form-field variante-input">
+          <mat-label>Color</mat-label>
+          <input matInput type="color" formControlName="valor" class="color-picker">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="form-field variante-input">
+          <mat-label>Stock</mat-label>
+          <input matInput type="number" formControlName="stock" required>
+        </mat-form-field>
+
+        <button mat-icon-button color="warn" (click)="eliminarVariante(i)" type="button" aria-label="Eliminar variante">
+          <mat-icon>delete</mat-icon>
+        </button>
+      </div>
+
+      <div class="mt-2">
+        <button mat-stroked-button color="primary" (click)="agregarVariante()" type="button">
+          Agregar Variante
+        </button>
+      </div>
+    </div>
+
   </div>
-
-  <mat-slide-toggle class="fadeIn fourth" formControlName="impuestoNacional">Aplica Impuesto Nacional</mat-slide-toggle>
-
-  <div *ngIf="formProducto.get('impuestoNacional')?.value">
-    <mat-form-field appearance="fill" class="full-width">
-      <mat-label>Precio sin Impuesto Nacional</mat-label>
-      <input matInput type="number" formControlName="precioSinImpuestoNacional">
-    </mat-form-field>
-  </div>
-
-
 
 </mat-dialog-content>
 
+
 <mat-dialog-actions align="end">
-  <button mat-raised-button  class="botonesRojos fadeIn fourth" (click)="guardar()">
+  <button mat-raised-button class="botonesRojos fadeIn fourth" (click)="guardar()">
     Guardar</button>
   <button class="fadeIn fourth" mat-button mat-dialog-close>Cancelar</button>
 </mat-dialog-actions>
-
