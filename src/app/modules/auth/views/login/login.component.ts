@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { LoginRequest } from '../../models/loginRequest.model';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Cliente } from '../../models/cliente.model';
+import { signOut } from '@angular/fire/auth';
 
 @Component({
   selector: 'app-login',
@@ -36,7 +37,7 @@ export class LoginComponent {
    }
 
    
-  async onSubmit() {
+  async login() {
     try {
       const loginRequest = new LoginRequest(this.usuario, this.contrasena);
 
@@ -69,28 +70,29 @@ export class LoginComponent {
     this.loginFail = false;
   }
 
-  continuarComoInvitado(): void {
-  const clienteInvitado = new Cliente(
-    'invitado',        // id
-    'invitado',        // usuario
-    '',                // mail
-    '',                // telefono
-    '',                // direccion
-    [],                // historial
-    true,              // estado
-    'Invitado',        // nombre
-    '',                // apellido
-    false,             // administrador
-    [],                // carrito
-    '',                // dni
-    0,                 // puntos
-    false,             // esMayorista
-    '',                // razonSocial
-    ''                 // cuit
-  );
+  async continuarComoInvitado(): Promise<void> {
+    await signOut(this.authService['auth']);
+      const clienteInvitado = new Cliente(
+      'invitado',        // id
+      'invitado',        // usuario
+      '',                // mail
+      '',                // telefono
+      '',                // direccion
+      [],                // historial
+      true,              // estado
+      'Invitado',        // nombre
+      '',                // apellido
+      false,             // administrador
+      [],                // carrito
+      '',                // dni
+      0,                 // puntos
+      false,             // esMayorista
+      '',                // razonSocial
+      ''                 // cuit
+    );
 
-  this.authService.setUsuarioActual(clienteInvitado); 
-  this.dialogRef.close(clienteInvitado);
+    this.authService.setUsuarioActual(clienteInvitado); 
+    this.dialogRef.close(clienteInvitado);
 }
 
 }

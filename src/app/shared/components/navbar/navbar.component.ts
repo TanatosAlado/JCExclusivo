@@ -44,24 +44,31 @@ export class NavbarComponent {
              private authService: AuthService) {
 
               this.clienteActual$ = this.generalService.getCliente();
-             }
+  }
 
   ngOnInit(): void {
-    const clienteId = localStorage.getItem('cliente');
-    if (clienteId) {
-      this.clientesService.getClienteById(clienteId).subscribe({
-        next: (cliente) => {
-          this.generalService.setCliente(cliente);
-          this.usrAdmin = cliente.administrador;
-          this.carritoService.actualizarCantidadProductos(cliente);
+    const clienteRaw = localStorage.getItem('clienteActual');
+    const cliente = clienteRaw ? JSON.parse(clienteRaw) : null;
+    if (cliente && cliente.id !== 'invitado') {
+      this.clientesService.getClienteById(cliente.id).subscribe({
+        next: (clienteDb) => {
+          this.generalService.setCliente(clienteDb);
+          this.usrAdmin = clienteDb.administrador;
+          this.carritoService.actualizarCantidadProductos(clienteDb);
         },
         error: () => {
           console.warn('Cliente no válido en localStorage');
-          localStorage.removeItem('cliente');
+          localStorage.removeItem('clienteActual');
         }
       });
+    } else if (cliente) {
+      // Si es invitado, lo dejo como está
+      this.generalService.setCliente(cliente);
+      this.carritoService.actualizarCantidadProductos(cliente);
     }
   }
+
+
   // Métodos para abrir los modales
   openIngreso(intencionMayorista: boolean = false) {
     const dialogRef = this.dialog.open(LoginComponent, {

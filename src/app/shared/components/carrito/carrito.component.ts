@@ -4,6 +4,7 @@ import { GeneralService } from '../../services/general.service';
 import { CarritoService } from '../../services/carrito.service';
 import { ClientesService } from '../../services/clientes.service';
 import { Router } from '@angular/router';
+import { VouchersPuntosService } from '../../services/vouchers-puntos.service';
 declare var bootstrap: any;
 
 @Component({
@@ -15,14 +16,26 @@ export class CarritoComponent {
 
  cliente:Cliente
   userLogueado=localStorage.getItem('mail')
+  valorParaSumarPunto: number = 200;
   
-   constructor(public generalService:GeneralService, private carritoService:CarritoService, private clienteService: ClientesService, private router: Router){
+   constructor(public generalService:GeneralService, private carritoService:CarritoService, private clienteService: ClientesService, private router: Router, private puntosService: VouchersPuntosService){
 
    }
 
-  ngOnInit(){
+  async ngOnInit(){
   this.getCliente()
+  await this.cargarConfiguracionYCalculos();
   }
+
+async cargarConfiguracionYCalculos() {
+  const config = await this.puntosService.obtenerValoresPuntos();
+
+  if (config && config.valorParaSumarPunto) {
+    this.valorParaSumarPunto = config.valorParaSumarPunto;
+  } else {
+    console.warn('⚠️ No se encontró configuración de puntos en Firestore. Usando valor por defecto.');
+  }
+}
 
   getCliente(){
     this.generalService.getCliente().subscribe(cliente => {
@@ -99,10 +112,14 @@ document.body.style.paddingRight = '0px';
     }
   }
 
- getPuntosPorCompra(): number {
+//  getPuntosPorCompra(): number {
+//   const total = this.generalService.getTotalPrecio(this.cliente);
+//   return Math.floor(total / 200);
+// } 
+getPuntosPorCompra(): number {
   const total = this.generalService.getTotalPrecio(this.cliente);
-  return Math.floor(total / 200);
-} 
+  return Math.floor(total / this.valorParaSumarPunto);
+}
 
 
 }

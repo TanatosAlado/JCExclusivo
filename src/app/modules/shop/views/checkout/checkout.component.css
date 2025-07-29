@@ -323,3 +323,15 @@ button[type=button]
   }
 }
 
+.card {
+  border-radius: 12px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+}
+
+mat-hint.error {
+  color: red;
+}
+
+mat-hint.success {
+  color: green;
+}
