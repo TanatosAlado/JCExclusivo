@@ -72,3 +72,77 @@
   margin-right: 5px;
   border: 1px solid #ccc;
 }
+
+.filtro-opciones {
+display: flex;
+  cursor: pointer;
+   justify-content: center; 
+   gap: 16px;
+}
+
+.filtro-opciones span {
+  cursor: pointer;
+  color: #444;
+  text-decoration: none;
+  transition: color 0.3s, text-decoration 0.3s;
+}
+
+.filtro-opciones span.activo {
+  color: var(--color-primario);
+  text-decoration: underline;
+  font-weight: bolder;
+  text-underline-offset: 4px;
+}
+.tabs-container {
+   width: 100%;
+  /* max-width: 600px; */
+  margin: 0 auto; 
+  padding: 20px;
+}
+
+span{
+  padding: 10px;
+  font-size: 16px;
+}
+
+.cabecera {
+  background-color: var(--color-primario) !important;
+  color: white !important;
+  font-weight: bold !important;
+  text-align: center !important;
+}
+
+th,
+td {
+  /* border: 1px solid black; */
+  padding: 8px;
+  text-align: center;
+}
+
+.tabla-container {
+  margin: 20px auto;
+  max-width: 1200px;
+  overflow-x: auto; /* Permite scroll horizontal en la tabla entera */
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  padding: 16px;
+}
+.pointer {
+  cursor: pointer;
+  margin-left: 1%;
+  margin-right: 1%;
+  color: var(--color-primario)
+}
+.search-input {
+  padding: 8px;
+  width: 100%;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  box-sizing: border-box;
+}
+
+.tabla-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}

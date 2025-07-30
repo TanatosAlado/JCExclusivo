@@ -1,1 +1,31 @@
-<p>clientes-editar works!</p>
+<div class="imagen-central fadeIn first">
+    <img src="../../../../../assets/logo.png" alt="Login" />
+</div>
+
+<mat-dialog-content [formGroup]="formCliente" class="contenido-modal">
+
+    <mat-form-field appearance="outline" class="full-width fadeIn first">
+        <mat-label>Razón Social</mat-label>
+        <input matInput formControlName="razonSocial">
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width fadeIn first">
+        <mat-label>Dirección</mat-label>
+        <input matInput formControlName="direccion">
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width fadeIn second">
+        <mat-label>Teléfono</mat-label>
+        <input matInput formControlName="telefono">
+    </mat-form-field>
+
+    <mat-checkbox formControlName="estado" class="fadeIn second">¿Usuario Habilitado?</mat-checkbox>
+    <mat-checkbox formControlName="administrador" class="fadeIn second">¿Es Administrador?</mat-checkbox>
+    <mat-checkbox formControlName="esMayorista" class="fadeIn second">¿Es Mayorista?</mat-checkbox>
+
+</mat-dialog-content>
+
+<mat-dialog-actions class="fadeIn fourth" align="end">
+    <button class="botonesRojos" mat-raised-button (click)="guardar()">Guardar</button>
+    <button mat-button mat-dialog-close>Cancelar</button>
+</mat-dialog-actions>
