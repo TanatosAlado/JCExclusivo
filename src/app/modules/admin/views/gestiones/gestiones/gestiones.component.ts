@@ -28,6 +28,12 @@ export class GestionesComponent {
       ruta: '/gestiones/pedidos',
     },
     {
+      titulo: 'Taller',
+      descripcion: 'Gestión de services y reparaciones',
+      icono: 'fas fa-microchip',
+      ruta: '/gestiones/taller',
+    },
+    {
       titulo: 'Vouchers y membresía',
       descripcion: 'Gestión de puntos por membresía y vouchers',
       icono: 'fa-solid fa-gift',

@@ -12,6 +12,7 @@ import { CheckoutComponent } from './modules/shop/views/checkout/checkout.compon
 import { PedidosComponent } from './modules/admin/views/pedidos/pedidos.component';
 import { EmpresaComponent } from './modules/admin/views/empresa/empresa.component';
 import { GiftsComponent } from './modules/admin/views/gifts/gifts.component';
+import { TallerComponent } from './modules/admin/views/taller/taller.component';
 
 const routes: Routes = [
     { path: '', redirectTo: 'inicio', pathMatch: 'prefix' },
@@ -29,6 +30,7 @@ const routes: Routes = [
       { path: 'pedidos', component: PedidosComponent },
       { path: 'empresa', component: EmpresaComponent },
       { path: 'gifts', component: GiftsComponent },
+      { path: 'taller', component: TallerComponent },
     ]
   },
   {path:'productos',component: GrillaItemComponent},

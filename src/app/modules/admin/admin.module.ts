@@ -15,6 +15,11 @@ import { ClientesDetallesComponent } from './views/clientes/components/clientes-
 import { PedidosComponent } from './views/pedidos/pedidos.component';
 import { EmpresaComponent } from './views/empresa/empresa.component';
 import { GiftsComponent } from './views/gifts/gifts.component';
+import { TallerComponent } from './views/taller/taller.component';
+import { ListaOrdenesComponent } from './views/taller/components/lista-ordenes/lista-ordenes.component';
+import { AltaOrdenComponent } from './views/taller/components/alta-orden/alta-orden.component';
+import { DetalleOrdenComponent } from './views/taller/components/detalle-orden/detalle-orden.component';
+import { EdicionOrdenComponent } from './views/taller/components/edicion-orden/edicion-orden.component';
 
 
 
@@ -33,7 +38,12 @@ import { GiftsComponent } from './views/gifts/gifts.component';
     ClientesDetallesComponent,
     PedidosComponent,
     EmpresaComponent,
-    GiftsComponent
+    GiftsComponent,
+    TallerComponent,
+    ListaOrdenesComponent,
+    AltaOrdenComponent,
+    DetalleOrdenComponent,
+    EdicionOrdenComponent
   ],
   imports: [
     CommonModule,
