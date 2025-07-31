@@ -13,7 +13,7 @@ export class ListaOrdenesComponent {
 
   
 
-    abrirModalAltaProducto(): void {
+    abrirModalAltaOrden(): void {
     const dialogRef = this.dialog.open(AltaOrdenComponent, {
       width: '90vw',
       maxWidth: '600px',
