@@ -1,0 +1,44 @@
+.form-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.form-field {
+  flex: 1 1 250px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.imagen-central {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.imagen-central img {
+  width: 100px;
+  height: auto;
+  border-radius: 20%;
+  object-fit: cover;
+}
+
+.acciones {
+  margin-top: 24px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+mat-form-field {
+  width: 100%;
+}
+
+.mat-form-field-infix {
+  font-size: 15px;
+}
+
+button[mat-raised-button] {
+  min-width: 140px;
+}

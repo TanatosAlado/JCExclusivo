@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { collection, collectionData, CollectionReference, deleteDoc, doc, Firestore, getDoc, updateDoc } from '@angular/fire/firestore';
+import { collection, collectionData, CollectionReference, deleteDoc, doc, Firestore, getDoc, getDocs, query, updateDoc, where } from '@angular/fire/firestore';
 import { BehaviorSubject, from, map, Observable, shareReplay, tap } from 'rxjs';
 import { Cliente } from 'src/app/modules/auth/models/cliente.model';
 
@@ -54,6 +54,19 @@ private firestore = inject(Firestore);
   eliminarCliente(id: string): Promise<void> {
     const ref = doc(this.firestore, 'Clientes', id);
     return deleteDoc(ref);
+  }
+
+    async buscarPorDni(dni: number): Promise<Cliente | null> {
+    const clientesRef = collection(this.firestore, 'Clientes');
+    const q = query(clientesRef, where('dni', '==', dni));
+    const snapshot = await getDocs(q);
+
+    if (!snapshot.empty) {
+      const doc = snapshot.docs[0];
+      return { id: doc.id, ...doc.data() } as Cliente;
+    } else {
+      return null;
+    }
   }
 
 }
