@@ -2,6 +2,7 @@ export interface Orden {
   id: string;
   numeroOrden: number;
   imei: string;
+  equipo: string;
   idCliente?: string;
   nombreCliente: string;
   telefonoCliente: string;

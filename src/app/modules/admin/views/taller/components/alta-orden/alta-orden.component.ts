@@ -30,6 +30,7 @@ export class AltaOrdenComponent {
       apellidoCliente: ['', [Validators.required]],
       telefonoCliente: ['', [Validators.required]],
       imei: ['', [Validators.required]],
+      equipo: ['', [Validators.required]],
       motivoIngreso: ['', [Validators.required]],
       presupuesto: [0],
       garantia: [false],
@@ -52,6 +53,7 @@ export class AltaOrdenComponent {
           telefonoCliente: cliente.telefono
         });
       } else {
+        console.error('Cliente no encontrado');
         this.errorCliente = 'Cliente no encontrado';
       }
     }).catch(err => {
@@ -73,6 +75,7 @@ export class AltaOrdenComponent {
         apellidoCliente: this.ordenForm.value.apellidoCliente,
         telefonoCliente: this.ordenForm.value.telefonoCliente,
         imei: this.ordenForm.value.imei,
+        equipo: this.ordenForm.value.equipo,
         motivoIngreso: this.ordenForm.value.motivoIngreso,
         presupuesto: this.ordenForm.value.presupuesto,
         estado: 'pendiente',

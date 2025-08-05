@@ -5,9 +5,11 @@ import {
   addDoc,
   doc,
   updateDoc,
-  getDocs
+  getDocs,
+  collectionData
 } from '@angular/fire/firestore';
 import { Orden } from '../models/orden.model';
+import { Observable } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -39,4 +41,13 @@ export class OrdenesService {
     const docRef = await addDoc(ordenesRef, orden);
     await updateDoc(docRef, { id: docRef.id });
   }
+
+  obtenerOrdenes(): Observable<Orden[]> {
+    const ref = collection(this.firestore, 'Ordenes Pendientes');
+    return collectionData(ref, { idField: 'id' }) as Observable<Orden[]>;
+  }
+
+
+
+
 }

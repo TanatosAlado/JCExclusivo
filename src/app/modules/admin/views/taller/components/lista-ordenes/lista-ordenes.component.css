@@ -1,0 +1,143 @@
+.tabla-container {
+  margin: 20px auto;
+  max-width: 1200px;
+  overflow-x: auto; /* Permite scroll horizontal en la tabla entera */
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  padding: 16px;
+}
+
+/* Estilo general de la tabla */
+table {
+  width: 100%;
+  border-spacing: 0;
+  border-collapse: collapse;
+  min-width: 600px; /* Evita que la tabla se achique demasiado */
+}
+
+/* Estilos Encabezados */
+.cabecera {
+  background-color:var(--color-primario) !important;
+  color: white !important;
+  font-weight: bold !important;
+  text-align: center !important;
+}
+
+/* Encabezados */
+th.mat-header-cell {
+  background-color: #f1f1f1;
+  font-weight: 600;
+  font-size: 16px;
+  color: #333;
+  padding: 12px 16px;
+  text-align: center;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+/* Celdas */
+td.mat-cell {
+  padding: 12px 16px;
+  font-size: 15px;
+  color: #555;
+  border-bottom: 1px solid #eee;
+}
+
+/* Fila hover */
+tr.mat-row:hover {
+  background-color: #f9f9f9;
+}
+td{
+  text-align: center !important;
+}
+
+/* Filas pares */
+tr.mat-row:nth-child(even) {
+  background-color: #fcfcfc;
+}
+
+/* Acciones */
+button.mat-icon-button {
+  margin-right: 8px;
+  min-width: 40px; /* Asegura tamaño mínimo */
+}
+
+/* Contenedor de botones acciones: siempre en fila, scroll si no entra */
+.acciones-cell {
+  display: flex;
+  flex-wrap: nowrap; /* NO dejar que los botones salten a otra línea */
+  overflow-x: auto; /* Scroll horizontal si no entra */
+  -webkit-overflow-scrolling: touch; /* Mejor scroll en móviles */
+  gap: 8px; /* Espacio entre botones */
+  padding: 4px 0; /* Espacio arriba y abajo */
+}
+
+.icons{
+cursor: pointer;
+color:var(--color-primario)
+}
+
+.pointer {
+  cursor: pointer;
+  margin-left: 1%;
+  margin-right: 1%;
+  color: var(--color-primario)
+}
+/* Botón Nuevo a la derecha */
+.button-container {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px; /* separación horizontal entre botones */
+  margin-bottom: 10px;
+}
+
+.boton-nuevo {
+  background-color: var(--color-primario) !important;
+  color: white !important;
+  font-weight: bold; 
+}
+.tabla-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.search-input {
+  padding: 8px;
+  width: 100%;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  box-sizing: border-box;
+}
+
+/* Media query para pantallas muy pequeñas */
+@media (max-width: 500px) {
+  /* Tabla sigue scrollable horizontalmente */
+  table {
+    min-width: 600px; /* Igual que antes */
+  }
+  
+  /* Que la celda acciones tenga scroll horizontal */
+  .acciones-cell {
+    overflow-x: auto;
+  }
+}
+
+.errores-carga {
+  margin-top: 1rem;
+  background-color: #ffe0e0;
+  padding: 1rem;
+  border: 1px solid #ffaaaa;
+  border-radius: 5px;
+}
+
+::ng-deep .snackbar-success {
+  background-color: #4caf50;
+  color: #fff;
+  font-weight: bold;
+}
+
+.snackbar-exito {
+  background-color: #4caf50;
+  color: white;
+  font-weight: bold;
+}

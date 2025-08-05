@@ -84,7 +84,7 @@ export class LoginComponent {
       '',                // apellido
       false,             // administrador
       [],                // carrito
-      '',                // dni
+      null,                // dni
       0,                 // puntos
       false,             // esMayorista
       '',                // razonSocial
