@@ -8,7 +8,8 @@ import {
   getDocs,
   collectionData,
   query,
-  where
+  where,
+  Timestamp
 } from '@angular/fire/firestore';
 import { Orden } from '../models/orden.model';
 import { Observable } from 'rxjs';
@@ -71,5 +72,42 @@ export class OrdenesService {
     }
   }
 
+  
+async buscarOrdenPorNumeroYDni(numeroOrden: number, dniCliente: number) {
+    try {
+      const ordenesRef = collection(this.firestore, 'Ordenes Pendientes');
+      const q = query(
+        ordenesRef,
+        where('numeroOrden', '==', numeroOrden),
+        where('dniCliente', '==', dniCliente)
+      );
+
+      const querySnapshot = await getDocs(q);
+
+      if (querySnapshot.empty) {
+        return null; // No se encontró nada
+      }
+
+      let orden: any = null;
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+
+        // Convertir fechas Firebase Timestamp a Date
+        ['fechaIngreso', 'fechaEntrega', 'fechaGarantia'].forEach(campo => {
+          if (data[campo] instanceof Timestamp) {
+            data[campo] = data[campo].toDate();
+          }
+        });
+
+        orden = { id: doc.id, ...data };
+      });
+
+      return orden;
+
+    } catch (error) {
+      console.error('Error buscando orden:', error);
+      throw error;
+    }
+  }
 
 }
