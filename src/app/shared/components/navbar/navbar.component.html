@@ -14,10 +14,16 @@
     </a>
 
     <!-- Íconos mobile -->
-    <div class="d-flex d-lg-none ms-auto gap-2 align-items-center">
-      <i class="fas fa-user text-white"></i>
+    <div *ngIf="(clienteActual$ | async) === null" class="d-flex d-lg-none ms-auto gap-2 align-items-center">
+      <i (click)="openIngreso(false)" class="fas fa-user text-white"></i>
       <i class="fas fa-shopping-cart text-white"></i>
     </div>
+
+    <!-- Mostrar logout solo si HAY cliente -->
+    <ng-container *ngIf="(clienteActual$ | async) as cliente">
+      <span class="text-white me-2">{{ cliente.nombre }}</span>
+      <mat-icon (click)="closeSesion()" class="icono-header">logout</mat-icon>
+    </ng-container>
 
     <!-- Menú desktop -->
     <div class="d-none d-lg-flex align-items-center justify-content-between w-100">
@@ -35,6 +41,14 @@
         <a routerLink="/productos" class="nav-link text-white">Productos</a>
         <a routerLink="/nosotros" class="nav-link text-white">Nosotros</a>
         <a routerLink="/contacto" class="nav-link text-white">Contacto</a>
+      
+        <!-- Nuevo enlace destacado -->
+        <a href="javascript:void(0)"
+          class="nav-link text-white estado-reparacion-link"
+          (click)="abrirModalReparacion()">
+          <i class="fas fa-tools me-1"></i> Reparación
+        </a>
+      
         <a *ngIf="usrAdmin" routerLink="/gestiones" class="nav-link" (click)="cerrarMenu()">Gestiones</a>
       </div>
 

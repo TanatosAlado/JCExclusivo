@@ -6,7 +6,9 @@ import {
   doc,
   updateDoc,
   getDocs,
-  collectionData
+  collectionData,
+  query,
+  where
 } from '@angular/fire/firestore';
 import { Orden } from '../models/orden.model';
 import { Observable } from 'rxjs';
@@ -47,7 +49,27 @@ export class OrdenesService {
     return collectionData(ref, { idField: 'id' }) as Observable<Orden[]>;
   }
 
+  async buscarOrdenPorCampo(campo: string, valor: string) {
+    try {
+      const colRef = collection(this.firestore, 'Ordenes Pendientes');
+      const q = query(colRef, where(campo, '==', valor.trim()));
 
+      const snapshot = await getDocs(q);
+
+      if (snapshot.empty) {
+        console.log('No se encontraron documentos');
+        return [];
+      }
+
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+    } catch (error) {
+      console.error('Error buscando orden:', error);
+      return [];
+    }
+  }
 
 
 }

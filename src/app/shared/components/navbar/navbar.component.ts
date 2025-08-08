@@ -9,6 +9,7 @@ import { GeneralService } from '../../services/general.service';
 import { ClientesService } from '../../services/clientes.service';
 import { AuthService } from 'src/app/modules/auth/services/auth.service';
 import { Observable } from 'rxjs';
+import { DetalleOrdenComponent } from 'src/app/modules/admin/views/taller/components/detalle-orden/detalle-orden.component';
 
 @Component({
   selector: 'app-navbar',
@@ -158,6 +159,17 @@ export class NavbarComponent {
   //   width: '600px',
   //   data: historial,
   // });
+}
+
+abrirModalReparacion() {
+  const modalRef = this.dialog.open(DetalleOrdenComponent, {
+    width: '800px', // similar a 'lg'
+    maxWidth: '90vw', // para que sea responsive
+    panelClass: 'modal-centrado' // clase CSS para centrar verticalmente
+  });
+
+  // Si tu componente recibe datos por @Input:
+  // modalRef.componentInstance.idOrden = '123';
 }
 
 }

@@ -1,1 +1,45 @@
-<p>detalle-orden works!</p>
+<h2 mat-dialog-title>🔧 Consulta de reparación</h2>
+
+<mat-dialog-content>
+  <p>Ingresá tu número de orden y DNI para conocer el estado de la reparación de tu equipo.</p>
+
+  <form [formGroup]="consultaForm" (ngSubmit)="buscar()">
+    <!-- Número de orden -->
+    <mat-form-field appearance="outline" class="w-100">
+      <mat-label>Número de orden</mat-label>
+      <input matInput formControlName="numeroOrden" placeholder="Ej: 12345">
+      <mat-error *ngIf="consultaForm.get('numeroOrden')?.hasError('required')">
+        El número de orden es obligatorio
+      </mat-error>
+    </mat-form-field>
+
+    <!-- DNI -->
+    <mat-form-field appearance="outline" class="w-100">
+      <mat-label>DNI</mat-label>
+      <input matInput formControlName="dni" placeholder="Ej: 30123456">
+      <mat-error *ngIf="consultaForm.get('dni')?.hasError('required')">
+        El DNI es obligatorio
+      </mat-error>
+    </mat-form-field>
+
+    <!-- Botón -->
+    <div class="mt-3 text-end">
+      <button mat-raised-button color="primary" type="submit" [disabled]="consultaForm.invalid || buscando">
+        {{ buscando ? 'Buscando...' : 'Buscar' }}
+      </button>
+    </div>
+  </form>
+
+  <!-- Mensajes -->
+  <div *ngIf="mensajeError" class="mt-3 text-danger">
+    {{ mensajeError }}
+  </div>
+
+  <!-- Resultado -->
+  <div *ngIf="resultado" class="mt-3">
+    <h4>Estado de la reparación</h4>
+    <p><strong>Orden:</strong> {{ resultado.numeroOrden }}</p>
+    <p><strong>Estado:</strong> {{ resultado.estado }}</p>
+    <p *ngIf="resultado.fechaEntrega"><strong>Fecha estimada de entrega:</strong> {{ resultado.fechaEntrega | date }}</p>
+  </div>
+</mat-dialog-content>
