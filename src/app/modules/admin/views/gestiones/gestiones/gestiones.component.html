@@ -4,7 +4,8 @@
       <a
         class="card item-card shadow-sm position-relative text-decoration-none"
         *ngFor="let gestion of gestiones"
-        [routerLink]="gestion.ruta"
+        [routerLink]="!gestion.disabled ? gestion.ruta : null"
+        [class.disabled-card]="gestion.disabled"
       >
         <div class="gestion-icon-container">
           <i [class]="gestion.icono"></i>

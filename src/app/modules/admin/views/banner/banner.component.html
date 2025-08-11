@@ -1,0 +1,49 @@
+<app-encabezado>
+  Gestión de Banner
+</app-encabezado>
+
+<div class="container my-4">
+
+  <!-- Subida de archivo -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <h5 class="card-title">Subir imagen para el banner</h5>
+
+      <div class="mb-3">
+        <input type="file" class="form-control" (change)="onFileSelected($event)">
+      </div>
+
+      <button class="btn btn-primary" (click)="subirArchivo()" [disabled]="!archivoSeleccionado || subiendo">
+        Subir archivo
+      </button>
+
+      <div *ngIf="subiendo" class="mt-2 text-info">
+        <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+        Subiendo archivo...
+      </div>
+
+      <div *ngIf="urlArchivo" class="mt-2 alert alert-success">
+        Archivo subido: <a [href]="urlArchivo" target="_blank">{{ urlArchivo }}</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Listado de archivos -->
+  <div class="card">
+    <div class="card-body">
+      <h5 class="card-title">Imágenes subidas</h5>
+
+      <ul class="list-group" *ngIf="archivos.length > 0; else sinArchivos">
+        <li *ngFor="let archivo of archivos" class="list-group-item d-flex justify-content-between align-items-center">
+          <a [href]="archivo.url" target="_blank">{{ archivo.nombre }}</a>
+          <button class="btn btn-sm btn-outline-danger" (click)="eliminar(archivo.nombre)">Eliminar</button>
+        </li>
+      </ul>
+
+      <ng-template #sinArchivos>
+        <p class="text-muted mt-3">No hay archivos subidos aún.</p>
+      </ng-template>
+    </div>
+  </div>
+
+</div>

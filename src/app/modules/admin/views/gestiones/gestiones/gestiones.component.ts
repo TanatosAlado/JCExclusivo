@@ -45,6 +45,13 @@ export class GestionesComponent {
       icono: 'fa-solid fa-building',
       ruta: '/gestiones/empresa',
     },
+    {
+      titulo: 'Banner',
+      descripcion: 'Gestión de banner',
+      icono: 'fas fa-image',
+      ruta: '/gestiones/banner',
+      disabled: true, // 🚫
+    },
     
   ];
 

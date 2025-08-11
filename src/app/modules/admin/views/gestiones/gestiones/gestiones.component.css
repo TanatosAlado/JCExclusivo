@@ -11,3 +11,9 @@
     /* Un color principal de tu paleta */
     text-align: center;
 }
+
+.disabled-card {
+  opacity: 0.5;
+  pointer-events: none; /* no se puede hacer click */
+  cursor: not-allowed;
+}
