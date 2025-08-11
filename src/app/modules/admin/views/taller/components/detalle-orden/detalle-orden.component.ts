@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatDialogRef } from '@angular/material/dialog';
 import { Firestore, collection, query, where, getDocs } from '@angular/fire/firestore';
+import { OrdenesService } from 'src/app/modules/admin/services/ordenes.service';
 
 
 @Component({
@@ -18,7 +19,8 @@ export class DetalleOrdenComponent {
   constructor(
     private fb: FormBuilder,
     private dialogRef: MatDialogRef<DetalleOrdenComponent>,
-    private firestore: Firestore
+    private firestore: Firestore,
+    private ordenesService: OrdenesService
   ) {
     this.consultaForm = this.fb.group({
       numeroOrden: ['', Validators.required],
@@ -36,24 +38,18 @@ async buscar() {
   const { numeroOrden, dni } = this.consultaForm.value;
 
   try {
-    const ordenesRef = collection(this.firestore, 'Ordenes Pendientes');
-    const q = query(
-      ordenesRef,
-      where('numeroOrden', '==', Number(numeroOrden)), // convertir a número
-      where('dniCliente', '==', Number(dni)) // también número
+    const orden = await this.ordenesService.buscarOrdenPorNumeroYDni(
+      Number(numeroOrden),
+      Number(dni)
     );
 
-    const querySnapshot = await getDocs(q);
-
-    if (querySnapshot.empty) {
+    if (!orden) {
       this.mensajeError = 'No se encontró ninguna orden con esos datos.';
     } else {
-      querySnapshot.forEach((doc) => {
-        this.resultado = { id: doc.id, ...doc.data() };
-      });
+      this.resultado = orden;
     }
-  } catch (error) {
-    console.error('Error buscando orden:', error);
+
+  } catch {
     this.mensajeError = 'Ocurrió un error al buscar la orden.';
   } finally {
     this.buscando = false;

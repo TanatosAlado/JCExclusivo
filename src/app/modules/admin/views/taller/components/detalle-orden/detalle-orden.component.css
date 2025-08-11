@@ -1,3 +1,35 @@
-.w-100 {
-  width: 100%;
+.consulta-card {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.consulta-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-end;
+}
+
+.consulta-form mat-form-field {
+  flex: 1 1 calc(50% - 16px);
+  min-width: 200px;
+}
+
+.consulta-form button {
+  flex: 1 1 100%;
+}
+
+.mensaje-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  color: #d32f2f;
+  font-weight: 500;
+}
+
+.badge {
+  padding: 0.5em 0.75em;
+  font-size: 0.85rem;
+  border-radius: 0.5rem;
 }
