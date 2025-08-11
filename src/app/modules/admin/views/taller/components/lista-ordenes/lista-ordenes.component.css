@@ -109,6 +109,37 @@ color:var(--color-primario)
   box-sizing: border-box;
 }
 
+.tab-content {
+  padding: 20px;
+  border-radius: 8px;
+  margin-top: 10px;
+}
+
+.tabs-container {
+   width: 100%;
+  /* max-width: 600px; */
+  margin: 0 auto; 
+  padding: 20px;
+}
+
+.tab {
+  padding: 10px;
+  font-size: 16px;
+}
+
+.tab.active {
+  color: var( --color-primario);
+  font-weight: bolder;
+  border-bottom: 2px solid var( --color-primario);
+}
+
+.tabs {
+  display: flex;
+  cursor: pointer;
+   justify-content: center; 
+   /* transform: translateX(-5%); */
+}
+
 /* Media query para pantallas muy pequeñas */
 @media (max-width: 500px) {
   /* Tabla sigue scrollable horizontalmente */

@@ -71,5 +71,9 @@ export class OrdenesService {
     }
   }
 
+  getOrdenPorTipo(tipo: string): Observable<Orden[]> {
+      const colRef = collection(this.firestore, tipo);
+      return collectionData(colRef, { idField: 'id' }) as Observable<Orden[]>;
+    }
 
 }

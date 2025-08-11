@@ -1,10 +1,11 @@
-import { Component, ViewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, ViewChild } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { AltaOrdenComponent } from '../alta-orden/alta-orden.component';
 import { Orden } from 'src/app/modules/admin/models/orden.model';
 import { MatTableDataSource } from '@angular/material/table';
 import { MatPaginator } from '@angular/material/paginator';
 import { OrdenesService } from 'src/app/modules/admin/services/ordenes.service';
+import { PedidosService } from 'src/app/shared/services/pedidos.service';
 
 @Component({
   selector: 'app-lista-ordenes',
@@ -13,12 +14,25 @@ import { OrdenesService } from 'src/app/modules/admin/services/ordenes.service';
 })
 export class ListaOrdenesComponent {
 
-  ordenes: Orden[] = [];
-  datasourceOrdenes: MatTableDataSource<Orden>
+  ordenesPendientes: Orden[] = [];
+  ordenesFinalizadas: Orden[] = [];
+  ordenesEliminadas: Orden[] = [];
+  activeTab: number = 1;
+  datasourceOrdenesPendientes: MatTableDataSource<Orden>
+  datasourceOrdenesFinalizadas: MatTableDataSource<Orden>
+  datasourceOrdenesEliminadas: MatTableDataSource<Orden>
   paginator!: MatPaginator;
+  @ViewChild('paginatorOrdenesPendientes') paginatorOrdenesPendientes!: MatPaginator;
+  @ViewChild('paginatorOrdenesFinalizados') paginatorOrdenesFinalizadas!: MatPaginator;
+  @ViewChild('paginatorOrdenesEliminados') paginatorOrdenesEliminadas!: MatPaginator;
   displayedColumns: string[] = ['numeroOrden', 'cliente', 'imei', 'equipo', 'estado', 'fechaIngreso', 'acciones'];
 
-  constructor(private dialog: MatDialog, private ordenesService: OrdenesService) { }
+  constructor(private dialog: MatDialog, private ordenesService: OrdenesService,private cdRef: ChangeDetectorRef) { 
+
+    this.datasourceOrdenesPendientes = new MatTableDataSource(this.ordenesPendientes);
+    this.datasourceOrdenesFinalizadas = new MatTableDataSource(this.ordenesFinalizadas);
+    this.datasourceOrdenesEliminadas = new MatTableDataSource(this.ordenesEliminadas);
+  }
 
   ngOnInit(): void {
     this.obtenerOrdenes();
@@ -36,19 +50,43 @@ export class ListaOrdenesComponent {
       this.setDataSourceAttributes();
     }
 
+    ngAfterViewInit() {
+    this.setDataSourceAttributes()
+  }
+
   setDataSourceAttributes() {
-    if (this.datasourceOrdenes) {
-      this.datasourceOrdenes.paginator = this.paginator;
+     if (this.datasourceOrdenesPendientes && this.activeTab===1) {
+      this.datasourceOrdenesPendientes.paginator = this.paginator;
+    }
+
+    if (this.datasourceOrdenesFinalizadas&& this.activeTab===2) {
+      this.datasourceOrdenesFinalizadas.paginator = this.paginator;
+    }
+     if (this.datasourceOrdenesFinalizadas&& this.activeTab===3) {
+      this.datasourceOrdenesFinalizadas.paginator = this.paginator;
     }
   }
 
   obtenerOrdenes(): void {
-    this.ordenesService.obtenerOrdenes().subscribe((ordenes: Orden[]) => {
-      this.ordenes = ordenes;
-      
-      
-      this.datasourceOrdenes = new MatTableDataSource(this.ordenes);
-      this.datasourceOrdenes.paginator = this.paginator;
+    this.ordenesService.getOrdenPorTipo('Ordenes Pendientes').subscribe(data => {
+      this.ordenesPendientes = data.sort((a, b) => b.numeroOrden - a.numeroOrden);
+      this.datasourceOrdenesPendientes = new MatTableDataSource(this.ordenesPendientes);
+      this.datasourceOrdenesPendientes.paginator = this.paginatorOrdenesPendientes;
+      this.cdRef.detectChanges();
+    });
+
+    this.ordenesService.getOrdenPorTipo('Ordenes Finalizadas').subscribe(data => {
+      this.ordenesFinalizadas = data.sort((a, b) => b.numeroOrden - a.numeroOrden);
+      this.datasourceOrdenesFinalizadas = new MatTableDataSource(this.ordenesFinalizadas);
+      this.datasourceOrdenesPendientes.paginator = this.paginatorOrdenesFinalizadas;
+      this.cdRef.detectChanges();
+    });
+
+    this.ordenesService.getOrdenPorTipo('Ordenes Eliminadas').subscribe(data => {
+      this.ordenesEliminadas = data.sort((a, b) => b.numeroOrden - a.numeroOrden);
+      this.datasourceOrdenesEliminadas = new MatTableDataSource(this.ordenesEliminadas);
+      this.datasourceOrdenesEliminadas.paginator = this.paginatorOrdenesEliminadas;
+      this.cdRef.detectChanges();
     });
   }
 
@@ -75,6 +113,12 @@ export class ListaOrdenesComponent {
   applyFilter(event: Event, dataSource: MatTableDataSource<any>): void {
     const filterValue = (event.target as HTMLInputElement).value;
     dataSource.filter = filterValue.trim().toLowerCase();
+  }
+
+  setPaginator(tab:number){
+   this.activeTab = tab;
+  this.setDataSourceAttributes();
+
   }
 
   verOrden(orden: Orden) {
