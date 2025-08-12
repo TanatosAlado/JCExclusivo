@@ -6,6 +6,11 @@ import { MatTableDataSource } from '@angular/material/table';
 import { MatPaginator } from '@angular/material/paginator';
 import { OrdenesService } from 'src/app/modules/admin/services/ordenes.service';
 import { PedidosService } from 'src/app/shared/services/pedidos.service';
+import { DetalleOrdenComponent } from '../detalle-orden/detalle-orden.component';
+import { EdicionOrdenComponent } from '../edicion-orden/edicion-orden.component';
+import { VerOrdenComponent } from '../ver-orden/ver-orden.component';
+import { ToastService } from 'src/app/shared/services/toast.service';
+import { ConfirmDialogComponent } from 'src/app/shared/components/confirm-dialog/confirm-dialog.component';
 
 @Component({
   selector: 'app-lista-ordenes',
@@ -27,7 +32,7 @@ export class ListaOrdenesComponent {
   @ViewChild('paginatorOrdenesEliminados') paginatorOrdenesEliminadas!: MatPaginator;
   displayedColumns: string[] = ['numeroOrden', 'cliente', 'imei', 'equipo', 'estado', 'fechaIngreso', 'acciones'];
 
-  constructor(private dialog: MatDialog, private ordenesService: OrdenesService,private cdRef: ChangeDetectorRef) { 
+  constructor(private dialog: MatDialog, private ordenesService: OrdenesService,private cdRef: ChangeDetectorRef, private toastService:ToastService) { 
 
     this.datasourceOrdenesPendientes = new MatTableDataSource(this.ordenesPendientes);
     this.datasourceOrdenesFinalizadas = new MatTableDataSource(this.ordenesFinalizadas);
@@ -122,7 +127,11 @@ export class ListaOrdenesComponent {
   }
 
   verOrden(orden: Orden) {
-    // mostrar detalle
+    console.log(orden)
+      this.dialog.open(VerOrdenComponent, {
+      width: '500px',
+      data: orden
+    });
   }
 
   editarOrden(orden: Orden) {
@@ -133,6 +142,33 @@ export class ListaOrdenesComponent {
     // abrir confirmación y eliminar
   }
 
+    moverDocumento(id: string, origen: string, destino: string) {
+    this.ordenesService.moverDocumento(id, origen, destino)
+      .then(() => {
+        if ((origen == 'Ordenes Pendientes') && (destino == 'Ordenes Finalizadas')) {
+          this.toastService.toastMessage('Orden finalizada con éxito', 'green', 2000);
+        } else if ((origen == 'Ordenes Pendientes') && (destino == 'Ordenes Eliminadas')) {
+          this.toastService.toastMessage('Orden eliminada con éxito', 'green', 2000);
+        } else if ((origen == 'Ordenes Finalizadas') && (destino == 'Ordenes Pendientes')) {
+          this.toastService.toastMessage('Orden regresada a pendientes con éxito', 'green', 2000);
+        } else if ((origen == 'Orden Finalizadas') && (destino == 'Ordenes Eliminadas')) {
+          this.toastService.toastMessage('Orden eliminado con éxito', 'green', 2000);
+        } else if ((origen == 'Ordenes Eliminadas') && (destino == 'Ordenes Pendientes')) {
+          this.toastService.toastMessage('Orden regresado a pendientes con éxito', 'green', 2000);
+        }
+        //this.getPedidos();
+      })
+  }
+
+  openConfirmDialog(id: string, tabla: string) {
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      width: '400px',
+      data: {
+        message: `¿Está seguro que desea eliminar esta órden?`,
+        confirmAction: () => this.moverDocumento(id, tabla, 'Ordenes Eliminadas') // Acción a ejecutar si se confirma
+      }
+    });
+  }
 }
 
 

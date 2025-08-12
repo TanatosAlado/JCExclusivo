@@ -9,7 +9,10 @@ import {
   collectionData,
   query,
   where,
-  Timestamp
+  Timestamp,
+  getDoc,
+  setDoc,
+  deleteDoc
 } from '@angular/fire/firestore';
 import { Orden } from '../models/orden.model';
 import { Observable } from 'rxjs';
@@ -114,4 +117,40 @@ async buscarOrdenPorNumeroYDni(numeroOrden: number, dniCliente: number) {
       return collectionData(colRef, { idField: 'id' }) as Observable<Orden[]>;
     }
 
+      //SERVICIO PARA MOVER UN CARRO DE PEDIDO PENDIENTE A PEDIDO FINALIZADO
+async moverDocumento(id: string, origen: string, destino: string): Promise<void> {
+  try {
+    const refOrigen = doc(this.firestore, origen, id);
+    const snap = await getDoc(refOrigen);
+
+    if (snap.exists()) {
+      const data = snap.data();
+
+      // Determinar el nuevo estado
+      let nuevoEstado = '';
+      if (destino === 'Pedidos Finalizados') {
+        nuevoEstado = 'Finalizado';
+      } else if (destino === 'Pedidos Pendientes') {
+        nuevoEstado = 'Pendiente';
+      } else if (destino === 'Pedidos Eliminados') {
+        nuevoEstado = 'Eliminado';
+      }
+
+      // Actualizar el campo estado
+      const dataActualizada = {
+        ...data,
+        estado: nuevoEstado
+      };
+
+      // Guardar en destino con estado actualizado
+      const refDestino = doc(this.firestore, destino, id);
+      await setDoc(refDestino, dataActualizada);
+
+      // Eliminar del origen
+      await deleteDoc(refOrigen);
+    } else {
+    }
+  } catch (err) {
+  }
+}
 }
