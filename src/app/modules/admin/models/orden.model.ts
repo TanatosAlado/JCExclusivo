@@ -13,7 +13,8 @@ export interface Orden {
   estado: string;
   fechaIngreso: Date;
   fechaEntrega?: Date;
+  diasGarantia?: number;
   garantia: boolean;
   fechaGarantia?: Date;
-  observaciones?: string[]; //Se puede separar en Fecha + Texto o hacerlo un string
+  observaciones?: string[];
 }

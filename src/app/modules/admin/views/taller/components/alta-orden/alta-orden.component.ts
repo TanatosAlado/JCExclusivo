@@ -82,7 +82,7 @@ export class AltaOrdenComponent {
         equipo: this.ordenForm.value.equipo,
         motivoIngreso: this.ordenForm.value.motivoIngreso,
         presupuesto: this.ordenForm.value.presupuesto,
-        estado: 'pendiente',
+        estado: 'Pendiente',
         fechaIngreso: new Date(),
         garantia: this.ordenForm.value.garantia,
         observaciones: this.ordenForm.value.observaciones
