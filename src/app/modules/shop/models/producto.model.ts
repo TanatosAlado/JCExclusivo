@@ -7,8 +7,10 @@ export interface VarianteProducto {
 export class Producto {
   constructor(
     public id: string,
+    public codigo: string,  //Agregado para el codigo del producto (codigo de barras)
     public nombre: string,
     public descripcion: string,
+    public precioCosto: number,       //Agregado para el costo del producto
     public ventaMinorista: boolean,
     public precioMinorista: number,
     public ventaMayorista: boolean,
@@ -22,6 +24,7 @@ export class Producto {
     public precioOferta: number,
     public tieneVariantes: boolean,
     public stock: number,
+    public stockMinimo: number, //Agregado para el stock minimo
     public variantes: VarianteProducto[]
   )
   { }

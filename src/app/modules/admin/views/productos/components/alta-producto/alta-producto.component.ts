@@ -40,6 +40,10 @@ ngOnInit(): void {
     rubro: ['', Validators.required],
     subrubro: ['', Validators.required],
     marca: ['', Validators.required],
+
+    codigo: ['', [Validators.required]],
+    precioCosto: [0, [Validators.required, Validators.min(0)]],
+
     
     ventaMinorista: [false],
     precioMinorista: [0],
@@ -53,6 +57,7 @@ ngOnInit(): void {
     destacado: [false],
 
     stock: [0],
+    stockMinimo: [0], 
     tieneVariantes: [false],
     variantes: this.fb.array([]),
   });
