@@ -1,9 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Orden } from '../../../../models/orden.model';
-import { OrdenesService } from 'src/app/modules/admin/services/ordenes.service'; 
-import { ClientesService } from 'src/app/shared/services/clientes.service'; 
+import { OrdenesService } from 'src/app/modules/admin/services/ordenes.service';
+import { ClientesService } from 'src/app/shared/services/clientes.service';
 import { Timestamp } from 'firebase/firestore';
+import { ToastService } from 'src/app/shared/services/toast.service';
 
 @Component({
   selector: 'app-alta-orden',
@@ -20,8 +21,9 @@ export class AltaOrdenComponent {
   constructor(
     private fb: FormBuilder,
     private ordenesService: OrdenesService,
-    private clientesService: ClientesService
-  ) {}
+    private clientesService: ClientesService,
+    private toastService: ToastService
+  ) { }
 
   ngOnInit(): void {
     this.ordenForm = this.fb.group({
@@ -68,6 +70,8 @@ export class AltaOrdenComponent {
     if (this.ordenForm.invalid) return;
 
     this.ordenesService.generarNumeroOrden().then(numero => {
+      const fechaActual = new Date();
+      const fechaFormateada = fechaActual.toLocaleDateString('es-AR'); // dd/mm/aaaa
       const nuevaOrden: Omit<Orden, 'id'> = {
         numeroOrden: numero,
         dniCliente: this.ordenForm.value.dniCliente,
@@ -81,13 +85,15 @@ export class AltaOrdenComponent {
         estado: 'pendiente',
         fechaIngreso: new Date(),
         garantia: this.ordenForm.value.garantia,
-        observaciones: this.ordenForm.value.observaciones ? [this.ordenForm.value.observaciones] : []
+        observaciones: this.ordenForm.value.observaciones
+          ? [`${fechaFormateada}: ${this.ordenForm.value.observaciones}`]
+          : []
       };
 
       this.ordenesService.crearOrden(nuevaOrden).then(() => {
         // Podés mostrar un mensaje, resetear el form, etc.
         this.ordenForm.reset();
-        alert('Orden creada con éxito');
+        this.toastService.toastMessage("Orden Creada con éxito", 'green', 2000)
       });
     });
   }

@@ -135,8 +135,24 @@ export class ListaOrdenesComponent {
   }
 
   editarOrden(orden: Orden) {
-    // redirigir a formulario con datos cargados
+     const dialogRef = this.dialog.open(EdicionOrdenComponent, {
+           width: '600px',
+           data: orden,  // Enviar los datos del producto a editar
+         });
+     
+         dialogRef.afterClosed().subscribe((resultado) => {
+           if (resultado) {
+             this.ordenesService.actualizarOrden(resultado.id,resultado)
+             .then(() => {
+               this.obtenerOrdenes(); // Refrescar la lista después de cerrar el modal
+             })
+             .catch(error => {
+             });
+           }
+         });
   }
+
+  
 
   eliminarOrden(orden: Orden) {
     // abrir confirmación y eliminar

@@ -1,1 +1,62 @@
-<p>edicion-orden works!</p>
+<div class="imagen-central fadeIn first">
+    <img src="../../../../../assets/logo.png" alt="Login" />
+</div>
+
+<mat-dialog-content [formGroup]="formOrdenes" class="contenido-modal">
+
+    <mat-form-field appearance="outline" class="full-width fadeIn first">
+        <mat-label>DNI</mat-label>
+        <input matInput formControlName="dniCliente" readonly>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width fadeIn first">
+        <mat-label>Nombre</mat-label>
+        <input matInput formControlName="nombreCliente" readonly>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width fadeIn first">
+        <mat-label>Apellido</mat-label>
+        <input matInput formControlName="apellidoCliente" readonly>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width fadeIn second">
+        <mat-label>Teléfono</mat-label>
+        <input matInput formControlName="telefonoCliente" readonly>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width fadeIn second">
+        <mat-label>IMEI</mat-label>
+        <input matInput formControlName="imei">
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width fadeIn second">
+        <mat-label>Equipo</mat-label>
+        <input matInput formControlName="equipo">
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width fadeIn second">
+        <mat-label>Motivo Ingreso</mat-label>
+        <input matInput formControlName="motivoIngreso">
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width fadeIn second">
+        <mat-label>Presupuesto</mat-label>
+        <input matInput formControlName="presupuesto">
+    </mat-form-field>
+
+    <mat-checkbox formControlName="garantia" class="fadeIn second">¿Tiene Garantía?</mat-checkbox>
+
+    <mat-form-field appearance="outline" class="form-field full-width fadeIn fourth">
+        <mat-label>Observaciones</mat-label>
+        <textarea matInput rows="3" formControlName="observaciones"></textarea>
+    </mat-form-field>
+
+
+
+
+</mat-dialog-content>
+
+<mat-dialog-actions class="fadeIn fourth" align="end">
+    <button class="botonesRojos" mat-raised-button (click)="guardar()">Guardar</button>
+    <button mat-button mat-dialog-close>Cancelar</button>
+</mat-dialog-actions>

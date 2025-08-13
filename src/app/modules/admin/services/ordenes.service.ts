@@ -153,4 +153,10 @@ async moverDocumento(id: string, origen: string, destino: string): Promise<void>
   } catch (err) {
   }
 }
+
+ actualizarOrden(id: string, datosParciales: Partial<Orden>): Promise<void> {
+    const clienteDocRef = doc(this.firestore, 'Ordenes Pendientes', id);
+    const datosPlano = JSON.parse(JSON.stringify(datosParciales)); // 🔧 conversión segura
+    return updateDoc(clienteDocRef, datosPlano);
+  }
 }
