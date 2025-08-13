@@ -20,6 +20,7 @@ import { ListaOrdenesComponent } from './views/taller/components/lista-ordenes/l
 import { AltaOrdenComponent } from './views/taller/components/alta-orden/alta-orden.component';
 import { DetalleOrdenComponent } from './views/taller/components/detalle-orden/detalle-orden.component';
 import { EdicionOrdenComponent } from './views/taller/components/edicion-orden/edicion-orden.component';
+import { VerOrdenComponent } from './views/taller/components/ver-orden/ver-orden.component';
 import { BannerComponent } from './views/banner/banner.component';
 
 
@@ -45,6 +46,7 @@ import { BannerComponent } from './views/banner/banner.component';
     AltaOrdenComponent,
     DetalleOrdenComponent,
     EdicionOrdenComponent,
+    VerOrdenComponent,
     BannerComponent
   ],
   imports: [

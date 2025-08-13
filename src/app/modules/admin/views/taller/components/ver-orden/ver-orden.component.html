@@ -1,0 +1,21 @@
+<h2 mat-dialog-title>Detalle de la Orden</h2>
+
+<mat-dialog-content class="contenido-modal">
+  <p><strong>Nro. Orden:</strong> {{ orden.numeroOrden }}</p>
+  <p><strong>Cliente:</strong>{{orden.apellidoCliente}} {{ orden.nombreCliente }}</p>
+  <p><strong>Teléfono:</strong> {{ orden.telefonoCliente }}</p>
+  <p><strong>Equipo:</strong> {{ orden.equipo }}</p>
+  <p><strong>Motivo Ingreso:</strong> {{ orden.motivoIngreso }}</p>
+  <p *ngIf="orden.presupuesto>0"><strong>Presupuesto:</strong> ${{ orden.presupuesto}}</p>
+  <p><strong>Estado:</strong> {{ orden.estado }}</p>
+  <p><strong>Garantía:</strong> {{ orden.garantia ? 'Sí' : 'No' }}</p>
+  <p *ngIf="orden.fechaGarantia"><strong>Fecha Garantía:</strong> {{ orden.fechaGarantia }}</p>
+  <p><strong>Fecha Ingreso:</strong> {{ orden.fechaIngreso?.toDate() | date:'dd/MM/yyyy' }}</p>
+  <p *ngIf="orden.fechaEntrega"><strong>Fecha Entrega:</strong> {{ orden.fechaEntrega?.toDate() | date:'dd/MM/yyyy' }}</p>
+  <p *ngIf="orden.observaciones.length>0"><strong>Observaciones:</strong> {{ orden.observaciones }}</p>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close>Cerrar</button>
+</mat-dialog-actions>
+
