@@ -22,6 +22,8 @@ import { DetalleOrdenComponent } from './views/taller/components/detalle-orden/d
 import { EdicionOrdenComponent } from './views/taller/components/edicion-orden/edicion-orden.component';
 import { VerOrdenComponent } from './views/taller/components/ver-orden/ver-orden.component';
 import { BannerComponent } from './views/banner/banner.component';
+import { MatSelectModule } from '@angular/material/select';
+
 
 
 
@@ -47,11 +49,12 @@ import { BannerComponent } from './views/banner/banner.component';
     DetalleOrdenComponent,
     EdicionOrdenComponent,
     VerOrdenComponent,
-    BannerComponent
+    BannerComponent,
   ],
   imports: [
     CommonModule,
-    SharedModule
+    SharedModule,
+    MatSelectModule
   ]
 })
 export class AdminModule { }

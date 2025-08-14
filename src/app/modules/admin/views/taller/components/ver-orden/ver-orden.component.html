@@ -9,6 +9,7 @@
   <p *ngIf="orden.presupuesto>0"><strong>Presupuesto:</strong> ${{ orden.presupuesto}}</p>
   <p><strong>Estado:</strong> {{ orden.estado }}</p>
   <p><strong>Garantía:</strong> {{ orden.garantia ? 'Sí' : 'No' }}</p>
+  <p *ngIf="orden.diasGarantia ||orden.diasGarantia>0"><strong>Días Garantía:</strong> {{ orden.diasGarantia}}</p>
   <p *ngIf="orden.fechaGarantia"><strong>Fecha Garantía:</strong> {{ orden.fechaGarantia }}</p>
   <p><strong>Fecha Ingreso:</strong> {{ orden.fechaIngreso?.toDate() | date:'dd/MM/yyyy' }}</p>
   <p *ngIf="orden.fechaEntrega"><strong>Fecha Entrega:</strong> {{ orden.fechaEntrega?.toDate() | date:'dd/MM/yyyy' }}</p>

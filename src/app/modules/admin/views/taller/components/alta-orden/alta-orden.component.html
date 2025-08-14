@@ -12,8 +12,7 @@
           <mat-label>DNI</mat-label>
           <input matInput formControlName="dniCliente" type="number" (keydown.enter)="buscarCliente()"
             (blur)="buscarCliente()">
-
-          <!-- Lupa como botón dentro del input -->
+            
           <button mat-icon-button matSuffix type="button" (click)="buscarCliente()" title="Buscar Cliente">
             <mat-icon>search</mat-icon>
           </button>

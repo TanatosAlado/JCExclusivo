@@ -44,11 +44,20 @@
         <input matInput formControlName="presupuesto">
     </mat-form-field>
 
+    <mat-form-field appearance="outline" class="full-width fadeIn second">
+  <mat-label>Estado</mat-label>
+  <mat-select formControlName="estado">
+    <mat-option *ngFor="let estado of estados" [value]="estado">
+      {{ estado }}
+    </mat-option>
+  </mat-select>
+</mat-form-field>
+
     <mat-checkbox formControlName="garantia" class="fadeIn second">¿Tiene Garantía?</mat-checkbox>
 
     <mat-form-field appearance="outline" class="full-width fadeIn second">
         <mat-label>Días de garantía</mat-label>
-        <input matInput formControlName="diasGarantia">
+        <input matInput type="number" formControlName="diasGarantia">
     </mat-form-field>
 
     <mat-form-field appearance="outline" class="form-field full-width fadeIn fourth">

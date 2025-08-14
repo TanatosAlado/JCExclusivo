@@ -24,7 +24,7 @@ export class OrdenesService {
 
   constructor(private firestore: Firestore) { }
 
-    async generarNumeroOrden(): Promise<number> {
+  async generarNumeroOrden(): Promise<number> {
     const ref = collection(this.firestore, 'Contador Ordenes');
     const snapshot = await getDocs(ref);
 
@@ -42,7 +42,7 @@ export class OrdenesService {
     return nuevo;
   }
 
-    async crearOrden(orden: Omit<Orden, 'id'>): Promise<void> {
+  async crearOrden(orden: Omit<Orden, 'id'>): Promise<void> {
     const ordenesRef = collection(this.firestore, 'Ordenes Pendientes');
     const docRef = await addDoc(ordenesRef, orden);
     await updateDoc(docRef, { id: docRef.id });
@@ -75,8 +75,8 @@ export class OrdenesService {
     }
   }
 
-  
-async buscarOrdenPorNumeroYDni(numeroOrden: number, dniCliente: number) {
+
+  async buscarOrdenPorNumeroYDni(numeroOrden: number, dniCliente: number) {
     try {
       const ordenesRef = collection(this.firestore, 'Ordenes Pendientes');
       const q = query(
@@ -113,48 +113,52 @@ async buscarOrdenPorNumeroYDni(numeroOrden: number, dniCliente: number) {
     }
   }
   getOrdenPorTipo(tipo: string): Observable<Orden[]> {
-      const colRef = collection(this.firestore, tipo);
-      return collectionData(colRef, { idField: 'id' }) as Observable<Orden[]>;
-    }
-
-      //SERVICIO PARA MOVER UN CARRO DE PEDIDO PENDIENTE A PEDIDO FINALIZADO
-async moverDocumento(id: string, origen: string, destino: string): Promise<void> {
-  try {
-    const refOrigen = doc(this.firestore, origen, id);
-    const snap = await getDoc(refOrigen);
-
-    if (snap.exists()) {
-      const data = snap.data();
-
-      // Determinar el nuevo estado
-      let nuevoEstado = '';
-      if (destino === 'Pedidos Finalizados') {
-        nuevoEstado = 'Finalizado';
-      } else if (destino === 'Pedidos Pendientes') {
-        nuevoEstado = 'Pendiente';
-      } else if (destino === 'Pedidos Eliminados') {
-        nuevoEstado = 'Eliminado';
-      }
-
-      // Actualizar el campo estado
-      const dataActualizada = {
-        ...data,
-        estado: nuevoEstado
-      };
-
-      // Guardar en destino con estado actualizado
-      const refDestino = doc(this.firestore, destino, id);
-      await setDoc(refDestino, dataActualizada);
-
-      // Eliminar del origen
-      await deleteDoc(refOrigen);
-    } else {
-    }
-  } catch (err) {
+    const colRef = collection(this.firestore, tipo);
+    return collectionData(colRef, { idField: 'id' }) as Observable<Orden[]>;
   }
-}
 
- actualizarOrden(id: string, datosParciales: Partial<Orden>): Promise<void> {
+  //SERVICIO PARA MOVER UN CARRO DE PEDIDO PENDIENTE A PEDIDO FINALIZADO
+  async moverDocumento(id: string, origen: string, destino: string): Promise<void> {
+    try {
+      const refOrigen = doc(this.firestore, origen, id);
+      const snap = await getDoc(refOrigen);
+
+      if (snap.exists()) {
+        const data = snap.data();
+        let fechaEntrega=null
+        // Determinar el nuevo estado
+        let nuevoEstado = '';
+        if (destino === 'Ordenes Finalizadas') {
+          nuevoEstado = 'Finalizado';
+          fechaEntrega=new Date()
+        } else if (destino === 'Ordenes Pendientes') {
+          nuevoEstado = 'Pendiente';
+           
+        } else if (destino === 'Ordenes Eliminadas') {
+          nuevoEstado = 'Finalizado';
+          
+        }
+
+        // Actualizar el campo estado
+        const dataActualizada = {
+          ...data,
+          estado: nuevoEstado,
+          fechaEntrega: fechaEntrega
+        };
+
+        // Guardar en destino con estado actualizado
+        const refDestino = doc(this.firestore, destino, id);
+        await setDoc(refDestino, dataActualizada);
+
+        // Eliminar del origen
+        await deleteDoc(refOrigen);
+      } else {
+      }
+    } catch (err) {
+    }
+  }
+
+  actualizarOrden(id: string, datosParciales: Partial<Orden>): Promise<void> {
     const clienteDocRef = doc(this.firestore, 'Ordenes Pendientes', id);
     const datosPlano = JSON.parse(JSON.stringify(datosParciales)); // 🔧 conversión segura
     return updateDoc(clienteDocRef, datosPlano);
