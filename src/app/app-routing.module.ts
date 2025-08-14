@@ -14,6 +14,7 @@ import { EmpresaComponent } from './modules/admin/views/empresa/empresa.componen
 import { GiftsComponent } from './modules/admin/views/gifts/gifts.component';
 import { TallerComponent } from './modules/admin/views/taller/taller.component';
 import { BannerComponent } from './modules/admin/views/banner/banner.component';
+import { LayoutDespachoComponent } from './modules/despacho/components/layout-despacho/layout-despacho.component';
 
 const routes: Routes = [
     { path: '', redirectTo: 'inicio', pathMatch: 'prefix' },
@@ -37,7 +38,8 @@ const routes: Routes = [
   },
   {path:'productos',component: GrillaItemComponent},
   {path:'producto/:id',component:DetalleProductoComponent},
-  {path: 'checkout',component: CheckoutComponent,},
+  {path: 'checkout',component: CheckoutComponent},
+  {path: 'despacho',component: LayoutDespachoComponent},
 ];
 
 @NgModule({
