@@ -62,9 +62,13 @@
 
     <mat-form-field appearance="outline" class="form-field full-width fadeIn fourth">
         <mat-label>Observaciones</mat-label>
-        <textarea matInput rows="3" formControlName="observaciones"></textarea>
+        <textarea matInput rows="3" formControlName="observaciones"readonly></textarea>
     </mat-form-field>
 
+     <mat-form-field appearance="outline" class="full-width fadeIn second">
+        <mat-label>Nueva Observacion</mat-label>
+        <input matInput formControlName="newObservacion">
+    </mat-form-field>
 
 
 

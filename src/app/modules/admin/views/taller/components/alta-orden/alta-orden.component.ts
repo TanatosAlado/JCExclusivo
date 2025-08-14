@@ -71,7 +71,12 @@ export class AltaOrdenComponent {
 
     this.ordenesService.generarNumeroOrden().then(numero => {
       const fechaActual = new Date();
-      const fechaFormateada = fechaActual.toLocaleDateString('es-AR'); // dd/mm/aaaa
+
+      const dia = String(fechaActual.getDate()).padStart(2, '0');
+      const mes = String(fechaActual.getMonth() + 1).padStart(2, '0'); // Mes empieza en 0
+      const anio = fechaActual.getFullYear();
+
+      const fechaFormateada = `${dia}/${mes}/${anio}`;
       const nuevaOrden: Omit<Orden, 'id'> = {
         numeroOrden: numero,
         dniCliente: this.ordenForm.value.dniCliente,
@@ -85,9 +90,11 @@ export class AltaOrdenComponent {
         estado: 'Pendiente',
         fechaIngreso: new Date(),
         garantia: this.ordenForm.value.garantia,
-        observaciones: this.ordenForm.value.observaciones
-          ? [`${fechaFormateada}: ${this.ordenForm.value.observaciones}`]
-          : []
+        observaciones: Array.isArray(this.ordenForm.value.observaciones)
+          ? this.ordenForm.value.observaciones
+          : this.ordenForm.value.observaciones
+            ? [`${fechaFormateada}: ${this.ordenForm.value.observaciones}`]
+            : []
       };
 
       this.ordenesService.crearOrden(nuevaOrden).then(() => {

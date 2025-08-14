@@ -12,11 +12,16 @@
   <p *ngIf="orden.diasGarantia ||orden.diasGarantia>0"><strong>Días Garantía:</strong> {{ orden.diasGarantia}}</p>
   <p *ngIf="orden.fechaGarantia"><strong>Fecha Garantía:</strong> {{ orden.fechaGarantia }}</p>
   <p><strong>Fecha Ingreso:</strong> {{ orden.fechaIngreso?.toDate() | date:'dd/MM/yyyy' }}</p>
-  <p *ngIf="orden.fechaEntrega"><strong>Fecha Entrega:</strong> {{ orden.fechaEntrega?.toDate() | date:'dd/MM/yyyy' }}</p>
-  <p *ngIf="orden.observaciones.length>0"><strong>Observaciones:</strong> {{ orden.observaciones }}</p>
+  <p *ngIf="orden.fechaEntrega"><strong>Fecha Entrega:</strong> {{ orden.fechaEntrega?.toDate() | date:'dd/MM/yyyy' }}
+  </p>
+  <p *ngIf="orden.observaciones?.length > 0">
+    <strong>Observaciones:</strong><br>
+    <span *ngFor="let obs of orden.observaciones">
+      {{ obs }}<br>
+    </span>
+  </p>
 </mat-dialog-content>
 
 <mat-dialog-actions align="end">
   <button mat-button mat-dialog-close>Cerrar</button>
 </mat-dialog-actions>
-

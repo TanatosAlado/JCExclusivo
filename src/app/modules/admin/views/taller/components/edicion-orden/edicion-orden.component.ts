@@ -27,7 +27,8 @@ export class EdicionOrdenComponent {
       garantia: [orden.garantia],
       diasGarantia: [{ value: orden.diasGarantia, disabled: !orden.garantia }],
       estado: [orden.estado],
-      observaciones: [orden.observaciones],
+      observaciones: [orden.observaciones?.join('\n') || ''],
+      newObservacion:[]
     });
 
     this.formOrdenes.get('garantia')!.valueChanges.subscribe((checked: boolean) => {
@@ -43,12 +44,28 @@ export class EdicionOrdenComponent {
 
 guardar(): void {
   if (this.formOrdenes.valid) {
+    const fechaActual = new Date();
+    const dia = String(fechaActual.getDate()).padStart(2, '0');
+    const mes = String(fechaActual.getMonth() + 1).padStart(2, '0');
+    const anio = fechaActual.getFullYear();
+    const fechaFormateada = `${dia}/${mes}/${anio}`;
+    const observacionesActuales = this.formOrdenes.get('observaciones')?.value
+      .split('\n')
+      .filter(o => o.trim() !== '');
+
+    const nuevaObs = this.formOrdenes.get('newObservacion')?.value?.trim();
+    if (nuevaObs) {
+      observacionesActuales.push(`${fechaFormateada}: ${nuevaObs}`);
+    }
     const ordenActualizada = {
       ...this.formOrdenes.getRawValue(),
+      observaciones: observacionesActuales,
+      newObservacion: '',
       id: this.orden.id
     };
+
     this.dialogRef.close(ordenActualizada);
-    this.toastService.toastMessage("Orden actualizado con éxito", "green", 2000);
+    this.toastService.toastMessage("Orden actualizada con éxito", "green", 2000);
   }
 }
 }
