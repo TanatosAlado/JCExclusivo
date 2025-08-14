@@ -7,7 +7,7 @@ export interface VarianteProducto {
 export class Producto {
   constructor(
     public id: string,
-    public codigo: string,  //Agregado para el codigo del producto (codigo de barras)
+    public codigoBarras: string,  //Agregado para el codigo del producto (codigo de barras)
     public nombre: string,
     public descripcion: string,
     public precioCosto: number,       //Agregado para el costo del producto

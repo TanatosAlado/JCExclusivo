@@ -13,6 +13,7 @@ import { provideAuth, getAuth } from '@angular/fire/auth'; // Para Auth (si lo u
 import { provideFirestore, getFirestore } from '@angular/fire/firestore'; // Para Firestore (si lo usas)
 import { environment } from 'src/environment/environment';
 import { ShopModule } from './modules/shop/shop.module';
+import { DespachoModule } from './modules/despacho/despacho.module';
 
 @NgModule({
   declarations: [
@@ -26,6 +27,7 @@ import { ShopModule } from './modules/shop/shop.module';
     AuthModule,
     BrowserAnimationsModule,
     ShopModule,
+    DespachoModule,
     provideFirebaseApp(() => initializeApp(environment.firebase)),
     provideAuth(() => getAuth()),
     provideFirestore(() => getFirestore()),
