@@ -13,6 +13,8 @@ import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { ContadorService } from 'src/app/shared/services/contador.service';
 import { VouchersPuntosService } from 'src/app/shared/services/vouchers-puntos.service';
 import { collection } from 'firebase/firestore/lite';
+import { InfoEmpresa } from 'src/app/shared/models/infoEmpresa.model';
+import { InfoEmpresaService } from 'src/app/shared/services/info-empresa.service';
 
 @Component({
   selector: 'app-checkout',
@@ -51,9 +53,9 @@ export class CheckoutComponent {
   productos: any[] = [];  // asumimos que ya lo estás cargando en el carrito
   total: number = 0;
   cuponInvalido: boolean = false;
+  infoEmpresa: InfoEmpresa | null = null;
 
-
-  constructor(private firestore: Firestore, private fb: FormBuilder, private clienteService: ClientesService, public pedidoService: PedidosService, public generalService: GeneralService, private contadorService: ContadorService, private router: Router, private carritoService: CarritoService, private puntosService: VouchersPuntosService) {
+  constructor(private infoEmpresaService: InfoEmpresaService, private firestore: Firestore, private fb: FormBuilder, private clienteService: ClientesService, public pedidoService: PedidosService, public generalService: GeneralService, private contadorService: ContadorService, private router: Router, private carritoService: CarritoService, private puntosService: VouchersPuntosService) {
 
     this.formCheckout = this.fb.group({
       user: ['', [Validators.required]],
@@ -66,13 +68,14 @@ export class CheckoutComponent {
   async ngOnInit() {
     this.getCliente()
     this.getContadorPedidos()
+     this.getDatosEmpresa()
     await this.inicializarValoresPuntos();
-      this.cuponControl.valueChanges.subscribe(() => {
-    if (this.cuponInvalido) {
-      this.cuponInvalido = false;
-      this.mensajeCupon = '';
-    }
-  });
+    this.cuponControl.valueChanges.subscribe(() => {
+      if (this.cuponInvalido) {
+        this.cuponInvalido = false;
+        this.mensajeCupon = '';
+      }
+    });
   }
 
   async inicializarValoresPuntos() {
@@ -341,21 +344,21 @@ export class CheckoutComponent {
   }
 
   aplicarCupon() {
-  const codigo = this.cuponControl.value?.trim();
-  if (!codigo) return;
+    const codigo = this.cuponControl.value?.trim();
+    if (!codigo) return;
 
-  this.puntosService.obtenerCuponPorCodigo(codigo).then((cupon) => {
-    if (cupon) {
-      this.cuponAplicado = cupon;
-      this.cuponInvalido = false;
-      this.mensajeCupon = '';
-      this.cuponControl.disable(); // Deshabilitamos si es válido
-    } else {
-      this.cuponAplicado = null;
-      this.cuponInvalido = true;
-      this.mensajeCupon = 'Cupón inválido o no disponible ❌';
-    }
-  });
+    this.puntosService.obtenerCuponPorCodigo(codigo).then((cupon) => {
+      if (cupon) {
+        this.cuponAplicado = cupon;
+        this.cuponInvalido = false;
+        this.mensajeCupon = '';
+        this.cuponControl.disable(); // Deshabilitamos si es válido
+      } else {
+        this.cuponAplicado = null;
+        this.cuponInvalido = true;
+        this.mensajeCupon = 'Cupón inválido o no disponible ❌';
+      }
+    });
   }
 
   eliminarCupon() {
@@ -365,4 +368,27 @@ export class CheckoutComponent {
     this.cuponControl.setValue('');
   }
 
+  //FUNCION PARA COPIAR EL CVU AL PORTAPAPELES, podemos volarlo
+  copiarCVU(cvu: string) {
+    navigator.clipboard.writeText(cvu).then(() => {
+      alert('CVU copiado al portapapeles');
+    }).catch(() => {
+      alert('No se pudo copiar el CVU');
+    });
+  }
+  
+  getTotal(): number {
+    return this.generalService.getTotalPrecio(this.clienteEncontrado);
+  }
+  generarQR(aliasOCvu: string): string {
+    return `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(aliasOCvu)}&size=200x200`;
+  }
+
+    //FUNCION PARA OBTENER LOS DATOS DE LA EMPRESA
+  getDatosEmpresa() {
+    this.infoEmpresaService.obtenerInfoGeneral().subscribe(data => {
+      this.infoEmpresa = data;
+    });
+  
+  }
 }

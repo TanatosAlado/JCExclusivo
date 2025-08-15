@@ -335,3 +335,64 @@ mat-hint.error {
 mat-hint.success {
   color: green;
 }
+
+.qr-container {
+  margin-top: 10px;
+  text-align: center;
+}
+
+.qr-container img {
+  width: 200px;
+  height: 200px;
+  border: 1px solid #ccc;
+  padding: 5px;
+  margin-bottom: 10px;
+}
+
+
+.qr-pago-container {
+  margin-top: 20px;
+  padding: 15px;
+  border: 2px solid #ccc;
+  border-radius: 12px;
+  background-color: #f9f9f9;
+
+  h4 {
+    margin-bottom: 10px;
+  }
+
+  .qr-bloque {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    flex-wrap: wrap;
+
+    img {
+      width: 200px;
+      height: 200px;
+      border: 1px solid #ccc;
+      padding: 5px;
+      background: white;
+    }
+
+    .qr-datos {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+
+      button {
+        align-self: start;
+        background-color: #204977;
+        color: white;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background-color: #16395d;
+      }
+    }
+  }
+}
