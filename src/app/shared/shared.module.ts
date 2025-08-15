@@ -24,6 +24,7 @@ import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { CarritoComponent } from './components/carrito/carrito.component';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { ConfirmDialogComponent } from './components/confirm-dialog/confirm-dialog.component';
+import { WhatsappComponent } from './components/whatsapp/whatsapp.component';
 
 
 @NgModule({
@@ -32,7 +33,8 @@ import { ConfirmDialogComponent } from './components/confirm-dialog/confirm-dial
     FooterComponent,
     DashboardComponent,
     CarritoComponent,
-    ConfirmDialogComponent
+    ConfirmDialogComponent,
+    WhatsappComponent
   ],
   imports: [
     CommonModule,
@@ -80,7 +82,8 @@ import { ConfirmDialogComponent } from './components/confirm-dialog/confirm-dial
     MatTooltipModule,
     MatBadgeModule,
     MatAutocompleteModule,
-    MatButtonToggleModule
+    MatButtonToggleModule,
+    WhatsappComponent
   ]
 })
 export class SharedModule { }
