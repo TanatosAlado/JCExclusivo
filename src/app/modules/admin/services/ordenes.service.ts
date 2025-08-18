@@ -42,10 +42,18 @@ export class OrdenesService {
     return nuevo;
   }
 
-  async crearOrden(orden: Omit<Orden, 'id'>): Promise<void> {
+  // async crearOrden(orden: Omit<Orden, 'id'>): Promise<void> {
+  //   const ordenesRef = collection(this.firestore, 'Ordenes Pendientes');
+  //   const docRef = await addDoc(ordenesRef, orden);
+  //   await updateDoc(docRef, { id: docRef.id });
+  // }
+
+  async crearOrden(orden: Omit<Orden, 'id'>): Promise<Orden> {
     const ordenesRef = collection(this.firestore, 'Ordenes Pendientes');
     const docRef = await addDoc(ordenesRef, orden);
+    const ordenCompleta: Orden = { ...orden, id: docRef.id };
     await updateDoc(docRef, { id: docRef.id });
+    return ordenCompleta;
   }
 
   obtenerOrdenes(): Observable<Orden[]> {

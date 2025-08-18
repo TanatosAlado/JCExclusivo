@@ -5,6 +5,8 @@ import { OrdenesService } from 'src/app/modules/admin/services/ordenes.service';
 import { ClientesService } from 'src/app/shared/services/clientes.service';
 import { Timestamp } from 'firebase/firestore';
 import { ToastService } from 'src/app/shared/services/toast.service';
+import { MatDialog, MatDialogRef } from '@angular/material/dialog';
+import { ComprobanteOrdenComponent } from '../comprobante-orden/comprobante-orden.component';
 
 @Component({
   selector: 'app-alta-orden',
@@ -17,12 +19,16 @@ export class AltaOrdenComponent {
   ordenForm!: FormGroup;
   cargandoCliente = false;
   errorCliente: string | null = null;
+  // private dialogRef: MatDialogRef<ComprobanteOrdenComponent>
 
   constructor(
     private fb: FormBuilder,
     private ordenesService: OrdenesService,
     private clientesService: ClientesService,
-    private toastService: ToastService
+    private toastService: ToastService,
+    private dialog: MatDialog,
+    private dialogRef: MatDialogRef<AltaOrdenComponent>
+
   ) { }
 
   ngOnInit(): void {
@@ -34,6 +40,8 @@ export class AltaOrdenComponent {
       imei: ['', [Validators.required]],
       equipo: ['', [Validators.required]],
       motivoIngreso: ['', [Validators.required]],
+      codigoDesbloqueo: [''],  
+      colorEquipo: [''],       
       presupuesto: [0],
       garantia: [false],
       observaciones: ['']
@@ -87,6 +95,8 @@ export class AltaOrdenComponent {
         equipo: this.ordenForm.value.equipo,
         motivoIngreso: this.ordenForm.value.motivoIngreso,
         presupuesto: this.ordenForm.value.presupuesto,
+        codigoDesbloqueo: this.ordenForm.value.codigoDesbloqueo,
+        colorEquipo: this.ordenForm.value.colorEquipo,
         estado: 'Pendiente',
         fechaIngreso: new Date(),
         garantia: this.ordenForm.value.garantia,
@@ -97,11 +107,27 @@ export class AltaOrdenComponent {
             : []
       };
 
-      this.ordenesService.crearOrden(nuevaOrden).then(() => {
-        // Podés mostrar un mensaje, resetear el form, etc.
-        this.ordenForm.reset();
-        this.toastService.toastMessage("Orden Creada con éxito", 'green', 2000)
+      // this.ordenesService.crearOrden(nuevaOrden).then(() => {
+      //   // Podés mostrar un mensaje, resetear el form, etc.
+      //   this.ordenForm.reset();
+      //   this.toastService.toastMessage("Orden Creada con éxito", 'green', 2000)
+      // });
+
+      this.ordenesService.crearOrden(nuevaOrden).then((ordenCreada) => {
+      this.ordenForm.reset();
+      this.toastService.toastMessage("Orden Creada con éxito", 'green', 2000);
+
+      // 👇 cerrás modal de alta (dependiendo si usás MatDialog, Bootstrap, etc.)
+       this.dialogRef.close(ordenCreada);
+
+      // 👇 abrís modal de comprobante
+      this.dialog.open(ComprobanteOrdenComponent, {
+        width: '600px',
+        data: ordenCreada
       });
+    });
+
+      
     });
   }
 }

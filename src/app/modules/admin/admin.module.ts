@@ -23,6 +23,8 @@ import { EdicionOrdenComponent } from './views/taller/components/edicion-orden/e
 import { VerOrdenComponent } from './views/taller/components/ver-orden/ver-orden.component';
 import { BannerComponent } from './views/banner/banner.component';
 import { MatSelectModule } from '@angular/material/select';
+import { ComprobanteOrdenComponent } from './views/taller/components/comprobante-orden/comprobante-orden.component';
+import { ConsultaOrdenComponent } from '../../shared/components/consulta-orden/consulta-orden.component';
 
 
 
@@ -50,6 +52,8 @@ import { MatSelectModule } from '@angular/material/select';
     EdicionOrdenComponent,
     VerOrdenComponent,
     BannerComponent,
+    ComprobanteOrdenComponent,
+    ConsultaOrdenComponent,
   ],
   imports: [
     CommonModule,

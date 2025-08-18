@@ -1,0 +1,23 @@
+<h2>Orden de Reparación N° {{ orden.numeroOrden }}</h2>
+<p><b>Cliente:</b> {{ orden.apellidoCliente }}, {{ orden.nombreCliente }}</p>
+<p><b>DNI:</b> {{ orden.dniCliente }}</p>
+<p><b>Teléfono:</b> {{ orden.telefonoCliente }}</p>
+<p><b>Equipo:</b> {{ orden.equipo }} ({{ orden.colorEquipo }})</p>
+<p><b>IMEI:</b> {{ orden.imei }}</p>
+<p><b>Motivo:</b> {{ orden.motivoIngreso }}</p>
+<p><b>Presupuesto:</b> {{ orden.presupuesto | currency }}</p>
+<p><b>Fecha ingreso:</b> {{ orden.fechaIngreso | date:'dd/MM/yyyy' }}</p>
+<p><b>Observaciones:</b></p>
+<ul>
+  <li *ngFor="let obs of orden.observaciones">{{ obs }}</li>
+</ul>
+
+<!-- QR -->
+<div style="text-align:center; margin:20px 0;">
+  <qrcode [qrdata]="qrLink" [width]="200"></qrcode>
+</div>
+
+<!-- Botón imprimir -->
+<div style="text-align:right;">
+  <button mat-raised-button color="primary" (click)="imprimir()">Imprimir</button>
+</div>

@@ -41,15 +41,9 @@
         <a routerLink="/productos" class="nav-link text-white">Productos</a>
         <a routerLink="/nosotros" class="nav-link text-white">Nosotros</a>
         <a routerLink="/contacto" class="nav-link text-white">Contacto</a>
-      
-        <!-- Nuevo enlace destacado -->
-        <a href="javascript:void(0)"
-          class="nav-link text-white estado-reparacion-link"
-          (click)="abrirModalReparacion()">
-          <i class="fas fa-tools me-1"></i> Reparación
-        </a>
-      
+        <a (click)="abrirModalReparacion()" class="nav-link text-white">Reparación</a>
         <a *ngIf="usrAdmin" routerLink="/gestiones" class="nav-link" (click)="cerrarMenu()">Gestiones</a>
+        <a *ngIf="usrAdmin" routerLink="/despacho" class="nav-link">Despacho</a>
       </div>
 
       <!-- Acciones -->
@@ -92,7 +86,7 @@
     <a routerLink="/nosotros" class="nav-link">Nosotros</a>
     <a routerLink="/contacto" class="nav-link">Contacto</a>
     <a *ngIf="usrAdmin" routerLink="/gestiones" class="nav-link">Gestiones</a>
-    <a *ngIf="usrAdmin" routerLink="/despacho" class="nav-link">Gestiones</a>
+    <a *ngIf="usrAdmin" routerLink="/despacho" class="nav-link">Despacho</a>
   </div>
 </div>
 

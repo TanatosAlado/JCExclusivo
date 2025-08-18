@@ -25,7 +25,7 @@ import { CarritoComponent } from './components/carrito/carrito.component';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { ConfirmDialogComponent } from './components/confirm-dialog/confirm-dialog.component';
 import { WhatsappComponent } from './components/whatsapp/whatsapp.component';
-
+import { QRCodeModule } from 'angularx-qrcode';
 
 @NgModule({
   declarations: [
@@ -57,7 +57,8 @@ import { WhatsappComponent } from './components/whatsapp/whatsapp.component';
     MatTooltipModule,
     MatBadgeModule,
     MatAutocompleteModule,
-    MatButtonToggleModule
+    MatButtonToggleModule,
+    QRCodeModule
   ],
   exports: [
     NavbarComponent,
@@ -83,7 +84,8 @@ import { WhatsappComponent } from './components/whatsapp/whatsapp.component';
     MatBadgeModule,
     MatAutocompleteModule,
     MatButtonToggleModule,
-    WhatsappComponent
+    WhatsappComponent,
+    QRCodeModule
   ]
 })
 export class SharedModule { }

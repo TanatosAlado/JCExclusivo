@@ -9,6 +9,8 @@ export interface Orden {
   apellidoCliente: string;
   dniCliente: number;
   motivoIngreso: string;
+  codigoDesbloqueo: string;
+  colorEquipo: string;
   presupuesto: number;
   estado: string;
   fechaIngreso: Date;

@@ -97,23 +97,22 @@ export class ListaOrdenesComponent {
 
   
 
-    abrirModalAltaOrden(): void {
-    const dialogRef = this.dialog.open(AltaOrdenComponent, {
-      width: '90vw',
-      maxWidth: '600px',
-      height: 'auto',
-      maxHeight: '90vh',
-      panelClass: 'custom-dialog-container',
-      
-    });
-  
-    dialogRef.afterClosed().subscribe(resultado => {
-      if (resultado) {
-        console.log('Producto creado:', resultado);
-     //   this.obtenerProductos(); // Refrescar productos
-      }
-    });
-  }
+abrirModalAltaOrden(): void {
+  const dialogRef = this.dialog.open(AltaOrdenComponent, {
+    width: '90vw',
+    maxWidth: '600px',
+    height: 'auto',
+    maxHeight: '90vh',
+    panelClass: 'custom-dialog-container',
+  });
+
+  dialogRef.afterClosed().subscribe(resultado => {
+    if (resultado) {
+      console.log('Orden creada:', resultado);
+      // Podrías refrescar la lista de órdenes acá si querés
+    }
+  });
+}
 
   applyFilter(event: Event, dataSource: MatTableDataSource<any>): void {
     const filterValue = (event.target as HTMLInputElement).value;
