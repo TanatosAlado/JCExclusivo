@@ -28,6 +28,9 @@ ordenId!: string;
 
       if (snap.exists()) {
         this.orden = snap.data();
+        console.log('Orden encontrada:', this.orden);
+        this.orden.fechaIngreso = this.orden.fechaIngreso.toDate(); 
+        console.log('Fecha de ingreso convertida:', this.orden.fechaIngreso);
       } else {
         this.error = 'No se encontró la orden solicitada.';
       }

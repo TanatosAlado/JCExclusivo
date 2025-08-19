@@ -11,7 +11,6 @@ export class ComprobanteOrdenComponent {
   qrLink: string;
 
   constructor(@Inject(MAT_DIALOG_DATA) public orden: Orden) {
-    // 👇 link que abrirá el QR (futuro componente de consulta)
     this.qrLink = `https://storejcexclusivo.web.app/consulta/${orden.id}`;
   }
 

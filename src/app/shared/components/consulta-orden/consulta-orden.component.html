@@ -1,20 +1,53 @@
-<div class="consulta-orden-container" *ngIf="!cargando; else loading">
+<div class="orden-container fadeIn">
+  <!-- LOGO -->
+  <div class="logo-container">
+    <img src="../../../../assets/logo.png" alt="Logo empresa" class="logo" />
+  </div>
+
+  <!-- TÍTULO -->
+  <h1 class="titulo">Seguimiento de reparación</h1>
+
+  <!-- BLOQUES -->
   <ng-container *ngIf="orden; else errorTpl">
-    <h2>Orden #{{ ordenId }}</h2>
-    <p><strong>Cliente:</strong> {{ orden.clienteNombre }}</p>
-    <p><strong>Estado:</strong> {{ orden.estado }}</p>
-    <p><strong>Fecha:</strong> {{ orden.fecha | date:'short' }}</p>
-    <p><strong>Descripción:</strong> {{ orden.descripcion }}</p>
-    <p><strong>Técnico asignado:</strong> {{ orden.tecnico || 'Pendiente' }}</p>
+    <!-- Datos del cliente -->
+    <div class="bloque">
+      <h2>👤 Datos del cliente</h2>
+      <p><strong>Nombre:</strong> {{ orden.nombreCliente }} {{ orden.apellidoCliente }}</p>
+    </div>
+
+    <!-- Datos del equipo -->
+    <div class="bloque">
+      <h2>💻 Datos del equipo</h2>
+      <p><strong>Equipo:</strong> {{ orden.equipo }}</p>
+      <p><strong>Color:</strong> {{ orden.colorEquipo }}</p>
+    </div>
+
+    <!-- Datos de la orden -->
+    <div class="bloque">
+      <h2>📝 Detalles de la orden</h2>
+      <p><strong>N° de Orden:</strong> {{ orden.numeroOrden }}</p>
+      <p><strong>Fecha de ingreso:</strong> {{ orden.fechaIngreso | date:'dd/MM/yyyy' }}</p>
+      <p><strong>Motivo:</strong> {{ orden.motivoIngreso }}</p>
+      
+      <!-- Observaciones como lista -->
+      <div *ngIf="orden.observaciones?.length">
+        <strong>Observaciones:</strong>
+        <ul>
+          <li *ngFor="let obs of orden.observaciones">{{ obs }}</li>
+        </ul>
+      </div>
+
+      <p><strong>Estado:</strong> <span class="estado">{{ orden.estado }}</span></p>
+    </div>
   </ng-container>
 
-  <ng-template #errorTpl>
-    <div class="alert alert-danger">{{ error }}</div>
-  </ng-template>
+  <!-- CTA -->
+  <div class="cta">
+    <p>¿Querés pasar a mirar nuestro <strong>Store</strong>?</p>
+    <a href="https://storejcexclusivo.web.app/productos" target="_blank" class="btn-store">Ir al Store 🛒</a>
+  </div>
 </div>
 
-<ng-template #loading>
-  <div class="spinner-border text-primary" role="status">
-    <span class="visually-hidden">Cargando...</span>
-  </div>
+<ng-template #errorTpl>
+  <p class="error">❌ No se encontró la orden solicitada.</p>
 </ng-template>

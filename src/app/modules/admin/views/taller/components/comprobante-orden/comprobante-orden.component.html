@@ -1,23 +1,55 @@
-<h2>Orden de Reparación N° {{ orden.numeroOrden }}</h2>
-<p><b>Cliente:</b> {{ orden.apellidoCliente }}, {{ orden.nombreCliente }}</p>
-<p><b>DNI:</b> {{ orden.dniCliente }}</p>
-<p><b>Teléfono:</b> {{ orden.telefonoCliente }}</p>
-<p><b>Equipo:</b> {{ orden.equipo }} ({{ orden.colorEquipo }})</p>
-<p><b>IMEI:</b> {{ orden.imei }}</p>
-<p><b>Motivo:</b> {{ orden.motivoIngreso }}</p>
-<p><b>Presupuesto:</b> {{ orden.presupuesto | currency }}</p>
-<p><b>Fecha ingreso:</b> {{ orden.fechaIngreso | date:'dd/MM/yyyy' }}</p>
-<p><b>Observaciones:</b></p>
-<ul>
-  <li *ngFor="let obs of orden.observaciones">{{ obs }}</li>
-</ul>
+<div class="orden-container fadeIn scrollable">
+  <!-- LOGO -->
+  <div class="logo-container">
+    <img src="../../../../assets/logo.png" alt="Logo empresa" class="logo" />
+  </div>
 
-<!-- QR -->
-<div style="text-align:center; margin:20px 0;">
-  <qrcode [qrdata]="qrLink" [width]="200"></qrcode>
-</div>
+  <!-- TÍTULO -->
+  <h1 class="titulo">Orden de reparación</h1>
 
-<!-- Botón imprimir -->
-<div style="text-align:right;">
-  <button mat-raised-button color="primary" (click)="imprimir()">Imprimir</button>
+  <!-- BLOQUES -->
+  <div class="bloque">
+    <h2>👤 Datos del cliente</h2>
+    <p><strong>Nombre:</strong> {{ orden.apellidoCliente }}, {{ orden.nombreCliente }}</p>
+    <p><strong>DNI:</strong> {{ orden.dniCliente }}</p>
+    <p><strong>Teléfono:</strong> {{ orden.telefonoCliente }}</p>
+  </div>
+
+  <div class="bloque">
+    <h2>💻 Datos del equipo</h2>
+    <p><strong>Equipo:</strong> {{ orden.equipo }}</p>
+    <p><strong>Color:</strong> {{ orden.colorEquipo }}</p>
+    <p><strong>IMEI:</strong> {{ orden.imei }}</p>
+  </div>
+
+  <div class="bloque">
+    <h2>📝 Detalles de la orden</h2>
+    <p><strong>N° de Orden:</strong> {{ orden.numeroOrden }}</p>
+    <p><strong>Fecha de ingreso:</strong> {{ orden.fechaIngreso | date:'dd/MM/yyyy' }}</p>
+    <p><strong>Motivo:</strong> {{ orden.motivoIngreso }}</p>
+
+    <!-- Presupuesto solo si es distinto de 0 -->
+    <p *ngIf="orden.presupuesto && orden.presupuesto > 0">
+      <strong>Presupuesto:</strong> {{ orden.presupuesto | currency }}
+    </p>
+
+    <!-- Observaciones -->
+    <div *ngIf="orden.observaciones?.length">
+      <strong>Observaciones:</strong>
+      <ul>
+        <li *ngFor="let obs of orden.observaciones">{{ obs }}</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- QR -->
+  <div class="qr-container">
+    <qrcode [qrdata]="qrLink" [width]="200"></qrcode>
+    <p class="qr-text">Escaneá el código para seguir el estado de tu reparación 📱</p>
+  </div>
+
+  <!-- Botones -->
+  <div class="acciones">
+    <button mat-raised-button color="primary" (click)="imprimir()">🖨️ Imprimir</button>
+  </div>
 </div>
