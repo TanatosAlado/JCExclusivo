@@ -50,9 +50,9 @@ export class VerOrdenComponent {
       '<style>' +
         'body { font-family: Arial, sans-serif; margin: 20px; }' +
         '.orden-container { max-width: 600px; margin: auto; padding: 15px; background: #fff; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); text-align: center; font-size: 13px; }' +
-        '.bloque { text-align: left; margin-bottom: 8px; padding: 10px; border-left: 5px solid #3498db; background: #f9f9f9; border-radius: 8px; }' +
-        '.bloque h2 { font-size: 1rem; margin-bottom: 5px; color: #2980b9; }' +
-        '.bloque p, .bloque ul { margin: 3px 0; font-size: 0.9rem; color: #333; }' +
+        '.bloque { text-align: left; margin-bottom: 10px; padding: 11px; border-left: 5px solid #3498db; background: #f9f9f9; border-radius: 8px; }' +
+        '.bloque h2 { font-size: 1rem; margin-bottom: 8px; color: #2980b9; }' +
+        '.bloque p, .bloque ul { margin: 4px 0; font-size: 0.9rem; color: #333; }' +
         '.qr-container { text-align: center; margin: 10px 0; }' +
         '.qr-text { margin-top: 5px; font-size: 0.85rem; color: #555; }' +
         '.estado { padding: 3px 6px; background: #eaf7ea; border: 1px solid #2ecc71; color: #27ae60; border-radius: 5px; font-weight: bold; }' +
