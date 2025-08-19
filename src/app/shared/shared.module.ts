@@ -26,6 +26,7 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { ConfirmDialogComponent } from './components/confirm-dialog/confirm-dialog.component';
 import { WhatsappComponent } from './components/whatsapp/whatsapp.component';
 import { QRCodeModule } from 'angularx-qrcode';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 @NgModule({
   declarations: [
@@ -58,7 +59,8 @@ import { QRCodeModule } from 'angularx-qrcode';
     MatBadgeModule,
     MatAutocompleteModule,
     MatButtonToggleModule,
-    QRCodeModule
+    QRCodeModule,
+    MatProgressSpinnerModule
   ],
   exports: [
     NavbarComponent,
@@ -85,7 +87,8 @@ import { QRCodeModule } from 'angularx-qrcode';
     MatAutocompleteModule,
     MatButtonToggleModule,
     WhatsappComponent,
-    QRCodeModule
+    QRCodeModule,
+    MatProgressSpinnerModule
   ]
 })
 export class SharedModule { }

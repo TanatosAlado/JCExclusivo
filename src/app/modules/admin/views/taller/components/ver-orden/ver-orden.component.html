@@ -1,27 +1,73 @@
-<h2 mat-dialog-title>Detalle de la Orden</h2>
-
 <mat-dialog-content class="contenido-modal">
-  <p><strong>Nro. Orden:</strong> {{ orden.numeroOrden }}</p>
-  <p><strong>Cliente:</strong>{{orden.apellidoCliente}} {{ orden.nombreCliente }}</p>
-  <p><strong>Teléfono:</strong> {{ orden.telefonoCliente }}</p>
-  <p><strong>Equipo:</strong> {{ orden.equipo }}</p>
-  <p><strong>Motivo Ingreso:</strong> {{ orden.motivoIngreso }}</p>
-  <p *ngIf="orden.presupuesto>0"><strong>Presupuesto:</strong> ${{ orden.presupuesto}}</p>
-  <p><strong>Estado:</strong> {{ orden.estado }}</p>
-  <p><strong>Garantía:</strong> {{ orden.garantia ? 'Sí' : 'No' }}</p>
-  <p *ngIf="orden.diasGarantia ||orden.diasGarantia>0"><strong>Días Garantía:</strong> {{ orden.diasGarantia}}</p>
-  <p *ngIf="orden.fechaGarantia"><strong>Fecha Garantía:</strong> {{ orden.fechaGarantia }}</p>
-  <p><strong>Fecha Ingreso:</strong> {{ orden.fechaIngreso?.toDate() | date:'dd/MM/yyyy' }}</p>
-  <p *ngIf="orden.fechaEntrega"><strong>Fecha Entrega:</strong> {{ orden.fechaEntrega?.toDate() | date:'dd/MM/yyyy' }}
-  </p>
-  <p *ngIf="orden.observaciones?.length > 0">
-    <strong>Observaciones:</strong><br>
-    <span *ngFor="let obs of orden.observaciones">
-      {{ obs }}<br>
-    </span>
-  </p>
+  <div id="detalleOrden" class="orden-container fadeIn">
+    <!-- LOGO -->
+    <div class="logo-container">
+      <img src="assets/logo.png" alt="Logo empresa" class="logo" />
+    </div>
+
+    <!-- TÍTULO -->
+    <h1 class="titulo">Orden de reparación</h1>
+
+    <!-- 👤 Datos del cliente -->
+    <div class="bloque">
+      <h2>👤 Datos del cliente</h2>
+      <p><strong>Nombre:</strong> {{ orden.apellidoCliente }}, {{ orden.nombreCliente }}</p>
+      <p><strong>Teléfono:</strong> {{ orden.telefonoCliente }}</p>
+    </div>
+
+    <!-- 💻 Datos del equipo -->
+    <div class="bloque">
+      <h2>💻 Datos del equipo</h2>
+      <p><strong>Equipo:</strong> {{ orden.equipo }}</p>
+      <p *ngIf="orden.colorEquipo"><strong>Color:</strong> {{ orden.colorEquipo }}</p>
+      <p *ngIf="orden.imei"><strong>IMEI:</strong> {{ orden.imei }}</p>
+    </div>
+
+    <!-- 📝 Detalles de la orden -->
+    <div class="bloque">
+      <h2>📝 Detalles de la orden</h2>
+      <p><strong>Nro. Orden:</strong> {{ orden.numeroOrden }}</p>
+      <p><strong>Fecha Ingreso:</strong> {{ orden.fechaIngreso?.toDate() | date:'dd/MM/yyyy' }}</p>
+      <p *ngIf="orden.fechaEntrega">
+        <strong>Fecha Entrega:</strong> {{ orden.fechaEntrega?.toDate() | date:'dd/MM/yyyy' }}
+      </p>
+      <p><strong>Motivo Ingreso:</strong> {{ orden.motivoIngreso }}</p>
+
+      <p *ngIf="orden.presupuesto && orden.presupuesto > 0">
+        <strong>Presupuesto:</strong> {{ orden.presupuesto | currency }}
+      </p>
+
+      <p>
+        <strong>Estado:</strong>
+        <span class="estado" [ngClass]="(orden.estado || '').toLowerCase()">
+          {{ orden.estado }}
+        </span>
+      </p>
+
+      <p><strong>Garantía:</strong> {{ orden.garantia ? 'Sí' : 'No' }}</p>
+      <p *ngIf="orden.diasGarantia && orden.diasGarantia > 0">
+        <strong>Días Garantía:</strong> {{ orden.diasGarantia }}
+      </p>
+      <p *ngIf="orden.fechaGarantia">
+        <strong>Fecha Garantía:</strong> {{ orden.fechaGarantia }}
+      </p>
+
+      <div *ngIf="orden.observaciones?.length">
+        <strong>Observaciones:</strong>
+        <ul>
+          <li *ngFor="let obs of orden.observaciones">{{ obs }}</li>
+        </ul>
+      </div>
+    </div>
+
+    <qrcode #qrCode [qrdata]="qrLink" [width]="200"></qrcode>
+  </div>
+
+
+
 </mat-dialog-content>
 
-<mat-dialog-actions align="end">
+<mat-dialog-actions align="end" class="acciones">
   <button mat-button mat-dialog-close>Cerrar</button>
+  <button mat-raised-button color="primary" (click)="imprimir()">🖨️ Reimprimir</button>
 </mat-dialog-actions>

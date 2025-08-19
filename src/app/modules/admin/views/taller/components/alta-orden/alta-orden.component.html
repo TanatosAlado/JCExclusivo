@@ -12,7 +12,7 @@
           <mat-label>DNI</mat-label>
           <input matInput formControlName="dniCliente" type="number" (keydown.enter)="buscarCliente()"
             (blur)="buscarCliente()">
-            
+
           <button mat-icon-button matSuffix type="button" (click)="buscarCliente()" title="Buscar Cliente">
             <mat-icon>search</mat-icon>
           </button>
@@ -43,17 +43,17 @@
           <mat-label>IMEI</mat-label>
           <input matInput formControlName="imei">
         </mat-form-field>
-      
+
         <mat-form-field appearance="outline" class="form-field">
           <mat-label>Equipo</mat-label>
           <input matInput formControlName="equipo" required>
         </mat-form-field>
-      
+
         <mat-form-field appearance="outline" class="form-field">
           <mat-label>Código de desbloqueo</mat-label>
           <input matInput formControlName="codigoDesbloqueo">
         </mat-form-field>
-      
+
         <mat-form-field appearance="outline" class="form-field">
           <mat-label>Color del equipo</mat-label>
           <input matInput formControlName="colorEquipo">
@@ -78,13 +78,25 @@
         <textarea matInput rows="3" formControlName="observaciones"></textarea>
       </mat-form-field>
 
-      <!-- Botón Guardar -->
+      <!-- Botón Guardar y Cancelar -->
       <div class="acciones fadeIn fourth">
         <button mat-raised-button color="primary" type="submit" [disabled]="ordenForm.invalid">
           Guardar Orden
         </button>
+
+        <button mat-button color="warn" type="button" (click)="cancelar()">
+          Cancelar
+        </button>
       </div>
 
     </form>
+
+    <div class="spinner-overlay" *ngIf="cargando">
+      <div class="spinner-box">
+        <mat-progress-spinner mode="indeterminate" diameter="50" color="primary"></mat-progress-spinner>
+        <p>Creando solicitud de reparación...</p>
+      </div>
+    </div>
+
   </mat-card-content>
 </mat-card>

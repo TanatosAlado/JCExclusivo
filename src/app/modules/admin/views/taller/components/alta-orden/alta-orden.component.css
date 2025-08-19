@@ -148,3 +148,41 @@ button[mat-raised-button] {
   -moz-animation-delay: 0.7s;
   animation-delay: 0.7s;
 }
+
+.spinner-overlay {
+  position: fixed; /* fijado sobre toda la pantalla */
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(3px); /* efecto blur moderno */
+  z-index: 2000;
+}
+
+.spinner-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 25px 35px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.spinner-box p {
+  margin-top: 15px;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #333;
+}
+
+/* Animación de entrada */
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
