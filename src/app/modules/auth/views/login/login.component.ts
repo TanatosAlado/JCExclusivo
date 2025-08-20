@@ -72,27 +72,28 @@ export class LoginComponent {
 
   async continuarComoInvitado(): Promise<void> {
     await signOut(this.authService['auth']);
-      const clienteInvitado = new Cliente(
-      'invitado',        // id
-      'invitado',        // usuario
-      '',                // mail
-      '',                // telefono
-      '',                // direccion
-      [],                // historial
-      true,              // estado
-      'Invitado',        // nombre
-      '',                // apellido
+    const clienteInvitado = new Cliente(
       false,             // administrador
+      '',                // apellido
       [],                // carrito
+      '',                 // cuit
+      '',                // direccion
       null,                // dni
-      0,                 // puntos
       false,             // esMayorista
+      true,              // estado
+      [],                // historial
+      'invitado',        // id
+      '',                // mail
+      'Invitado',        // nombre
+      0,                 // puntos
       '',                // razonSocial
-      ''                 // cuit
+      '',                // telefono
+      'invitado',        // usuario
+
     );
 
-    this.authService.setUsuarioActual(clienteInvitado); 
+    this.authService.setUsuarioActual(clienteInvitado);
     this.dialogRef.close(clienteInvitado);
-}
+  }
 
 }

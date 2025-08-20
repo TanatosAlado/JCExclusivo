@@ -1,28 +1,46 @@
-<h2 mat-dialog-title>Detalle del Producto</h2>
+<h2 mat-dialog-title class="titulo-modal">📦 Detalle del Producto</h2>
 
 <mat-dialog-content class="contenido-modal">
-  <p><strong>Nombre:</strong> {{ producto.nombre }}</p>
-  <p><strong>Descripción:</strong> {{ producto.descripcion }}</p>
-  <p><strong>Rubro:</strong> {{ producto.rubro }}</p>
-  <p><strong>Subrubro:</strong> {{ producto.subrubro }}</p>
-  <p><strong>Marca:</strong> {{ producto.marca }}</p>
-  <p><strong>Precio Minorista:</strong> ${{ producto.precioMinorista}}</p>
-  <p *ngIf="producto.precioMayorista > 0">
-  <strong>Precio Mayorista:</strong> ${{ producto.precioMayorista }}
-</p>
-  <p><strong>Stock:</strong> {{ producto.stock }}</p>
-  <p><strong>Destacado:</strong> {{ producto.destacado ? 'Sí' : 'No' }}</p>
-  <p><strong>Oferta:</strong> {{ producto.oferta ? 'Sí' : 'No' }}</p>
-  <p *ngIf="producto.oferta"><strong>Precio Oferta:</strong> ${{ producto.precioOferta }}</p>
-  <p><strong>Impuesto Nacional:</strong> {{ producto.impuestoNacional ? 'Sí' : 'No' }}</p>
-  <p *ngIf="producto.impuestoNacional"><strong>Precio sin Impuesto Nacional:</strong> ${{ producto.precioSinImpuestoNacional }}</p>
+  <!-- Datos principales -->
+  <div class="bloque">
+    <p><strong>Nombre:</strong> {{ producto.nombre }}</p>
+    <p><strong>Descripción:</strong> {{ producto.descripcion }}</p>
+    <p><strong>Código interno:</strong> {{ producto.codigo }}</p>
+  </div>
 
+  <!-- Rubros y marca -->
+  <div class="bloque">
+    <p><strong>Rubro:</strong> {{ producto.rubro }}</p>
+    <p><strong>Subrubro:</strong> {{ producto.subrubro }}</p>
+    <p><strong>Marca:</strong> {{ producto.marca }}</p>
+  </div>
+
+  <!-- Precios -->
+  <div class="bloque precios">
+    <p><strong>Precio Minorista:</strong> ${{ producto.precioMinorista }}</p>
+    <p *ngIf="producto.precioMayorista > 0">
+      <strong>Precio Mayorista:</strong> ${{ producto.precioMayorista }}
+    </p>
+    <p *ngIf="producto.oferta"><strong>Precio Oferta:</strong> ${{ producto.precioOferta }}</p>
+  </div>
+
+  <!-- Stock y flags -->
+  <div class="bloque">
+    <p><strong>Stock:</strong> {{ producto.stock }}</p>
+    <p><strong>Destacado:</strong> {{ producto.destacado ? 'Sí' : 'No' }}</p>
+    <p><strong>Oferta:</strong> {{ producto.oferta ? 'Sí' : 'No' }}</p>
+    <p><strong>Impuesto Nacional:</strong> {{ producto.impuestoNacional ? 'Sí' : 'No' }}</p>
+    <p *ngIf="producto.impuestoNacional">
+      <strong>Precio sin Impuesto Nacional:</strong> ${{ producto.precioSinImpuestoNacional }}
+    </p>
+  </div>
+
+  <!-- Imagen -->
   <div *ngIf="producto.imagen" class="product-img">
-    <p><strong>Imagen:</strong></p>
-    <img [src]="producto.imagen" alt="Imagen del producto" style="max-width: 100%; height: auto;">
+    <img [src]="producto.imagen" alt="Imagen del producto">
   </div>
 </mat-dialog-content>
 
 <mat-dialog-actions align="end">
-  <button mat-button mat-dialog-close>Cerrar</button>
+  <button mat-button mat-dialog-close color="primary">Cerrar</button>
 </mat-dialog-actions>

@@ -85,7 +85,7 @@ export class LayoutDespachoComponent implements OnInit {
 
     // Buscar en Firebase
     const productosRef = collection(this.firestore, 'productos');
-    const q = query(productosRef, where('codigoBarras', '==', codigo));
+    const q = query(productosRef, where('codigo', '==', codigo));
     const snap = await getDocs(q);
 
     if (!snap.empty) {

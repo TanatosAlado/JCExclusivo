@@ -17,70 +17,70 @@ export class GeneralService {
     this.inicializarClienteDesdeStorage();
   }
 
-private async inicializarClienteDesdeStorage() {
-  const clienteId = localStorage.getItem('cliente');
+  private async inicializarClienteDesdeStorage() {
+    const clienteId = localStorage.getItem('cliente');
 
-  if (clienteId === 'invitado') {
-    const carritoRaw = localStorage.getItem('carritoInvitado');
-    const carrito = carritoRaw ? JSON.parse(carritoRaw) : [];
+    if (clienteId === 'invitado') {
+      const carritoRaw = localStorage.getItem('carritoInvitado');
+      const carrito = carritoRaw ? JSON.parse(carritoRaw) : [];
 
-    const clienteInvitado = new Cliente(
-      'invitado',
-      'invitado',
-      '',
-      '',
-      '',
-      [],
-      true,
-      'Invitado',
-      '',
-      false,
-      carrito,
-      null,
-      0,
-      false,
-      '',
-      ''
-    );
-    this.clienteSubject.next(clienteInvitado);
+      const clienteInvitado = new Cliente(
+        false,             // administrador
+        '',                // apellido
+        [],                // carrito
+        '',                 // cuit
+        '',                // direccion
+        null,                // dni
+        false,             // esMayorista
+        true,              // estado
+        [],                // historial
+        'invitado',        // id
+        '',                // mail
+        'Invitado',        // nombre
+        0,                 // puntos
+        '',                // razonSocial
+        '',                // telefono
+        'invitado',        // usuario
+      );
+      this.clienteSubject.next(clienteInvitado);
 
-    // ✅ Asegurarse de que no haya residuos
-    localStorage.setItem('cliente', 'invitado');
-    return; // ⛔ Salir antes de buscar en Firebase
-  }
+      // ✅ Asegurarse de que no haya residuos
+      localStorage.setItem('cliente', 'invitado');
+      return; // ⛔ Salir antes de buscar en Firebase
+    }
 
-  // Solo si no es invitado
-  if (clienteId) {
-    try {
-      const cliente = await firstValueFrom(this.clientesService.getClienteById(clienteId));
-      this.clienteSubject.next(cliente);
-    } catch (e) {
-      console.error('Error al obtener cliente logueado:', e);
+    // Solo si no es invitado
+    if (clienteId) {
+      try {
+        const cliente = await firstValueFrom(this.clientesService.getClienteById(clienteId));
+        this.clienteSubject.next(cliente);
+      } catch (e) {
+        console.error('Error al obtener cliente logueado:', e);
+      }
     }
   }
-}
 
 
 
   //SERVICE PARA GUARDAR EL CLIENTE LOGUEADO EN EL LS
-setCliente(cliente: Cliente | null): void {
-  const actual = this.clienteSubject.value;
+  setCliente(cliente: Cliente | null): void {
+    const actual = this.clienteSubject.value;
 
-  // Si ya está como 'invitado' y me quieren pisar con otro, lo ignoro
-if (actual?.id === 'invitado' && cliente && cliente.id !== 'invitado') {
-  console.debug('[IGNORADO] Ya está como invitado. Ignorando nuevo cliente:', cliente?.id);
-  return;
-}
-  this.clienteSubject.next(cliente);
+    // Si ya está como 'invitado' y me quieren pisar con otro, lo ignoro
+    if (actual?.id === 'invitado' && cliente && cliente.id !== 'invitado') {
+      console.debug('[IGNORADO] Ya está como invitado. Ignorando nuevo cliente:', cliente?.id);
+      return;
+    }
+    this.clienteSubject.next(cliente);
 
-  if (cliente && cliente.id !== 'invitado') {
-    localStorage.setItem('cliente', cliente.id);
-    localStorage.setItem('clienteActual', JSON.stringify(cliente));
-  } else {
-    localStorage.removeItem('cliente');
-    localStorage.setItem('clienteActual', JSON.stringify(cliente));
+    if (cliente && cliente.id !== 'invitado') {
+      localStorage.setItem('cliente', cliente.id);
+      localStorage.setItem('clienteActual', JSON.stringify(cliente));
+    } else {
+      localStorage.removeItem('cliente');
+      localStorage.setItem('clienteActual', JSON.stringify(cliente));
+    }
   }
-}
 
   getCliente(): Observable<Cliente | null> {
     return this.clienteSubject.asObservable();
@@ -96,32 +96,32 @@ if (actual?.id === 'invitado' && cliente && cliente.id !== 'invitado') {
   // }
   getTotalPrecio(cliente: any, usarPuntos: boolean = false, valorMonetarioPorPunto: number = 50, cuponAplicado: any = null): number {
     let total = cliente.carrito.reduce(
-    (sum: number, prod: any) => sum + (prod.precioFinal * prod.cantidad),
-    0
-  );
+      (sum: number, prod: any) => sum + (prod.precioFinal * prod.cantidad),
+      0
+    );
 
-  // Aplicar cupón si está disponible
-  if (cuponAplicado && cuponAplicado.activo) {
-    if (cuponAplicado.tipo === 'porcentaje') {
-      const descuento = (cuponAplicado.valor / 100) * total;
-      total -= descuento;
-    } else if (cuponAplicado.tipo === 'monto') {
-      total -= cuponAplicado.valor;
+    // Aplicar cupón si está disponible
+    if (cuponAplicado && cuponAplicado.activo) {
+      if (cuponAplicado.tipo === 'porcentaje') {
+        const descuento = (cuponAplicado.valor / 100) * total;
+        total -= descuento;
+      } else if (cuponAplicado.tipo === 'monto') {
+        total -= cuponAplicado.valor;
+      }
+
+      // Asegurarse de que el total no sea negativo
+      total = Math.max(total, 0);
     }
 
-    // Asegurarse de que el total no sea negativo
-    total = Math.max(total, 0);
-  }
+    // Aplicar puntos si corresponde
+    if (usarPuntos && cliente.puntos > 0) {
+      const maxPuntosPorMonto = Math.floor(total / valorMonetarioPorPunto);
+      const puntosUsables = Math.min(cliente.puntos, maxPuntosPorMonto);
+      const descuento = puntosUsables * valorMonetarioPorPunto;
+      total = Math.max(total - descuento, 0);
+    }
 
-  // Aplicar puntos si corresponde
-  if (usarPuntos && cliente.puntos > 0) {
-    const maxPuntosPorMonto = Math.floor(total / valorMonetarioPorPunto);
-    const puntosUsables = Math.min(cliente.puntos, maxPuntosPorMonto);
-    const descuento = puntosUsables * valorMonetarioPorPunto;
-    total = Math.max(total - descuento, 0);
-  }
-
-  return total;
+    return total;
   }
 
   //SERVICE PARA TRAER CLIENTE POR ID
@@ -188,22 +188,22 @@ if (actual?.id === 'invitado' && cliente && cliente.id !== 'invitado') {
 
             // 🔄 Refrescar clienteSubject con el nuevo carrito
             const clienteActualizado = new Cliente(
-              'invitado',
-              'invitado',
-              '',
-              '',
-              '',
-              [],
-              true,
-              'Invitado',
-              '',
-              false,
-              carrito,
-              null,
-              0,
-              false,
-              '',
-              ''
+              false,             // administrador
+              '',                // apellido
+              [],                // carrito
+              '',                 // cuit
+              '',                // direccion
+              null,                // dni
+              false,             // esMayorista
+              true,              // estado
+              [],                // historial
+              'invitado',        // id
+              '',                // mail
+              'Invitado',        // nombre
+              0,                 // puntos
+              '',                // razonSocial
+              '',                // telefono
+              'invitado',        // usuario
             );
             this.clienteSubject.next(clienteActualizado);
 

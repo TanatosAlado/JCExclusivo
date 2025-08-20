@@ -4,31 +4,108 @@
 
 <div class="container mt-4">
   <!-- Card de configuración de puntos -->
-  <div class="card mb-4">
-    <div class="card-header bg-light">
-      <h5 class="mb-0">⚙️ Configuración de Puntos</h5>
-    </div>
-    <div class="card-body">
-      <form [formGroup]="formPuntos" (ngSubmit)="guardar()">
-        <div class="mb-3">
-          <label class="form-label">Monto para sumar 1 punto ($)</label>
-          <input type="number" class="form-control" formControlName="valorParaSumarPunto">
-        </div>
+  <div class="container-fluid">
+    <div class="row g-4">
 
-        <div class="mb-3">
-          <label class="form-label">Valor monetario por punto ($)</label>
-          <input type="number" class="form-control" formControlName="valorMonetarioPorPunto">
-        </div>
+      <!-- Columna IZQUIERDA: Configuración minorista -->
+      <div class="col-12 col-lg-6">
+        <div class="card h-100 shadow-sm">
+          <div class="card-header bg-light d-flex align-items-center justify-content-between">
+            <h5 class="mb-0">⚙️ Configuración minorista</h5>
+          </div>
 
-        <button type="submit" class="btn btn-success" [disabled]="formPuntos.invalid">
-          💾 Guardar configuración
-        </button>
-      </form>
+          <div class="card-body">
+            <form [formGroup]="formPuntos">
+              <div class="mb-3">
+                <label class="form-label">Monto para sumar 1 punto</label>
+                <div class="input-group">
+                  <span class="input-group-text">$</span>
+                  <input type="number" class="form-control" formControlName="valorParaSumarPunto" min="0" step="0.01"
+                    placeholder="Ej: 1000">
+                </div>
+                <div class="form-text">
+                  Por cada <b>$X</b> gastados se suma <b>1 punto</b>.
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Valor monetario por punto</label>
+                <div class="input-group">
+                  <span class="input-group-text">$</span>
+                  <input type="number" class="form-control" formControlName="valorMonetarioPorPunto" min="0" step="0.01"
+                    placeholder="Ej: 5">
+                </div>
+                <div class="form-text">
+                  Cada punto equivale a este valor para canje/descuento.
+                </div>
+              </div>
+
+              <div class="d-flex gap-2">
+                <button type="button" (click)="guardar()" class="btn btn-success" [disabled]="formPuntos.invalid">
+                  💾 Guardar configuración
+                </button>
+                <button type="button" class="btn btn-outline-secondary" (click)="formPuntos.reset()">
+                  ↺ Limpiar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Columna DERECHA: Configuración mayorista -->
+      <div class="col-12 col-lg-6">
+        <div class="card h-100 shadow-sm">
+          <div class="card-header bg-light">
+            <h5 class="mb-0">🏷️ Configuración mayorista</h5>
+          </div>
+
+          <div class="card-body">
+            <form [formGroup]="formMayorista">
+              <div class="mb-3">
+                <label class="form-label">Monto mínimo de primera compra</label>
+                <div class="input-group">
+                  <span class="input-group-text">$</span>
+                  <input type="number" class="form-control" formControlName="minimoPrimeraCompra" min="0" step="0.01"
+                    placeholder="Ej: 150000">
+                </div>
+                <div class="form-text">
+                  Se requerirá este mínimo para aprobar a un cliente como mayorista.
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Monto mínimo de futuras compras</label>
+                <div class="input-group">
+                  <span class="input-group-text">$</span>
+                  <input type="number" class="form-control" formControlName="minimoFuturasCompras" min="0" step="0.01"
+                    placeholder="Ej: 80000">
+                </div>
+                <div class="form-text">
+                  Monto mínimo en pedidos posteriores para mantener la condición mayorista.
+                </div>
+              </div>
+
+              <div class="d-flex gap-2">
+                <button type="button" (click)="guardarMayorista()" class="btn btn-primary"
+                  [disabled]="formMayorista.invalid">
+                  💾 Guardar configuración
+                </button>
+                <button type="button" class="btn btn-outline-secondary" (click)="formMayorista.reset()">
+                  ↺ Limpiar
+                </button>
+              </div>
+            </form>
+          </div>
+
+        </div>
+      </div>
+
     </div>
   </div>
 
   <!-- Card de cupones -->
-  <div class="card">
+  <div class="card mt-4">
     <div class="card-header bg-light">
       <h5 class="mb-0">🎟️ Cupones de descuento</h5>
     </div>

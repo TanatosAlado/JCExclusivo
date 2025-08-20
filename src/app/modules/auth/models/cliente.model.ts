@@ -1,20 +1,20 @@
 export class Cliente {
     constructor(
-        public id: string,
-        public usuario: string,
-        public mail: string,
-        public telefono: string,
-        public direccion: string,
-        public historial: any[] = [],
-        public estado: boolean,
-        public nombre: string,
-        public apellido: string,
         public administrador: boolean = false,
+        public apellido: string,
         public carrito: any[] = [],
+        public cuit: string = '',
+        public direccion: string,
         public dni: number,
-        public puntos: number,
         public esMayorista: boolean = false,
+        public estado: boolean,
+        public historial: any[] = [],
+        public id: string,
+        public mail: string,
+        public nombre: string,
+        public puntos: number,
         public razonSocial: string = '',
-        public cuit: string = ''
+        public telefono: string,
+        public usuario: string,
     ) { }
 }

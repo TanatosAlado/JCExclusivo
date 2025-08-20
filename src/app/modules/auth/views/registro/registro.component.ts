@@ -78,22 +78,23 @@ export class RegistroComponent {
 
       // 3. Crear nuevo cliente (modelo actualizado)
       const nuevoCliente = new Cliente(
-        uid,
-        form.usuario,
-        form.mail,
-        form.telefono,
-        form.direccion,
-        [],
-        true,
-        form.nombre,
+
+        false,             // administrador
         form.apellido,
-        false,
-        [],
+        [],                // carrito
+        form.cuit || '',
+        form.direccion,
         form.dni,
-        0,
         form.esMayorista,
+        true,
+        [],                // historial
+        uid,
+        form.mail,
+        form.nombre,
+        0,                 // puntos
         form.razonSocial || '',
-        form.cuit || ''
+        form.telefono,
+        form.usuario,
       );
 
       // 4. Guardar en Firestore

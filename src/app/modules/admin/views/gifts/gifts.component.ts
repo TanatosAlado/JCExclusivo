@@ -15,8 +15,9 @@ export class GiftsComponent implements OnInit {
   cuponForm!: FormGroup;
   cupones: Cupon[] = [];
 
+  formMayorista!: FormGroup;
 
-  constructor(private fb: FormBuilder, private puntosService: VouchersPuntosService, private firestore: Firestore) {}
+  constructor(private fb: FormBuilder, private puntosService: VouchersPuntosService, private firestore: Firestore) { }
 
   ngOnInit(): void {
     this.initForms();
@@ -36,6 +37,11 @@ export class GiftsComponent implements OnInit {
       cantidadDisponible: [null, [Validators.required, Validators.min(1)]],
       activo: [true],
     });
+
+    this.formMayorista = this.fb.group({
+      minimoPrimeraCompra: [null, [Validators.required, Validators.min(0)]],
+      minimoFuturasCompras: [null, [Validators.required, Validators.min(0)]],
+    });
   }
 
   private cargarDatos(): void {
@@ -43,7 +49,13 @@ export class GiftsComponent implements OnInit {
     this.puntosService.obtenerValoresPuntos().then((valores) => {
       if (valores) {
         this.formPuntos.patchValue(valores);
-        console.log('Valores de puntos cargados:', valores);
+      }
+    });
+
+    // Cargar valores mayoristas
+    this.puntosService.obtenerMontosMayoristas().then((valoresMayoristas) => {
+      if (valoresMayoristas) {
+        this.formMayorista.patchValue(valoresMayoristas);
       }
     });
 
@@ -53,7 +65,7 @@ export class GiftsComponent implements OnInit {
     });
   }
 
-    crearCupon(): void {
+  crearCupon(): void {
     const cupon = this.cuponForm.value as Cupon;
     const cuponesRef = collection(this.firestore, 'Cupones');
     addDoc(cuponesRef, cupon).then(() => {
@@ -64,12 +76,6 @@ export class GiftsComponent implements OnInit {
         valor: 0
       });
     });
-  }
-
-  guardarPuntos(): void {
-    if (this.formPuntos.valid) {
-      this.puntosService.actualizarValoresPuntos(this.formPuntos.value);
-    }
   }
 
   guardarCupon(): void {
@@ -87,7 +93,7 @@ export class GiftsComponent implements OnInit {
     }
   }
 
-    guardar(): void {
+  guardar(): void {
     if (this.formPuntos.valid) {
       this.puntosService.guardarValoresPuntos(this.formPuntos.value)
         .then(() => console.log('Valores guardados'))
@@ -100,4 +106,13 @@ export class GiftsComponent implements OnInit {
     const cuponDocRef = doc(this.firestore, 'Cupones', cupon.id);
     deleteDoc(cuponDocRef);
   }
+
+  guardarMayorista(): void {
+    if (this.formMayorista.invalid) return;
+    this.puntosService.guardarMontosMayorista(this.formMayorista.value)
+      .then(() => console.log('Valores guardados'))
+      .catch((error) => console.error('Error al guardar montos', error));
+  }
+
+
 }
