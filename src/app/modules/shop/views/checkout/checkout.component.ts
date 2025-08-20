@@ -54,6 +54,7 @@ export class CheckoutComponent {
   total: number = 0;
   cuponInvalido: boolean = false;
   infoEmpresa: InfoEmpresa | null = null;
+  montoParaActivar: number = 50000; // Monto mínimo para activar el modo mayorista
 
   constructor(private infoEmpresaService: InfoEmpresaService, private firestore: Firestore, private fb: FormBuilder, private clienteService: ClientesService, public pedidoService: PedidosService, public generalService: GeneralService, private contadorService: ContadorService, private router: Router, private carritoService: CarritoService, private puntosService: VouchersPuntosService) {
 
@@ -80,10 +81,18 @@ export class CheckoutComponent {
 
   async inicializarValoresPuntos() {
     const valores = await this.puntosService.obtenerValoresPuntos();
-    this.valorParaSumarPunto = valores.valorParaSumarPunto;
-    this.valorMonetarioPorPunto = valores.valorMonetarioPorPunto;
-
+    if (valores) {
+      this.valorParaSumarPunto = valores.valorParaSumarPunto;
+      this.valorMonetarioPorPunto = valores.valorMonetarioPorPunto;
+    }
+    
     this.puntosAplicados = this.getPuntosAplicados(this.clienteEncontrado);
+
+    const valoresMayoristas = await this.puntosService.obtenerMontosMayoristas();
+    if (valoresMayoristas) {
+      this.montoParaActivar = valoresMayoristas.minimoPrimeraCompra;
+    } 
+
   }
   //FUNCION PARA BUSCAR EL CLIENTE LOGUEADO Y  GUARDARLO EN UNA VARIABLE
   getCliente() {
@@ -256,6 +265,9 @@ export class CheckoutComponent {
         const puntosGanados = Math.floor(puntosSumar);
         const puntosGastados = Math.floor(puntoRestar);
         this.clienteEncontrado.puntos = this.clienteEncontrado.puntos - puntosGastados + puntosGanados;
+        if(this.clienteEncontrado.esMayorista && !this.clienteEncontrado.mayoristaActivado) {
+          this.clienteEncontrado.mayoristaActivado = historico.total >= this.montoParaActivar;
+        }
 
         await this.clienteService.actualizarCliente(this.clienteEncontrado.id, this.clienteEncontrado);
       } else {

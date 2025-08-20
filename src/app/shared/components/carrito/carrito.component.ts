@@ -14,30 +14,44 @@ declare var bootstrap: any;
 })
 export class CarritoComponent {
 
- cliente:Cliente
-  userLogueado=localStorage.getItem('mail')
+  cliente: Cliente
+  userLogueado = localStorage.getItem('mail')
   valorParaSumarPunto: number = 200;
-  
-   constructor(public generalService:GeneralService, private carritoService:CarritoService, private clienteService: ClientesService, private router: Router, private puntosService: VouchersPuntosService){
+  montoMinimoMayorista: number = 50000;
 
-   }
+  constructor(public generalService: GeneralService, private carritoService: CarritoService, private clienteService: ClientesService, private router: Router, private puntosService: VouchersPuntosService) {
 
-  async ngOnInit(){
-  this.getCliente()
-  await this.cargarConfiguracionYCalculos();
   }
 
-async cargarConfiguracionYCalculos() {
-  const config = await this.puntosService.obtenerValoresPuntos();
-
-  if (config && config.valorParaSumarPunto) {
-    this.valorParaSumarPunto = config.valorParaSumarPunto;
-  } else {
-    console.warn('⚠️ No se encontró configuración de puntos en Firestore. Usando valor por defecto.');
+  async ngOnInit() {
+    this.getCliente()
+    await this.cargarConfiguracionYCalculos();
   }
-}
 
-  getCliente(){
+  async cargarConfiguracionYCalculos() {
+    const config = await this.puntosService.obtenerValoresPuntos();
+    const montoMayorista = await this.puntosService.obtenerMontosMayoristas();
+
+    if (config && config.valorParaSumarPunto) {
+      this.valorParaSumarPunto = config.valorParaSumarPunto;
+    } else {
+      console.warn('⚠️ No se encontró configuración de puntos en Firestore. Usando valor por defecto.');
+    }
+
+    if (montoMayorista) {
+      if (this.cliente && this.cliente.esMayorista) {
+        if (this.cliente.mayoristaActivado) {
+          this.montoMinimoMayorista = montoMayorista.minimoFuturasCompras;
+        } else {
+          this.montoMinimoMayorista = montoMayorista.minimoPrimeraCompra;
+        }
+      }
+    } else {
+      console.warn('⚠️ No se encontró configuración de monto mínimo mayorista en Firestore. Usando valor por defecto.');
+    }
+  }
+
+  getCliente() {
     this.generalService.getCliente().subscribe(cliente => {
       this.cliente = cliente;
     });
@@ -61,47 +75,47 @@ async cargarConfiguracionYCalculos() {
     this.carritoService.actualizarCantidadProductos(this.cliente)
   }
 
-  
+
   //ACTUALIZAR CAMBIOS EN EL CARRITO DEL CLINETE
-guardarCambiosCarrito() {
-  const cliente = this.cliente;
-  if (!cliente) return;
+  guardarCambiosCarrito() {
+    const cliente = this.cliente;
+    if (!cliente) return;
 
-  if (cliente.id === 'invitado') {
-    // Actualizar carrito en localStorage para invitado
-    localStorage.setItem('carritoInvitado', JSON.stringify(cliente.carrito));
-    this.carritoService.actualizarCantidadProductosDesdeLocalStorage();
-  } else {
-    // Cliente logueado: actualizar en Firebase
-    this.clienteService.actualizarCliente(cliente.id, cliente)
-      .then(() => '')
-      .catch(err => console.error(err));
+    if (cliente.id === 'invitado') {
+      // Actualizar carrito en localStorage para invitado
+      localStorage.setItem('carritoInvitado', JSON.stringify(cliente.carrito));
+      this.carritoService.actualizarCantidadProductosDesdeLocalStorage();
+    } else {
+      // Cliente logueado: actualizar en Firebase
+      this.clienteService.actualizarCliente(cliente.id, cliente)
+        .then(() => '')
+        .catch(err => console.error(err));
+    }
   }
-}
 
 
- eliminarDelCarrito(productoId: string) {
-  const clienteEncontrado = this.cliente;
-  if (clienteEncontrado) {
-    const clienteId = clienteEncontrado.id;
-    this.carritoService.deleteProductoCarrito(clienteId, productoId).then(() => {
-      // ✅ Eliminar del array local
-      this.cliente.carrito = this.cliente.carrito.filter((producto: any) => producto.id !== productoId);
-      this.guardarCambiosCarrito()
-      this.carritoService.actualizarCantidadProductos(this.cliente)
-    });
+  eliminarDelCarrito(productoId: string) {
+    const clienteEncontrado = this.cliente;
+    if (clienteEncontrado) {
+      const clienteId = clienteEncontrado.id;
+      this.carritoService.deleteProductoCarrito(clienteId, productoId).then(() => {
+        // ✅ Eliminar del array local
+        this.cliente.carrito = this.cliente.carrito.filter((producto: any) => producto.id !== productoId);
+        this.guardarCambiosCarrito()
+        this.carritoService.actualizarCantidadProductos(this.cliente)
+      });
+    }
   }
-}
 
 
-  navigateCheckout(){
+  navigateCheckout() {
     // Forzar cierre manual quitando clases de Bootstrap
-  document.body.classList.remove('offcanvas-backdrop', 'show');
-  document.body.style.overflow = 'auto';
-document.body.style.paddingRight = '0px';
- this.cerrarCarrito();
-  this.router.navigate(['checkout']);
-  
+    document.body.classList.remove('offcanvas-backdrop', 'show');
+    document.body.style.overflow = 'auto';
+    document.body.style.paddingRight = '0px';
+    this.cerrarCarrito();
+    this.router.navigate(['checkout']);
+
   }
 
   cerrarCarrito() {
@@ -112,23 +126,12 @@ document.body.style.paddingRight = '0px';
     }
   }
 
-//  getPuntosPorCompra(): number {
-//   const total = this.generalService.getTotalPrecio(this.cliente);
-//   return Math.floor(total / 200);
-// } 
-getPuntosPorCompra(): number {
-  const total = this.generalService.getTotalPrecio(this.cliente);
-  return Math.floor(total / this.valorParaSumarPunto);
-}
+
+  getPuntosPorCompra(): number {
+    const total = this.generalService.getTotalPrecio(this.cliente);
+    return Math.floor(total / this.valorParaSumarPunto);
+  }
 
 
 }
-
-  
-  // getClienteLogueado(){
-  //     this.carritoService.obtenerClienteLogueado().subscribe((clientes) => {
-  //       this.clientes = clientes;
-  //       console.log("cliente logueado",this.clientes)
-  //     });
-  //   }
 

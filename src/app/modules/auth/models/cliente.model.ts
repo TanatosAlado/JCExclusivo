@@ -16,5 +16,6 @@ export class Cliente {
         public razonSocial: string = '',
         public telefono: string,
         public usuario: string,
+        public mayoristaActivado: boolean = false
     ) { }
 }

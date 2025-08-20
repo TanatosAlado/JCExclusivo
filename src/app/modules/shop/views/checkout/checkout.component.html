@@ -170,7 +170,7 @@
       <div class="resumen-carrito mt-3" *ngIf="cliente.carrito && cliente.carrito.length > 0">
 
         <!-- Sección: Canjear Puntos -->
-        <div *ngIf="cliente.id != 'invitado'" class="card mb-3" style="max-width: 500px; margin: auto;">
+        <div *ngIf="cliente.id !== 'invitado' && !cliente.esMayorista" class="card mb-3" style="max-width: 500px; margin: auto;">
           <div class="card-body d-flex justify-content-between align-items-center">
             <div>
               <strong>Canjeá tus puntos</strong><br />
@@ -238,7 +238,7 @@
         </div>
 
         <!-- Sección: Puntos a sumar -->
-        <div *ngIf="cliente.id != 'invitado'" class="card mb-3" style="max-width: 500px; margin: auto;">
+        <div *ngIf="cliente.id !== 'invitado' && !cliente.esMayorista" class="card mb-3" style="max-width: 500px; margin: auto;">
           <div class="card-body">
             <small>
               Esta compra sumará

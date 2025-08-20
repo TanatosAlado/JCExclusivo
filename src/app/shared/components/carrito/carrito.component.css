@@ -183,3 +183,42 @@ button {
   margin-top: 1rem;
   text-align: center;
 }
+
+.contenedor-compra button:disabled {
+  opacity: 0.5;          
+  cursor: not-allowed;   
+  background-color: #ccc; 
+  color: #666;           
+  border: 1px solid #aaa; 
+}
+
+.mensaje-informativo {
+  background-color: #f8f9fa; 
+  border-left: 4px solid #0d6efd; 
+  font-size: 0.9rem; 
+}
+.mensaje-informativo i {
+  font-size: 1.2rem;
+}
+
+.alerta {
+  display: flex;
+  align-items: center;
+  background-color: #e7f3ff;   /* azul clarito */
+  color: #084298;              /* azul Bootstrap oscuro */
+  padding: 12px 16px;
+  border: 1px solid #b6d4fe;
+  border-radius: 8px;
+  font-family: Arial, sans-serif;
+  max-width: 700px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.alerta-icono {
+  margin-right: 10px;
+  font-size: 20px;
+}
+
+.alerta-texto {
+  font-size: 15px;
+}
