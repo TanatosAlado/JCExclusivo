@@ -15,15 +15,16 @@
 
     <!-- Íconos mobile -->
     <div *ngIf="(clienteActual$ | async) === null" class="d-flex d-lg-none ms-auto gap-2 align-items-center">
+      <a (click)="openIngreso(true)" class="btn btn-outline-warning btn-sm">Mayoristas</a>
       <i (click)="openIngreso(false)" class="fas fa-user text-white"></i>
       <i class="fas fa-shopping-cart text-white"></i>
     </div>
 
-    <!-- Mostrar logout solo si HAY cliente -->
-    <ng-container *ngIf="(clienteActual$ | async) as cliente">
+    <div *ngIf="(clienteActual$ | async) as cliente" class="d-flex d-lg-none ms-auto gap-2 align-items-center">
       <span class="text-white me-2">{{ cliente.nombre }}</span>
       <mat-icon (click)="closeSesion()" class="icono-header">logout</mat-icon>
-    </ng-container>
+      <i class="fas fa-shopping-cart text-white"></i>
+    </div>
 
     <!-- Menú desktop -->
     <div class="d-none d-lg-flex align-items-center justify-content-between w-100">
@@ -85,6 +86,7 @@
     <a routerLink="/productos" class="nav-link">Productos</a>
     <a routerLink="/nosotros" class="nav-link">Nosotros</a>
     <a routerLink="/contacto" class="nav-link">Contacto</a>
+    <a (click)="abrirModalReparacion()" class="nav-link text-white">Reparación</a>
     <a *ngIf="usrAdmin" routerLink="/gestiones" class="nav-link">Gestiones</a>
     <a *ngIf="usrAdmin" routerLink="/despacho" class="nav-link">Despacho</a>
   </div>

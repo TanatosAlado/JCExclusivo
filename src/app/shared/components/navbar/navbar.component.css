@@ -260,3 +260,10 @@ img.logo {
 .badge-cantidad{
   color: white;
 }
+
+@media (max-width: 576px) {
+  .btn-outline-warning {
+    font-size: 0.65rem;  /* letra más chica */
+    padding: 0.30rem 0.6rem; /* menos padding */
+  }
+}
