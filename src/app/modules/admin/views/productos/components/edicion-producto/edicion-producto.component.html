@@ -1,111 +1,96 @@
 <div class="imagen-central fadeIn first">
-  <img src="../../../../../assets/logo.png" alt="Login" />
+  <img src="../../../../../assets/logo.png" alt="Editar Producto" />
 </div>
-
 
 <mat-dialog-content [formGroup]="formProducto" class="contenido-modal">
 
+  <!-- Básicos -->
   <div class="form-grid">
-
-    <mat-form-field appearance="outline" class="form-field fadeIn first">
-      <mat-label>Nombre</mat-label>
-      <input matInput formControlName="nombre" required>
+    <mat-form-field appearance="outline" class="form-field">
+      <mat-label>Código de Barras</mat-label>
+      <input matInput formControlName="codigoBarras" required>
     </mat-form-field>
 
-    <mat-form-field appearance="outline" class="form-field fadeIn first">
+    <mat-form-field appearance="outline" class="form-field">
       <mat-label>Rubro</mat-label>
       <input matInput formControlName="rubro">
     </mat-form-field>
 
-    <mat-form-field appearance="outline" class="form-field fadeIn second">
+    <mat-form-field appearance="outline" class="form-field">
       <mat-label>Subrubro</mat-label>
       <input matInput formControlName="subrubro">
     </mat-form-field>
 
-    <mat-form-field appearance="outline" class="form-field fadeIn second">
+    <mat-form-field appearance="outline" class="form-field">
       <mat-label>Marca</mat-label>
       <input matInput formControlName="marca">
     </mat-form-field>
   </div>
 
-  <mat-form-field appearance="outline" class="full-width fadeIn first">
+  <mat-form-field appearance="outline" class="full-width">
     <mat-label>Descripción</mat-label>
-    <textarea matInput formControlName="descripcion" rows="3"></textarea>
+    <textarea matInput rows="3" formControlName="descripcion"></textarea>
   </mat-form-field>
 
+  <mat-form-field appearance="outline" class="full-width">
+    <mat-label>URL de Imagen</mat-label>
+    <input matInput formControlName="imagen" placeholder="https://...">
+  </mat-form-field>
+
+  <!-- Precios -->
   <div class="form-grid">
-    <mat-checkbox formControlName="ventaMinorista" class="fadeIn second">¿Se vende en Minorista?</mat-checkbox>
-    <mat-form-field appearance="outline" class="form-field fadeIn second">
+    <mat-form-field appearance="outline" class="form-field">
+      <mat-label>Precio Costo</mat-label>
+      <input matInput type="number" formControlName="precioCosto">
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="form-field">
+      <mat-label>Precio sin Impuestos</mat-label>
+      <input matInput type="number" formControlName="precioSinImpuestos">
+    </mat-form-field>
+  </div>
+
+  <div class="form-grid">
+    <mat-checkbox formControlName="ventaMinorista">¿Se vende en Minorista?</mat-checkbox>
+    <mat-form-field appearance="outline" class="form-field" *ngIf="formProducto.get('ventaMinorista')?.value">
       <mat-label>Precio Minorista</mat-label>
       <input matInput type="number" formControlName="precioMinorista">
     </mat-form-field>
 
-    <mat-checkbox formControlName="ventaMayorista" class="fadeIn second">¿Se vende en Mayorista?</mat-checkbox>
-    <mat-form-field appearance="outline" class="form-field fadeIn second">
+    <mat-checkbox formControlName="ventaMayorista">¿Se vende en Mayorista?</mat-checkbox>
+    <mat-form-field appearance="outline" class="form-field" *ngIf="formProducto.get('ventaMayorista')?.value">
       <mat-label>Precio Mayorista</mat-label>
       <input matInput type="number" formControlName="precioMayorista">
     </mat-form-field>
+  </div>
 
-    <mat-checkbox class="fadeIn third" formControlName="destacado">Destacado</mat-checkbox>
+  <!-- Oferta y destacado -->
+  <div class="form-grid">
+    <mat-checkbox formControlName="oferta">¿Está en oferta?</mat-checkbox>
+    <mat-form-field appearance="outline" class="form-field" *ngIf="formProducto.get('oferta')?.value">
+      <mat-label>Precio de Oferta</mat-label>
+      <input matInput type="number" formControlName="precioOferta">
+    </mat-form-field>
 
-    <mat-form-field appearance="outline" class="form-field fadeIn third">
+    <mat-checkbox formControlName="destacado">¿Es destacado?</mat-checkbox>
+  </div>
+
+  <!-- Stock -->
+  <div class="form-grid">
+    <mat-form-field appearance="outline" class="form-field">
       <mat-label>Stock</mat-label>
       <input matInput type="number" formControlName="stock">
     </mat-form-field>
 
-    <mat-form-field appearance="outline" class="full-width fadeIn third">
-      <mat-label>Imagen (URL o base64)</mat-label>
-      <input matInput formControlName="imagen">
+    <mat-form-field appearance="outline" class="form-field">
+      <mat-label>Stock Mínimo</mat-label>
+      <input matInput type="number" formControlName="stockMinimo">
     </mat-form-field>
-
-    <mat-checkbox class="fadeIn third" formControlName="oferta">En Oferta</mat-checkbox>
-
-    <mat-form-field appearance="outline" class="form-field fadeIn second">
-      <mat-label>Precio Oferta</mat-label>
-      <input matInput type="number" formControlName="precioOferta">
-    </mat-form-field>
-
-    <mat-checkbox formControlName="tieneVariantes" class="fadeIn fourth">¿Tiene Variantes?</mat-checkbox>
-
-    <!-- Aquí va el formArray variantes, sin mat-form-field que envuelva el div -->
-    <div *ngIf="formProducto.get('tieneVariantes')?.value" formArrayName="variantes" class="variante-lista fadeIn fourth">
-      <h4>Variantes</h4>
-
-      <div *ngFor="let variante of variantes.controls; let i = index" [formGroupName]="i" class="variante-row">
-        <mat-form-field appearance="outline" class="form-field variante-input">
-          <mat-label>Nombre del color</mat-label>
-          <input matInput formControlName="nombre" required>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" class="form-field variante-input">
-          <mat-label>Color</mat-label>
-          <input matInput type="color" formControlName="valor" class="color-picker">
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" class="form-field variante-input">
-          <mat-label>Stock</mat-label>
-          <input matInput type="number" formControlName="stock" required>
-        </mat-form-field>
-
-        <button mat-icon-button color="warn" (click)="eliminarVariante(i)" type="button" aria-label="Eliminar variante">
-          <mat-icon>delete</mat-icon>
-        </button>
-      </div>
-
-      <div class="mt-2">
-        <button mat-stroked-button color="primary" (click)="agregarVariante()" type="button">
-          Agregar Variante
-        </button>
-      </div>
-    </div>
-
   </div>
 
 </mat-dialog-content>
 
-
 <mat-dialog-actions align="end">
-  <button mat-raised-button class="botonesRojos fadeIn fourth" (click)="guardar()">
-    Guardar</button>
-  <button class="fadeIn fourth" mat-button mat-dialog-close>Cancelar</button>
+  <button mat-raised-button color="primary" (click)="guardar()">Guardar</button>
+  <button mat-button mat-dialog-close>Cancelar</button>
 </mat-dialog-actions>

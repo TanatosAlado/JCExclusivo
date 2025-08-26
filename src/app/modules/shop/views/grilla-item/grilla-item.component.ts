@@ -65,7 +65,6 @@ export class GrillaItemComponent {
 
     this.productosFiltrados = this.productosOriginal.filter(p => {
       const tipoVentaOk = this.esMayorista ? p.ventaMayorista : p.ventaMinorista;
-      const nombreOk = this.filtroNombre ? p.nombre.toLowerCase().includes(this.filtroNombre.toLowerCase()) : true;
       const rubroOk = this.filtroRubro ? p.rubro === this.filtroRubro : true;
       const subrubroOk = this.filtroSubrubro ? p.subrubro === this.filtroSubrubro : true;
       const destacadoOk = this.soloDestacados ? p.destacado === true : true;
@@ -73,7 +72,7 @@ export class GrillaItemComponent {
       const precioMaxOk = this.precioMax !== null ? p.precioMinorista <= this.precioMax : true;
       const marcaOk = this.filtroMarca ? p.marca === this.filtroMarca : true;
 
-      return tipoVentaOk && nombreOk && rubroOk && subrubroOk && destacadoOk && precioMinOk && precioMaxOk && marcaOk;
+      return tipoVentaOk && rubroOk && subrubroOk && destacadoOk && precioMinOk && precioMaxOk && marcaOk;
     });
 
     this.paginaActual = 1; // resetea a la primera página al aplicar filtros

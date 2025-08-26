@@ -1,5 +1,5 @@
 import { Component, Inject } from '@angular/core';
-import { FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { Producto } from 'src/app/modules/shop/models/producto.model';
 
@@ -11,94 +11,65 @@ import { Producto } from 'src/app/modules/shop/models/producto.model';
 export class EdicionProductoComponent {
 
   formProducto!: FormGroup;
-  productoForm: any;
+
   constructor(
     private fb: FormBuilder,
     private dialogRef: MatDialogRef<EdicionProductoComponent>,
     @Inject(MAT_DIALOG_DATA) public producto: Producto
-  ) { }
-
+  ) {}
 
   ngOnInit(): void {
     this.formProducto = this.fb.group({
-      nombre: [this.producto.nombre, Validators.required],
-      descripcion: [this.producto.descripcion],
-      rubro: [this.producto.rubro],
-      subrubro: [this.producto.subrubro],
-      marca: [this.producto.marca],
-      precioMinorista: [this.producto.precioMinorista, [Validators.required, Validators.min(0)]],
-      precioMayorista: [this.producto.precioMayorista, [Validators.required, Validators.min(0)]],
-      stock: [this.producto.stock, [Validators.required, Validators.min(0)]],
-      destacado: [this.producto.destacado],
-      oferta: [this.producto.oferta],
-      precioOferta: [this.producto.precioOferta],
+      codigoBarras: [this.producto.codigoBarras, Validators.required],
+      descripcion: [this.producto.descripcion, Validators.required],
       imagen: [this.producto.imagen],
+      rubro: [this.producto.rubro, Validators.required],
+      subrubro: [this.producto.subrubro, Validators.required],
+      marca: [this.producto.marca, Validators.required],
+
+      precioCosto: [this.producto.precioCosto, [Validators.required, Validators.min(0)]],
+      precioSinImpuestos: [this.producto.precioSinImpuestos, [Validators.required, Validators.min(0)]],
+
       ventaMinorista: [this.producto.ventaMinorista ?? false],
+      precioMinorista: [this.producto.precioMinorista],
       ventaMayorista: [this.producto.ventaMayorista ?? false],
-      tieneVariantes: [this.producto.tieneVariantes ?? false],
-      variantes: this.fb.array([]),
+      precioMayorista: [this.producto.precioMayorista],
+
+      oferta: [this.producto.oferta ?? false],
+      precioOferta: [this.producto.precioOferta],
+      destacado: [this.producto.destacado ?? false],
+
+      stock: [this.producto.stock, [Validators.required, Validators.min(0)]],
+      stockMinimo: [this.producto.stockMinimo, [Validators.min(0)]],
     });
 
-    this.suscribirseACambios();
-      if (this.producto.variantes && this.producto.variantes.length) {
-    this.cargarVariantes(this.producto.variantes);
-  }
+    this.setupConditionalFields();
   }
 
-  private suscribirseACambios(): void {
-    this.formProducto.get('oferta')?.valueChanges.subscribe(oferta => {
-      const precioOferta = this.formProducto.get('precioOferta');
-      if (oferta) {
-        precioOferta?.setValidators([Validators.required, Validators.min(0)]);
-        precioOferta?.enable();
-      } else {
-        precioOferta?.clearValidators();
-        precioOferta?.setValue(0);
-        precioOferta?.disable();
-      }
-      precioOferta?.updateValueAndValidity();
-    });
-
+  private setupConditionalFields(): void {
     this.formProducto.get('ventaMinorista')?.valueChanges.subscribe((checked: boolean) => {
-      const control = this.formProducto.get('precioMinorista');
-      if (checked) {
-        control?.enable();
-      } else {
-        control?.setValue(0);
-        control?.disable();
-      }
+      const ctrl = this.formProducto.get('precioMinorista');
+      checked ? ctrl?.enable() : ctrl?.disable();
     });
 
     this.formProducto.get('ventaMayorista')?.valueChanges.subscribe((checked: boolean) => {
-      const control = this.formProducto.get('precioMayorista');
-      if (checked) {
-        control?.enable();
-      } else {
-        control?.setValue(0);
-        control?.disable();
-      }
+      const ctrl = this.formProducto.get('precioMayorista');
+      checked ? ctrl?.enable() : ctrl?.disable();
     });
 
-    this.formProducto.get('tieneVariantes')?.valueChanges.subscribe((checked: boolean) => {
-  if (!checked) {
-    while (this.variantes.length !== 0) {
-      this.variantes.removeAt(0);
-    }
-  }
-});
+    this.formProducto.get('oferta')?.valueChanges.subscribe((checked: boolean) => {
+      const ctrl = this.formProducto.get('precioOferta');
+      checked ? ctrl?.enable() : ctrl?.disable();
+    });
 
+    // Inicializar controles deshabilitados si corresponde
     if (!this.formProducto.get('ventaMinorista')?.value) {
-      this.formProducto.get('precioMinorista')?.setValue(0);
       this.formProducto.get('precioMinorista')?.disable();
     }
-
     if (!this.formProducto.get('ventaMayorista')?.value) {
-      this.formProducto.get('precioMayorista')?.setValue(0);
       this.formProducto.get('precioMayorista')?.disable();
     }
-
     if (!this.formProducto.get('oferta')?.value) {
-      this.formProducto.get('precioOferta')?.setValue(0);
       this.formProducto.get('precioOferta')?.disable();
     }
   }
@@ -108,52 +79,13 @@ export class EdicionProductoComponent {
       this.formProducto.markAllAsTouched();
       return;
     }
-    const valoresCompletos = this.formProducto.getRawValue();
 
+    const valores = this.formProducto.getRawValue();
     const productoActualizado: Producto = {
       ...this.producto,
-      ...valoresCompletos
+      ...valores
     };
 
     this.dialogRef.close(productoActualizado);
   }
-get variantes(): FormArray {
-  return this.formProducto.get('variantes') as FormArray;
 }
-
-private cargarVariantes(variantesData: any[]): void {
-  variantesData.forEach(v => {
-    this.variantes.push(this.fb.group({
-      nombre: [v.nombre, Validators.required],
-      valor: [v.valor, Validators.required],
-      stock: [v.stock, [Validators.required, Validators.min(0)]],
-    }));
-  });
-}
-  agregarVariante() {
-    this.variantes.push(this.fb.group({
-      nombre: ['', Validators.required],
-      valor: ['#000000', Validators.required], // Color visual
-      stock: [0, [Validators.required, Validators.min(0)]],
-    }));
-  }
-
-  eliminarVariante(index: number) {
-    this.variantes.removeAt(index);
-  }
-  // guardar(): void {
-  //   if (this.formProducto.invalid) {
-  //     this.formProducto.markAllAsTouched();
-  //     return;
-  //   }
-
-  //   const productoActualizado: Producto = {
-  //     ...this.producto,
-  //     ...this.formProducto.value
-  //   };
-
-  //   this.dialogRef.close(productoActualizado); 
-  // }
-}
-
-

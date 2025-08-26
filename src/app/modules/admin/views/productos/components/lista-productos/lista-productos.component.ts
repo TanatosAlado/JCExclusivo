@@ -9,6 +9,7 @@ import { EdicionProductoComponent } from '../edicion-producto/edicion-producto.c
 import { ConfirmDialogComponent } from 'src/app/shared/components/confirm-dialog/confirm-dialog.component';
 import { DetalleProductoComponent } from '../detalle-producto/detalle-producto.component';
 import { ToastService } from 'src/app/shared/services/toast.service';
+import * as XLSX from 'xlsx';
 
 @Component({
   selector: 'app-lista-productos',
@@ -20,7 +21,8 @@ export class ListaProductosComponent {
   rubrosUnicos: string[] = [];
   subrubrosUnicos: string[] = [];
   marcasUnicas: string[] = [];
-  displayedColumns: string[] = ['nombre', 'descripcion', 'acciones'];
+  displayedColumns: string[] = ['descripcion', 'rubro', 'stock', 'precioMinorista', 'precioMayorista', 'acciones'];
+
   productos: Producto[] = [];
   datasourceProductos: MatTableDataSource<Producto>
   paginator!: MatPaginator;
@@ -138,5 +140,103 @@ editarProducto(producto: Producto): void {
       }
     });
   }
+
+
+
+// Inicio Carga Excel
+
+onFileChange(event: any) {
+  const target: DataTransfer = <DataTransfer>(event.target);
+  if (target.files.length !== 1) {
+    console.error('Debe cargar un único archivo Excel');
+    return;
+  }
+
+  const reader: FileReader = new FileReader();
+  reader.onload = (e: any) => {
+    const bstr: string = e.target.result;
+    const wb: XLSX.WorkBook = XLSX.read(bstr, { type: 'binary' });
+
+    // tomo la primera hoja
+    const wsname: string = wb.SheetNames[0];
+    const ws: XLSX.WorkSheet = wb.Sheets[wsname];
+
+    // convierto a JSON
+    const data: any[] = XLSX.utils.sheet_to_json(ws, { header: 1 });
+
+    // la primera fila son los headers → usamos sheet_to_json sin header:1
+    const productosExcel: any[] = XLSX.utils.sheet_to_json(ws);
+
+    console.log('Productos importados desde Excel:', productosExcel);
+
+    // mapear cada fila a Producto
+    productosExcel.forEach((v: any) => {
+      const producto: Producto = {
+        id: '', // lo seteo después
+        codigoBarras: v.codigoBarras?.toString() || '',
+        descripcion: v.descripcion || '',
+        precioCosto: this.parseNumber(v.precioCosto) || 0,
+        precioSinImpuestos: this.parseNumber(v.precioSinImpuestos) || 0,
+
+        ventaMinorista: this.parseBoolean(v.ventaMinorista),
+        precioMinorista: this.parseNumber(v.precioMinorista)|| 0,
+
+        ventaMayorista: this.parseBoolean(v.ventaMayorista),
+        precioMayorista: this.parseNumber(v.precioMayorista) || 0,
+
+        imagen: v.imagen || '',
+        rubro: (v.rubro || '').toString().toUpperCase(),
+        subrubro: (v.subrubro || '').toString().toUpperCase(),
+        marca: (v.marca || '').toString().toUpperCase(),
+        destacado: this.parseBoolean(v.destacado),
+
+        oferta: this.parseBoolean(v.oferta),
+        precioOferta: this.parseNumber(v.precioOferta) || 0,
+
+        stock: this.parseNumber(v.stock) || 0,
+        stockMinimo: this.parseNumber(v.stockMinimo) || 0,
+      };
+
+      // lógica de checks (igual que formulario)
+      if (!producto.ventaMinorista) producto.precioMinorista = 0;
+      if (!producto.ventaMayorista) producto.precioMayorista = 0;
+      if (!producto.oferta) producto.precioOferta = 0;
+
+      // Guardamos en Firebase
+      this.productosService.agregarProducto(producto)
+        .then((docRef) => {
+          producto.id = docRef.id;
+          return this.productosService.actualizarProducto(producto);
+        })
+        .then(() => console.log('Producto importado:', producto));
+    });
+  };
+  reader.readAsBinaryString(target.files[0]);
+}
+
+// helper para convertir TRUE/FALSE/1/0
+private parseBoolean(value: any): boolean {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') return value.toLowerCase() === 'true';
+  if (typeof value === 'number') return value === 1;
+  return false;
+}
+
+private parseNumber(value: any): number {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') {
+    // elimina símbolos de moneda, comas, espacios
+    const clean = value.replace(/[^0-9.,-]/g, '').replace(',', '.');
+    return Number(clean) || 0;
+  }
+  return 0;
+}
+
+// Fin Carga Excel
+
+
+
+
+
 
 }

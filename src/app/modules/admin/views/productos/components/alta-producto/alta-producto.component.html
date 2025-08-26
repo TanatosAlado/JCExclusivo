@@ -1,21 +1,16 @@
 <div class="imagen-central fadeIn first">
   <img src="../../../../../assets/logo.png" alt="Login" />
 </div>
+
 <mat-card class="producto-form-card">
-  <!-- <mat-card-title>Nuevo Producto</mat-card-title> -->
   <mat-card-content>
     <form [formGroup]="productoForm" (ngSubmit)="onSubmit()">
 
       <!-- Sección básica -->
       <div class="form-grid">
         <mat-form-field appearance="outline" class="form-field fadeIn first">
-          <mat-label>Nombre</mat-label>
-          <input matInput formControlName="nombre" required>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" class="form-field fadeIn first">
           <mat-label>Código de Barras</mat-label>
-          <input matInput formControlName="codigo" required>
+          <input matInput formControlName="codigoBarras" required>
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="form-field fadeIn first">
@@ -44,12 +39,16 @@
         <input matInput type="url" formControlName="imagen" placeholder="https://...">
       </mat-form-field>
 
-      <!-- Sección precios y stock -->
+      <!-- Sección precios -->
       <div class="form-grid fadeIn third">
-
         <mat-form-field appearance="outline" class="form-field">
           <mat-label>Precio Costo</mat-label>
           <input matInput type="number" formControlName="precioCosto" required>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="form-field">
+          <mat-label>Precio sin Impuestos</mat-label>
+          <input matInput type="number" formControlName="precioSinImpuestos" required>
         </mat-form-field>
 
         <mat-checkbox formControlName="ventaMinorista">¿Se vende en Minorista?</mat-checkbox>
@@ -76,49 +75,17 @@
         <mat-checkbox formControlName="destacado">¿Es destacado?</mat-checkbox>
       </div>
 
-      <!-- Variantes -->
+      <!-- Stock -->
       <div class="form-grid fadeIn fourth">
-        <mat-checkbox formControlName="tieneVariantes">¿Tiene variantes de colores?</mat-checkbox>
-        <mat-form-field *ngIf="!productoForm.get('tieneVariantes')?.value" appearance="outline" class="form-field">
+        <mat-form-field appearance="outline" class="form-field">
           <mat-label>Stock</mat-label>
           <input matInput type="number" formControlName="stock">
         </mat-form-field>
 
-        <mat-form-field *ngIf="productoForm.get('tieneVariantes')?.value" appearance="outline" class="form-field">
+        <mat-form-field appearance="outline" class="form-field">
           <mat-label>Stock Mínimo</mat-label>
           <input matInput type="number" formControlName="stockMinimo">
         </mat-form-field>
-      </div>
-
-      <div *ngIf="productoForm.get('tieneVariantes')?.value" formArrayName="variantes" class="variante-lista">
-        <h4>Variantes</h4>
-        <div *ngFor="let variante of variantes.controls; let i = index" [formGroupName]="i" class="variante-row">
-
-          <mat-form-field appearance="outline" class="form-field variante-input">
-            <mat-label>Nombre del color</mat-label>
-            <input matInput formControlName="nombre" required>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline" class="form-field variante-input">
-            <mat-label>Color</mat-label>
-            <input matInput type="color" formControlName="valor" class="color-picker">
-          </mat-form-field>
-
-          <mat-form-field appearance="outline" class="form-field variante-input">
-            <mat-label>Stock</mat-label>
-            <input matInput type="number" formControlName="stock" required>
-          </mat-form-field>
-
-          <button mat-icon-button color="warn" (click)="eliminarVariante(i)" type="button">
-            <mat-icon>delete</mat-icon>
-          </button>
-        </div>
-
-        <div class="mt-2">
-          <button mat-stroked-button color="primary" (click)="agregarVariante()" type="button">
-            Agregar Variante
-          </button>
-        </div>
       </div>
 
       <!-- Botón Guardar -->

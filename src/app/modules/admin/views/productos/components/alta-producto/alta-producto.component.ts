@@ -1,5 +1,5 @@
 import { Component, Inject } from '@angular/core';
-import { FormBuilder, FormGroup, Validators, FormArray, ValidatorFn, AbstractControl, ValidationErrors } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, ValidatorFn, AbstractControl, ValidationErrors } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { Producto } from 'src/app/modules/shop/models/producto.model';
 import { ProductosService } from 'src/app/modules/shop/services/productos.service';
@@ -13,205 +13,210 @@ export class AltaProductoComponent {
 
   productoForm!: FormGroup;
 
-  constructor(@Inject(MAT_DIALOG_DATA) public data: { rubros: string[], subrubros: string[], marcas: string[] },
+  constructor(
+    @Inject(MAT_DIALOG_DATA) public data: { rubros: string[], subrubros: string[], marcas: string[] },
     private fb: FormBuilder,
     private productosService: ProductosService,
-    private dialogRef: MatDialogRef<AltaProductoComponent>) { }
+    private dialogRef: MatDialogRef<AltaProductoComponent>
+  ) {}
 
   rubros: string[] = [];
   subrubros: string[] = [];
   marcas: string[] = [];
   rubrosFiltrados: string[] = [];
   subrubrosFiltrados: string[] = [];
-  marcasFiltradas: string[] = []
+  marcasFiltradas: string[] = [];
 
-ngOnInit(): void {
+  ngOnInit(): void {
 
-  if (this.data) {
-    this.rubros = this.data.rubros || [];
-    this.subrubros = this.data.subrubros || [];
-    this.marcas = this.data.marcas || [];
+    if (this.data) {
+      this.rubros = this.data.rubros || [];
+      this.subrubros = this.data.subrubros || [];
+      this.marcas = this.data.marcas || [];
+    }
+
+this.productoForm = this.fb.group({
+  // básicos
+  codigoBarras: ['', [Validators.required]],
+  descripcion: ['', Validators.required],
+  imagen: [''],
+  rubro: ['', Validators.required],
+  subrubro: ['', Validators.required],
+  marca: ['', Validators.required],
+
+  // precios
+  precioCosto: [0, [Validators.required, Validators.min(0)]],
+  precioSinImpuestos: [0, [Validators.required, Validators.min(0)]], // 👈 nuevo campo obligatorio
+
+  ventaMinorista: [false],
+  precioMinorista: [{ value: 0, disabled: true }, [Validators.min(0)]],
+
+  ventaMayorista: [false],
+  precioMayorista: [{ value: 0, disabled: true }, [Validators.min(0)]],
+
+  oferta: [false],
+  precioOferta: [{ value: 0, disabled: true }, [Validators.min(0)]],
+
+  destacado: [false],
+
+  // stock
+  stock: [0, [Validators.min(0)]],
+  stockMinimo: [0, [Validators.min(0)]],
+}, { validators: [this.alMenosUnCanalVenta()] });
+
+    this.setupAutocomplete();
+    this.setupConditionalFields();
   }
 
-  this.productoForm = this.fb.group({
-    nombre: ['', Validators.required],
-    descripcion: [''],
-    imagen: [''],
-    rubro: ['', Validators.required],
-    subrubro: ['', Validators.required],
-    marca: ['', Validators.required],
-
-    codigo: ['', [Validators.required]],
-    precioCosto: [0, [Validators.required, Validators.min(0)]],
-
-    
-    ventaMinorista: [false],
-    precioMinorista: [0],
-    
-    ventaMayorista: [false],
-    precioMayorista: [0],
-    
-    oferta: [false],
-    precioOferta: [0],
-
-    destacado: [false],
-
-    stock: [0],
-    stockMinimo: [0], 
-    tieneVariantes: [false],
-    variantes: this.fb.array([]),
-  });
-
-  this.setupAutocomplete();
-  this.setupConditionalFields();
-
-  // Lógica para habilitar/deshabilitar stock
-  this.productoForm.get('tieneVariantes')?.valueChanges.subscribe((tieneVariante) => {
-    const stockCtrl = this.productoForm.get('stock');
-    if (tieneVariante) {
-      stockCtrl?.disable();
-    } else {
-      stockCtrl?.enable();
-    }
-  });
-
-  // Si oferta = false, limpiamos precioOferta
-  this.productoForm.get('oferta')?.valueChanges.subscribe(oferta => {
+  /** Reglas de habilitado/validadores según checkboxes */
+  private setupConditionalFields(): void {
+    const precioMinoristaCtrl = this.productoForm.get('precioMinorista');
+    const precioMayoristaCtrl = this.productoForm.get('precioMayorista');
     const precioOfertaCtrl = this.productoForm.get('precioOferta');
-    if (!oferta) {
-      precioOfertaCtrl?.setValue(0);
-      precioOfertaCtrl?.disable();
-    } else {
-      precioOfertaCtrl?.enable();
-    }
-  });
 
-  // Similar para precioMinorista y precioMayorista
-  this.productoForm.get('ventaMinorista')?.valueChanges.subscribe(minorista => {
-    const ctrl = this.productoForm.get('precioMinorista');
-    if (!minorista) {
-      ctrl?.setValue(0);
-      ctrl?.disable();
-    } else {
-      ctrl?.enable();
-    }
-  });
+    const ventaMinoristaCtrl = this.productoForm.get('ventaMinorista');
+    const ventaMayoristaCtrl = this.productoForm.get('ventaMayorista');
+    const ofertaCtrl = this.productoForm.get('oferta');
 
-  this.productoForm.get('ventaMayorista')?.valueChanges.subscribe(mayorista => {
-    const ctrl = this.productoForm.get('precioMayorista');
-    if (!mayorista) {
-      ctrl?.setValue(0);
-      ctrl?.disable();
-    } else {
-      ctrl?.enable();
-    }
-  });
-}
-
-  setupConditionalFields(): void {
-    this.productoForm.get('oferta')?.valueChanges.subscribe((oferta) => {
-      const precioOferta = this.productoForm.get('precioOferta');
-      if (oferta) {
-        precioOferta?.enable();
-        precioOferta?.setValidators([Validators.required, Validators.min(0)]);
+    // minorista
+    const applyMinorista = (val: boolean) => {
+      if (val) {
+        precioMinoristaCtrl?.enable();
+        precioMinoristaCtrl?.setValidators([Validators.required, Validators.min(0)]);
       } else {
-        precioOferta?.disable();
-        precioOferta?.clearValidators();
-        precioOferta?.setValue(0);
+        precioMinoristaCtrl?.reset(0);
+        precioMinoristaCtrl?.disable();
+        precioMinoristaCtrl?.clearValidators();
       }
-      precioOferta?.updateValueAndValidity();
+      precioMinoristaCtrl?.updateValueAndValidity();
+    };
+
+    // mayorista
+    const applyMayorista = (val: boolean) => {
+      if (val) {
+        precioMayoristaCtrl?.enable();
+        precioMayoristaCtrl?.setValidators([Validators.required, Validators.min(0)]);
+      } else {
+        precioMayoristaCtrl?.reset(0);
+        precioMayoristaCtrl?.disable();
+        precioMayoristaCtrl?.clearValidators();
+      }
+      precioMayoristaCtrl?.updateValueAndValidity();
+    };
+
+    // oferta
+    const applyOferta = (val: boolean) => {
+      if (val) {
+        precioOfertaCtrl?.enable();
+        precioOfertaCtrl?.setValidators([Validators.required, Validators.min(0)]);
+      } else {
+        precioOfertaCtrl?.reset(0);
+        precioOfertaCtrl?.disable();
+        precioOfertaCtrl?.clearValidators();
+      }
+      precioOfertaCtrl?.updateValueAndValidity();
+    };
+
+    // init + subscriptions
+    applyMinorista(!!ventaMinoristaCtrl?.value);
+    applyMayorista(!!ventaMayoristaCtrl?.value);
+    applyOferta(!!ofertaCtrl?.value);
+
+    ventaMinoristaCtrl?.valueChanges.subscribe(applyMinorista);
+    ventaMayoristaCtrl?.valueChanges.subscribe(applyMayorista);
+    ofertaCtrl?.valueChanges.subscribe(applyOferta);
+  }
+
+  /** Autocomplete simple (comparación case-insensitive) */
+  private setupAutocomplete(): void {
+    this.productoForm.get('rubro')?.valueChanges.subscribe(valor => {
+      const f = (valor || '').toString().toUpperCase();
+      this.rubrosFiltrados = this.rubros.filter(r => r.toUpperCase().includes(f));
     });
 
+    this.productoForm.get('subrubro')?.valueChanges.subscribe(valor => {
+      const f = (valor || '').toString().toUpperCase();
+      this.subrubrosFiltrados = this.subrubros.filter(s => s.toUpperCase().includes(f));
+    });
+
+    this.productoForm.get('marca')?.valueChanges.subscribe(valor => {
+      const f = (valor || '').toString().toUpperCase();
+      this.marcasFiltradas = this.marcas.filter(m => m.toUpperCase().includes(f));
+    });
   }
 
-    setupAutocomplete(): void {
-  this.productoForm.get('rubro')?.valueChanges.subscribe(valor => {
-    const filtro = (valor || '').toUpperCase();
-    this.rubrosFiltrados = this.rubros.filter(r => r.includes(filtro));
-  });
-
-  this.productoForm.get('subrubro')?.valueChanges.subscribe(valor => {
-    const filtro = (valor || '').toUpperCase();
-    this.subrubrosFiltrados = this.subrubros.filter(s => s.includes(filtro));
-  });
-
-  this.productoForm.get('marca')?.valueChanges.subscribe(valor => {
-    const filtro = (valor || '').toUpperCase();
-    this.marcasFiltradas = this.marcas.filter(s => s.includes(filtro));
-  });
-}
-
-get variantes(): FormArray {
-  return this.productoForm.get('variantes') as FormArray;
-}
-
-
-  agregarVariante() {
-    this.variantes.push(this.fb.group({
-      nombre: ['', Validators.required],
-      valor: ['#000000', Validators.required], // Color visual
-      stock: [0, [Validators.required, Validators.min(0)]],
-    }));
-  }
-
-  eliminarVariante(index: number) {
-    this.variantes.removeAt(index);
-  }
-
-  guardarProducto() {
-    if (this.productoForm.valid) {
-      console.log(this.productoForm.value);
-      // Aquí podés mandar los datos al backend
-    }
+  /** Al menos un canal de venta debe estar activo */
+  private alMenosUnCanalVenta(): ValidatorFn {
+    return (group: AbstractControl): ValidationErrors | null => {
+      const vm = group.get('ventaMinorista')?.value;
+      const vM = group.get('ventaMayorista')?.value;
+      return vm || vM ? null : { sinCanalVenta: true };
+    };
   }
 
   limpiarCerosIzquierda(campo: string): void {
-  const control = this.productoForm.get(campo);
-  if (!control) return;
-
-  let valor: string = control.value?.toString() ?? '';
-
-  // Limpiamos todos los ceros a la izquierda, excepto si el valor es "0"
-  const valorLimpio = valor.replace(/^0+(?!$)/, '');
-
-  // Solo actualizamos si el valor cambia
-  if (valor !== valorLimpio) {
-    control.setValue(valorLimpio);
+    const control = this.productoForm.get(campo);
+    if (!control) return;
+    const valor: string = control.value?.toString() ?? '';
+    const valorLimpio = valor.replace(/^0+(?!$)/, '');
+    if (valor !== valorLimpio) control.setValue(valorLimpio);
   }
-}
 
-soloNumerosValidator(): ValidatorFn {
-  return (control: AbstractControl): ValidationErrors | null => {
-    const valor = control.value;
-    return isNaN(valor) || valor === '' ? { soloNumeros: true } : null;
-  };
-}
-
-permitirSoloNumeros(event: KeyboardEvent): void {
-  const charCode = event.key;
-
-  if (!/^\d$/.test(charCode)) {
-    event.preventDefault();
+  permitirSoloNumeros(event: KeyboardEvent): void {
+    const char = event.key;
+    if (!/^\d$/.test(char)) event.preventDefault();
   }
-}
 
   onSubmit() {
-    if (this.productoForm.valid) {
-      const producto: Producto = this.productoForm.value;
-
-      producto.rubro = producto.rubro.toUpperCase();
-      producto.subrubro = producto.subrubro.toUpperCase();
-      producto.marca = producto.marca.toUpperCase();
-
-      this.productosService.agregarProducto(producto).then((docRef) => {
-        producto.id = docRef.id; 
-        return this.productosService.actualizarProducto(producto);    
-    }).then(() => {
-      this.dialogRef.close(producto); // cerramos el modal y devolvemos el producto actualizado
-    });
-    } else {
+    if (this.productoForm.invalid) {
       this.productoForm.markAllAsTouched();
+      return;
     }
+
+    // getRawValue para incluir controles deshabilitados (precios)
+    const v = this.productoForm.getRawValue();
+
+    // normalizo textos a MAYÚSCULAS donde corresponde
+    const rubro = (v.rubro || '').toString().toUpperCase();
+    const subrubro = (v.subrubro || '').toString().toUpperCase();
+    const marca = (v.marca || '').toString().toUpperCase();
+
+    // armamos el objeto según el modelo nuevo
+    const producto: Producto = {
+      id: '', // lo seteo luego con el docRef.id
+      codigoBarras: v.codigoBarras,
+      descripcion: v.descripcion,
+      precioCosto: Number(v.precioCosto) || 0,
+      precioSinImpuestos: Number(v.precioSinImpuestos) || 0,
+
+      ventaMinorista: !!v.ventaMinorista,
+      precioMinorista: Number(v.precioMinorista) || 0,
+
+      ventaMayorista: !!v.ventaMayorista,
+      precioMayorista: Number(v.precioMayorista) || 0,
+
+      imagen: v.imagen || '',
+      rubro,
+      subrubro,
+      marca,
+      destacado: !!v.destacado,
+
+      oferta: !!v.oferta,
+      precioOferta: Number(v.precioOferta) || 0,
+
+      stock: Number(v.stock) || 0,
+      stockMinimo: Number(v.stockMinimo) || 0,
+    };
+
+    this.productosService.agregarProducto(producto)
+      .then((docRef) => {
+        producto.id = docRef.id;
+        return this.productosService.actualizarProducto(producto);
+      })
+      .then(() => {
+        this.dialogRef.close(producto);
+      });
   }
+
 
 }
