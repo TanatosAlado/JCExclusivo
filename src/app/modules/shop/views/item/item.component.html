@@ -10,29 +10,42 @@
   
 
   <div class="text-center py-4">
-    <!-- Ahora usamos descripcion en vez de nombre -->
+    <!-- Descripción (común a ambos) -->
     <a class="h6 text-decoration-none text-truncate" href="">
       {{ producto.descripcion }}
     </a>
 
-    <div class="d-flex align-items-center justify-content-center mt-2">
-      <!-- Si está en oferta -->
-      <h5 *ngIf="producto.oferta">
-        {{ producto.precioOferta | currency }}
-      </h5>
-      <h6 *ngIf="producto.oferta" class="text-muted ms-2">
-        <del>{{ esMayorista ? producto.precioMayorista : producto.precioMinorista | currency }}</del>
-      </h6>
+    <!-- Vista para MAYORISTA -->
+    <ng-container *ngIf="esMayorista; else vistaMinorista">
+      <div class="d-flex align-items-center justify-content-center mt-2">
+        <h5>
+          {{ producto.precioMayorista | currency }}
+        </h5>
+      </div>
+    </ng-container>
 
-      <!-- Si no está en oferta -->
-      <h5 *ngIf="!producto.oferta">
-        {{ esMayorista ? producto.precioMayorista : producto.precioMinorista | currency }}
-      </h5>
-    </div>
+    <!-- Vista para MINORISTA -->
+    <ng-template #vistaMinorista>
+      <div class="d-flex align-items-center justify-content-center mt-2">
+        <!-- Si está en oferta -->
+        <h5 *ngIf="producto.oferta">
+          {{ producto.precioOferta | currency }}
+        </h5>
+        <h6 *ngIf="producto.oferta" class="text-muted ms-2">
+          <del>{{ producto.precioMinorista | currency }}</del>
+        </h6>
 
-        <!-- Precio sin impuestos -->
-    <div class="small text-muted">
-      Precio sin impuestos: {{ producto.precioSinImpuestos | currency }}
-    </div>
+        <!-- Si no está en oferta -->
+        <h5 *ngIf="!producto.oferta">
+          {{ producto.precioMinorista | currency }}
+        </h5>
+      </div>
+
+      <!-- Impuestos nacionales -->
+      <div class="small text-muted">
+        Precio sin impuestos: {{ producto.precioSinImpuestos | currency }}
+      </div>
+    </ng-template>
   </div>
+
 </div>

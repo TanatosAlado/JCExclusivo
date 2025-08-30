@@ -1,5 +1,8 @@
 <div class="container mt-5">
-  <h2 class="mb-4 titulo">DESTACADOS</h2>
+  <div class="titulo mb-4">
+    <h2>DESTACADOS</h2>
+    <h2 *ngIf="esMayorista">- MAYORISTA</h2>
+  </div>
   <div class="grid-productos">
     <div class="item" *ngFor="let producto of destacados">
       <app-item [producto]="producto" [esMayorista]="esMayorista"></app-item>

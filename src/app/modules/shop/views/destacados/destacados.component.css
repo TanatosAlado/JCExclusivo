@@ -4,8 +4,16 @@
     gap: 1.5rem;
 }
 
-.titulo{
+.titulo {
   background-color: var(--color-primario);
   color: white;
   text-align: center;
-}  
+  display: flex;             
+  justify-content: center;   
+  align-items: baseline;     
+  gap: 0.5rem;               
+}
+
+.titulo h2{
+  margin: 0;   
+}
