@@ -1,9 +1,25 @@
 <div class="container mt-5">
   <div class="tabla-container">
-    <div class="button-container">
-       <button mat-raised-button class="boton-nuevo" (click)="abrirModalAltaProducto()">Nuevo</button>
-       <input type="file" (change)="onFileChange($event)" accept=".xlsx, .xls" />
-    </div>
+<div class="button-container">
+  <!-- Botón Nuevo -->
+  <button mat-raised-button class="boton-nuevo" (click)="abrirModalAltaProducto()">
+    Nuevo
+  </button>
+
+  <!-- Input file oculto -->
+  <input 
+    #fileInput 
+    type="file" 
+    (change)="onFileChange($event)" 
+    accept=".xlsx, .xls" 
+    hidden
+  />
+
+  <!-- Botón para disparar el input -->
+  <button mat-raised-button color="primary" (click)="fileInput.click()">
+    Subir Excel
+  </button>
+</div>
 
     <input class="search-input" (keyup)="applyFilter($event,datasourceProductos)" placeholder="Búsqueda Productos" #input>
 

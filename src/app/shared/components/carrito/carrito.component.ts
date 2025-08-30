@@ -123,13 +123,18 @@ export class CarritoComponent {
     this.router.navigate(['checkout']);
   }
 
-  cerrarCarrito() {
-    const offcanvasElement = document.getElementById('offcanvasCarrito');
-    if (offcanvasElement) {
-      const offcanvasInstance = bootstrap.Offcanvas.getInstance(offcanvasElement);
-      offcanvasInstance?.hide();
-    }
+cerrarCarrito() {
+  const offcanvasElement = document.getElementById('offcanvasCarrito');
+  if (offcanvasElement) {
+    const offcanvasInstance = bootstrap.Offcanvas.getInstance(offcanvasElement);
+    offcanvasInstance?.hide();
   }
+
+  // 🔥 limpieza manual de backdrop
+  document.querySelectorAll('.offcanvas-backdrop').forEach(b => b.remove());
+  document.body.classList.remove('offcanvas-backdrop', 'show');
+  document.body.style.overflow = 'auto';
+}
 
   getPuntosPorCompra(): number {
     const total = this.getTotalPrecio();
