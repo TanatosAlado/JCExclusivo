@@ -35,74 +35,43 @@
     margin-bottom: 4%;
     font-weight: bold;
   }
-  .opciones-envio {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    padding: 1rem;
-    max-width: 100%;
-  }
-  
-  .opciones-envio label {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.8rem 1rem;
-    border: 2px solid #ccc;
-    border-radius: 8px;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: border-color 0.3s, background-color 0.3s;
-    background-color: #f9f9f9;
-  }
-  
-  .opciones-envio {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start; 
-    gap: 1rem;
-    padding: 1rem;
-    max-width: 100%;
-  }
-  
-  .opciones-envio {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
-    padding: 1rem;
-    max-width: 100%;
-  }
-  
-  .opciones-envio label {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 1rem;
-    padding: 0.8rem 1rem;
-    border: 2px solid #ccc;
-    border-radius: 8px;
-    font-size: 1rem;
-    cursor: pointer;
-    background-color: #f9f9f9;
-    width: 70%;
-    transition: border-color 0.3s, background-color 0.3s;
-  }
-  
-  .opciones-envio label:hover {
-    border-color: var(--color-primario);
-    background-color: #eef6ff;
-    cursor: pointer;
-  }
-  
-  .opciones-envio input[type="radio"] {
-    accent-color: var(--color-primario);
-    transform: scale(1.2);
-    margin-right: 0.5rem;
-    
- 
-  }
- 
+
+/* Opciones de envío y pago */
+.opciones-envio {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem;
+  max-width: 100%;
+}
+
+.opciones-envio label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.8rem 1rem;
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  background-color: #f9f9f9;
+  width: 70%;
+  transition: border-color 0.3s, background-color 0.3s;
+}
+
+.opciones-envio label:hover {
+  border-color: var(--color-primario);
+  background-color: #eef6ff;
+}
+
+.opciones-envio input[type="radio"] {
+  accent-color: var(--color-primario);
+  transform: scale(1.2);
+  margin-right: 0.5rem;
+}
+
   .texto-opcion {
     flex: 1;
   }
