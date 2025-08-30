@@ -184,17 +184,34 @@
         <!-- Sección: Ingresar Cupón -->
         <div class="card mb-3" style="max-width: 500px; margin: auto;">
           <div class="card-body">
-            <label class="form-label"><strong>¿Tenés un cupón de descuento?</strong></label>
-            <div class="input-group">
-              <input type="text" [formControl]="cuponControl" placeholder="Ingresá tu cupón" class="form-control" />
-              <button [disabled]="cuponAplicado || cuponControl.disabled" class="btn btn-outline-secondary"
-                type="button" (click)="aplicarCupon()">Aplicar</button>
+            <div class="d-flex flex-column align-items-center my-4">
+              <label class="form-label fw-bold mb-2 text-center">
+                ¿Tenés un cupón de descuento?
+              </label>
+              <div class="d-flex flex-wrap justify-content-center" style="max-width: 500px; width: 100%;">
+                <input
+                  type="text"
+                  [formControl]="cuponControl"
+                  placeholder="Ingresá tu cupón"
+                  class="form-control rounded mb-2 text-center"
+                  style="height: 40px; flex: 1 1 250px; margin-right: 5px;"
+                />
+                <button
+                  [disabled]="cuponAplicado || cuponControl.disabled"
+                  class="btn btn-primary rounded d-flex align-items-center justify-content-center"
+                  type="button"
+                  (click)="aplicarCupon()"
+                  style="height: 40px; min-width: 70px;"
+                >
+                  Aplicar
+                </button>
+              </div>
             </div>
 
             <!-- Cupón aplicado -->
-            <div *ngIf="cuponAplicado" class="text-success mt-3 d-flex align-items-center">
-              <span>
-                ✅ Cupón aplicado: <strong>{{ cuponAplicado.codigo }}</strong> -
+            <div *ngIf="cuponAplicado" class="d-flex align-items-center bg-success bg-opacity-10 text-success rounded-pill px-3 py-2 mt-3" style="max-width: 450px;">
+              <span class="flex-grow-1 text-truncate">
+                Cupón aplicado: <strong>{{ cuponAplicado.codigo }}</strong> -
                 <ng-container *ngIf="cuponAplicado.tipo === 'porcentaje'">
                   {{ cuponAplicado.valor }}% OFF
                 </ng-container>
@@ -202,13 +219,21 @@
                   ${{ cuponAplicado.valor }} OFF
                 </ng-container>
               </span>
-              <button type="button" class="btn btn-sm btn-link text-danger ms-2 p-0" (click)="eliminarCupon()">
-                Quitar ❌
+              <button 
+                type="button" 
+                class="btn btn-sm btn-outline-danger rounded-circle ms-2 p-1 d-flex align-items-center justify-content-center"
+                style="width: 28px; height: 28px; line-height: 1;"
+                (click)="eliminarCupon()"
+                title="Quitar cupón"
+              >
+                ❌
               </button>
             </div>
+
             <mat-hint *ngIf="cuponInvalido" class="error">
               {{ mensajeCupon }}
             </mat-hint>
+
 
             <!-- Error de cupón -->
             <div *ngIf="errorCupon" class="text-danger mt-2">
