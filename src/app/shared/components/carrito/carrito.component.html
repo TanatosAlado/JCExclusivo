@@ -1,5 +1,5 @@
 <div *ngIf="cliente" class="offcanvas-body">
-  <div *ngFor="let producto of cliente.carrito" class="card mb-3 shadow-sm border-0">
+  <div *ngFor="let producto of carrito" class="card mb-3 shadow-sm border-0">
     <div class="row g-0 align-items-center">
       <div class="col-4">
         <img [src]="producto.imagen" alt="{{ producto.nombre }}" class="img-fluid rounded-start imagen-maxima">
@@ -15,11 +15,12 @@
               (click)="aumentarCantidad(producto)">+</button>
           </div>
           <div class="info-precios mt-2">
-            <label>Stock:{{ producto.stock }}</label>
-            <strong class="precio-final">{{ producto.precioFinal * producto.cantidad |currency}}</strong>
+            <label>Stock: {{ producto.stock }}</label>
+            <strong class="precio-final">{{ producto.precioFinal * producto.cantidad | currency }}</strong>
           </div>
         </div>
       </div>
+
       <div class="col-1 d-flex justify-content-center align-items-start pt-3">
         <button class="delete-btn" style="padding: 0.4rem 0.5rem;">
           <i (click)="eliminarDelCarrito(producto.id)" class="fa-solid fa-trash fa-lg"></i>
@@ -27,41 +28,45 @@
       </div>
     </div>
   </div>
-  <div class="resumen-carrito mt-3" *ngIf="cliente.carrito && cliente.carrito.length > 0">
-    <div *ngIf="cliente.esMayorista && (this.generalService.getTotalPrecio(cliente) < montoMinimoMayorista)"
-      class="alerta mb-3">
+
+  <!-- Resumen carrito -->
+  <div class="resumen-carrito mt-3" *ngIf="carrito.length > 0">
+    <div *ngIf="cliente.esMayorista && (getTotalPrecio() < montoMinimoMayorista)" class="alerta mb-3">
       <span class="alerta-icono">ℹ️</span>
       <span class="alerta-texto">
         <ng-container *ngIf="cliente.mayoristaActivado; else primerCompra">
           Compra mínima requerida: <strong>{{ montoMinimoMayorista | currency }}</strong>
         </ng-container>
         <ng-template #primerCompra>
-          Para activarse como mayorista, su primer compra debe superar <strong>{{ montoMinimoMayorista | currency
-            }}</strong>
+          Para activarse como mayorista, su primer compra debe superar
+          <strong>{{ montoMinimoMayorista | currency }}</strong>
         </ng-template>
       </span>
     </div>
     <div class="resumen-linea">
       <span>Total a pagar:</span>
-      <span>{{ this.generalService.getTotalPrecio(cliente)|currency }}</span>
+      <span>{{ getTotalPrecio() | currency }}</span>
     </div>
-    <h6 *ngIf="(cliente.nombre != 'Invitado') && (!cliente.esMayorista)">Esta compra sumará {{ getPuntosPorCompra() }}
-      puntos</h6>
+    <h6 *ngIf="(cliente.nombre != 'Invitado') && (!cliente.esMayorista)">
+      Esta compra sumará {{ getPuntosPorCompra() }} puntos
+    </h6>
   </div>
 
-  <div class="contenedor-compra" *ngIf="cliente.carrito && cliente.carrito.length > 0">
+  <!-- Acciones -->
+  <div class="contenedor-compra" *ngIf="carrito.length > 0">
     <button (click)="navigateCheckout()"
-      [disabled]="cliente.esMayorista && (this.generalService.getTotalPrecio(cliente) < montoMinimoMayorista)">FINALIZAR
-      COMPRA</button>
+      [disabled]="cliente.esMayorista && (getTotalPrecio() < montoMinimoMayorista)">
+      FINALIZAR COMPRA
+    </button>
     <span data-bs-dismiss="offcanvas">Ver Más Productos</span>
   </div>
 
-  <p class="text-center mt-4" *ngIf="cliente.carrito && cliente.carrito.length === 0">
+  <!-- Carrito vacío -->
+  <p class="text-center mt-4" *ngIf="carrito.length === 0">
     Aún no hay productos en el Carrito.
   </p>
-
-
 </div>
+
 <div *ngIf="!cliente">
   <p class="text-center mt-4">
     Inicia sesión para recuperar tu carrito o continua como invitado.

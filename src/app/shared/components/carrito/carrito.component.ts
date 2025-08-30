@@ -14,17 +14,22 @@ declare var bootstrap: any;
 })
 export class CarritoComponent {
 
-  cliente: Cliente
-  userLogueado = localStorage.getItem('mail')
+  cliente: Cliente;
+  carrito: any[] = []; // ✅ siempre vamos a trabajar con este array
+  userLogueado = localStorage.getItem('mail');
   valorParaSumarPunto: number = 200;
   montoMinimoMayorista: number = 50000;
 
-  constructor(public generalService: GeneralService, private carritoService: CarritoService, private clienteService: ClientesService, private router: Router, private puntosService: VouchersPuntosService) {
-
-  }
+  constructor(
+    public generalService: GeneralService,
+    private carritoService: CarritoService,
+    private clienteService: ClientesService,
+    private router: Router,
+    private puntosService: VouchersPuntosService
+  ) {}
 
   async ngOnInit() {
-    this.getCliente()
+    this.getCliente();
     await this.cargarConfiguracionYCalculos();
   }
 
@@ -54,6 +59,16 @@ export class CarritoComponent {
   getCliente() {
     this.generalService.getCliente().subscribe(cliente => {
       this.cliente = cliente;
+
+      if (this.cliente && this.cliente.id === 'invitado') {
+        // Invitado → carrito desde localStorage
+        const carritoLS = localStorage.getItem('carritoInvitado');
+        this.carrito = carritoLS ? JSON.parse(carritoLS) : [];
+        this.cliente.carrito = this.carrito; // mantener en sync
+      } else {
+        // Cliente logueado
+        this.carrito = this.cliente?.carrito || [];
+      }
     });
   }
 
@@ -62,51 +77,42 @@ export class CarritoComponent {
     if (producto.cantidad > 1) {
       producto.cantidad--;
     }
-    this.guardarCambiosCarrito()
-    //this.carritoService.contadorProductos()
-    this.carritoService.actualizarCantidadProductos(this.cliente)
+    this.guardarCambiosCarrito();
+    this.carritoService.actualizarCantidadProductos(this.cliente);
   }
 
   //FUNCION PARA AUMENTAR EN UNO LA CANTIDAD DEL PRODUCTO EN EL CARRO
   aumentarCantidad(producto: any): void {
     producto.cantidad++;
-    this.guardarCambiosCarrito()
-    // this.carritoService.contadorProductos()
-    this.carritoService.actualizarCantidadProductos(this.cliente)
+    this.guardarCambiosCarrito();
+    this.carritoService.actualizarCantidadProductos(this.cliente);
   }
 
-
-  //ACTUALIZAR CAMBIOS EN EL CARRITO DEL CLINETE
+  //ACTUALIZAR CAMBIOS EN EL CARRITO DEL CLIENTE
   guardarCambiosCarrito() {
-    const cliente = this.cliente;
-    if (!cliente) return;
+    if (!this.cliente) return;
 
-    if (cliente.id === 'invitado') {
-      // Actualizar carrito en localStorage para invitado
-      localStorage.setItem('carritoInvitado', JSON.stringify(cliente.carrito));
+    if (this.cliente.id === 'invitado') {
+      localStorage.setItem('carritoInvitado', JSON.stringify(this.carrito));
       this.carritoService.actualizarCantidadProductosDesdeLocalStorage();
     } else {
-      // Cliente logueado: actualizar en Firebase
-      this.clienteService.actualizarCliente(cliente.id, cliente)
-        .then(() => '')
+      this.cliente.carrito = this.carrito;
+      this.clienteService.actualizarCliente(this.cliente.id, this.cliente)
         .catch(err => console.error(err));
     }
   }
 
-
   eliminarDelCarrito(productoId: string) {
-    const clienteEncontrado = this.cliente;
-    if (clienteEncontrado) {
-      const clienteId = clienteEncontrado.id;
-      this.carritoService.deleteProductoCarrito(clienteId, productoId).then(() => {
-        // ✅ Eliminar del array local
-        this.cliente.carrito = this.cliente.carrito.filter((producto: any) => producto.id !== productoId);
-        this.guardarCambiosCarrito()
-        this.carritoService.actualizarCantidadProductos(this.cliente)
-      });
-    }
-  }
+    this.carrito = this.carrito.filter(p => p.id !== productoId);
+    this.cliente.carrito = this.carrito; // sincronizar
 
+    if (this.cliente.id !== 'invitado') {
+      this.carritoService.deleteProductoCarrito(this.cliente.id, productoId);
+    }
+
+    this.guardarCambiosCarrito();
+    this.carritoService.actualizarCantidadProductos(this.cliente);
+  }
 
   navigateCheckout() {
     // Forzar cierre manual quitando clases de Bootstrap
@@ -115,7 +121,6 @@ export class CarritoComponent {
     document.body.style.paddingRight = '0px';
     this.cerrarCarrito();
     this.router.navigate(['checkout']);
-
   }
 
   cerrarCarrito() {
@@ -126,12 +131,12 @@ export class CarritoComponent {
     }
   }
 
-
   getPuntosPorCompra(): number {
-    const total = this.generalService.getTotalPrecio(this.cliente);
+    const total = this.getTotalPrecio();
     return Math.floor(total / this.valorParaSumarPunto);
   }
 
-
+  getTotalPrecio(): number {
+    return this.carrito.reduce((acc, prod) => acc + (prod.precioFinal * prod.cantidad), 0);
+  }
 }
-
