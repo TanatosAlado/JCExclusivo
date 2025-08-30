@@ -23,7 +23,13 @@
     <div *ngIf="(clienteActual$ | async) as cliente" class="d-flex d-lg-none ms-auto gap-2 align-items-center">
       <span class="text-white me-2">{{ cliente.nombre }}</span>
       <mat-icon (click)="closeSesion()" class="icono-header">logout</mat-icon>
-      <i class="fas fa-shopping-cart text-white"></i>
+      <div class="carrito-icono" (click)="abrirCarrito()" data-bs-toggle="offcanvas"
+          data-bs-target="#offcanvasCarrito" aria-controls="offcanvasCarrito">
+          <i class="fas fa-shopping-cart text-white"></i>
+          <span class="badge-cantidad" *ngIf="(cantidadProductos$ | async) as cantidad" [class.oculto]="cantidad === 0">
+                {{ cantidad }}
+          </span>
+      </div>    
     </div>
 
     <!-- Menú desktop -->
