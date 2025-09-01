@@ -6,6 +6,7 @@ import { ClientesService } from 'src/app/shared/services/clientes.service';
 import { ToastService } from 'src/app/shared/services/toast.service';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { ComprobanteOrdenComponent } from '../comprobante-orden/comprobante-orden.component';
+import { collection, Firestore, getDocs, query, where } from '@angular/fire/firestore';
 
 @Component({
   selector: 'app-alta-orden',
@@ -19,6 +20,7 @@ export class AltaOrdenComponent {
   cargandoCliente = false;
   errorCliente: string | null = null;
   cargando = false;
+  imeiResultados: any[] | null = null;
 
   constructor(
     private fb: FormBuilder,
@@ -26,7 +28,8 @@ export class AltaOrdenComponent {
     private clientesService: ClientesService,
     private toastService: ToastService,
     private dialog: MatDialog,
-    private dialogRef: MatDialogRef<AltaOrdenComponent>
+    private dialogRef: MatDialogRef<AltaOrdenComponent>,
+    private firestore: Firestore
 
   ) { }
 
@@ -130,5 +133,36 @@ export class AltaOrdenComponent {
     this.dialogRef.close(); // Cierra el modal sin devolver datos
   }
 
+  async consultarIMEI() {
+  const imei = this.ordenForm.get('imei')?.value?.trim();
+  if (!imei) {
+    alert('Por favor, ingrese un IMEI primero.');
+    return;
+  }
+
+  this.imeiResultados = null; // reset
+
+  try {
+    const colecciones = ['Ordenes Pendientes', 'Ordenes Finalizadas'];
+    let resultados: any[] = [];
+
+    for (const col of colecciones) {
+      const ref = collection(this.firestore, col);
+      const q = query(ref, where('imei', '==', imei));
+      const snap = await getDocs(q);
+
+      snap.forEach(doc => {
+        resultados.push(doc.data());
+      });
+    }
+
+    this.imeiResultados = resultados;
+    console.log('Resultados IMEI:', resultados);
+
+  } catch (err) {
+    console.error('Error al consultar IMEI:', err);
+    this.imeiResultados = [];
+  }
+}
 
 }

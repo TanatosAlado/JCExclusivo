@@ -44,6 +44,35 @@
           <input matInput formControlName="imei">
         </mat-form-field>
 
+        <!-- Botón consultar IMEI -->
+        <div class="imei-check">
+          <button mat-stroked-button color="accent" type="button" (click)="consultarIMEI()">
+            🔍 Consultar IMEI
+          </button>
+        </div>
+
+<!-- Resultados de la consulta -->
+<div *ngIf="imeiResultados && imeiResultados.length > 0" class="imei-resultados">
+  <h4>Historial de reparaciones encontradas:</h4>
+
+  <div class="resultado-card" *ngFor="let r of imeiResultados">
+    <p><strong>📅 Fecha de ingreso:</strong> {{ r.fechaIngreso?.toDate() | date:'dd/MM/yyyy' }}</p>
+    <p><strong>👤 Cliente:</strong> {{ r.nombreCliente }} {{ r.apellidoCliente }}</p>
+    <p><strong>📝 Motivo:</strong> {{ r.motivoIngreso }}</p>
+    
+    <div *ngIf="r.observaciones?.length">
+      <p><strong>🔍 Observaciones:</strong></p>
+      <ul>
+        <li *ngFor="let obs of r.observaciones">{{ obs }}</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+        <div *ngIf="imeiResultados && imeiResultados.length === 0" class="imei-resultados">
+          <p>✅ No se encontraron órdenes previas con este IMEI.</p>
+        </div>
+
         <mat-form-field appearance="outline" class="form-field">
           <mat-label>Equipo</mat-label>
           <input matInput formControlName="equipo" required>

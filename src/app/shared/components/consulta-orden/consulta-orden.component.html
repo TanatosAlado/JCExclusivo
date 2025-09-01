@@ -7,8 +7,12 @@
   <!-- TÍTULO -->
   <h1 class="titulo">Seguimiento de reparación</h1>
 
-  <!-- BLOQUES -->
-  <ng-container *ngIf="orden; else errorTpl">
+  <!-- ESTADOS -->
+  <ng-container *ngIf="cargando">
+    <p class="loading">⏳ Buscando tu orden, por favor esperá...</p>
+  </ng-container>
+
+  <ng-container *ngIf="!cargando && orden">
     <!-- Datos del cliente -->
     <div class="bloque">
       <h2>👤 Datos del cliente</h2>
@@ -28,7 +32,7 @@
       <p><strong>N° de Orden:</strong> {{ orden.numeroOrden }}</p>
       <p><strong>Fecha de ingreso:</strong> {{ orden.fechaIngreso | date:'dd/MM/yyyy' }}</p>
       <p><strong>Motivo:</strong> {{ orden.motivoIngreso }}</p>
-      
+
       <!-- Observaciones como lista -->
       <div *ngIf="orden.observaciones?.length">
         <strong>Observaciones:</strong>
@@ -41,13 +45,14 @@
     </div>
   </ng-container>
 
+  <!-- ERROR -->
+  <ng-container *ngIf="!cargando && error">
+    <p class="error">❌ {{ error }}</p>
+  </ng-container>
+
   <!-- CTA -->
-  <div class="cta">
+  <div class="cta" *ngIf="!cargando && orden">
     <p>¿Querés pasar a mirar nuestro <strong>Store</strong>?</p>
     <a href="https://storejcexclusivo.web.app/productos" target="_blank" class="btn-store">Ir al Store 🛒</a>
   </div>
 </div>
-
-<ng-template #errorTpl>
-  <p class="error">❌ No se encontró la orden solicitada.</p>
-</ng-template>

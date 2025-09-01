@@ -19,26 +19,36 @@ ordenId!: string;
     private firestore: Firestore
   ) {}
 
-  async ngOnInit() {
-    this.ordenId = this.route.snapshot.paramMap.get('id')!;
+async ngOnInit() {
+  this.ordenId = this.route.snapshot.paramMap.get('id')!;
 
-    try {
-      const ref = doc(this.firestore, `Ordenes Pendientes/${this.ordenId}`);
-      const snap = await getDoc(ref);
+  try {
+    // Primero busca en Ordenes Pendientes
+    let ref = doc(this.firestore, `Ordenes Pendientes/${this.ordenId}`);
+    let snap = await getDoc(ref);
 
-      if (snap.exists()) {
-        this.orden = snap.data();
-        console.log('Orden encontrada:', this.orden);
-        this.orden.fechaIngreso = this.orden.fechaIngreso.toDate(); 
-        console.log('Fecha de ingreso convertida:', this.orden.fechaIngreso);
-      } else {
-        this.error = 'No se encontró la orden solicitada.';
-      }
-    } catch (err) {
-      console.error(err);
-      this.error = 'Error al consultar la orden.';
-    } finally {
-      this.cargando = false;
+    if (!snap.exists()) {
+      // Si no está, busca en Ordenes Finalizadas
+      ref = doc(this.firestore, `Ordenes Finalizadas/${this.ordenId}`);
+      snap = await getDoc(ref);
     }
+
+    if (snap.exists()) {
+      this.orden = snap.data();
+      console.log('Orden encontrada:', this.orden);
+
+      if (this.orden.fechaIngreso?.toDate) {
+        this.orden.fechaIngreso = this.orden.fechaIngreso.toDate();
+        console.log('Fecha de ingreso convertida:', this.orden.fechaIngreso);
+      }
+    } else {
+      this.error = 'No se encontró la orden solicitada.';
+    }
+  } catch (err) {
+    console.error(err);
+    this.error = 'Error al consultar la orden.';
+  } finally {
+    this.cargando = false;
   }
+}
 }
