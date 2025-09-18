@@ -1,0 +1,33 @@
+<h2 mat-dialog-title>{{ data?.sucursal ? 'Editar Sucursal' : 'Nueva Sucursal' }}</h2>
+
+<mat-dialog-content [formGroup]="sucursalForm" class="form-grid">
+  <mat-form-field appearance="outline">
+    <mat-label>Nombre</mat-label>
+    <input matInput formControlName="nombre">
+    <mat-error *ngIf="sucursalForm.get('nombre')?.hasError('required')">
+      El nombre es obligatorio
+    </mat-error>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Dirección</mat-label>
+    <input matInput formControlName="direccion">
+    <mat-error *ngIf="sucursalForm.get('direccion')?.hasError('required')">
+      La dirección es obligatoria
+    </mat-error>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Teléfono</mat-label>
+    <input matInput formControlName="telefono">
+  </mat-form-field>
+
+  <mat-checkbox formControlName="activa"> Activa </mat-checkbox>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancelar()">Cancelar</button>
+  <button mat-raised-button color="primary" (click)="guardar()" [disabled]="sucursalForm.invalid">
+    Guardar
+  </button>
+</mat-dialog-actions>

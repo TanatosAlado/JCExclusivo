@@ -27,6 +27,11 @@ import { ConfirmDialogComponent } from './components/confirm-dialog/confirm-dial
 import { WhatsappComponent } from './components/whatsapp/whatsapp.component';
 import { QRCodeModule } from 'angularx-qrcode';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
+import { MAT_DATE_LOCALE } from '@angular/material/core';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+
 
 @NgModule({
   declarations: [
@@ -60,7 +65,10 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
     MatAutocompleteModule,
     MatButtonToggleModule,
     QRCodeModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
+    MatDatepickerModule,
+    MatNativeDateModule,
+    BrowserAnimationsModule
   ],
   exports: [
     NavbarComponent,
@@ -88,7 +96,13 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
     MatButtonToggleModule,
     WhatsappComponent,
     QRCodeModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
+    MatDatepickerModule,
+    MatNativeDateModule,
+    BrowserAnimationsModule,
+  ],
+  providers: [
+      { provide: MAT_DATE_LOCALE, useValue: 'es-AR' } 
   ]
 })
 export class SharedModule { }

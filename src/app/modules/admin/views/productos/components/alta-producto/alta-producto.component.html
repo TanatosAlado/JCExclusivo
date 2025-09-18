@@ -75,12 +75,17 @@
         <mat-checkbox formControlName="destacado">¿Es destacado?</mat-checkbox>
       </div>
 
-      <!-- Stock -->
+      <!-- Stock distribuido -->
       <div class="form-grid fadeIn fourth">
-        <mat-form-field appearance="outline" class="form-field">
-          <mat-label>Stock</mat-label>
-          <input matInput type="number" formControlName="stock">
-        </mat-form-field>
+        <div formArrayName="stockSucursales" class="full-width">
+          <div *ngFor="let stock of productoForm.get('stockSucursales')['controls']; let i = index" [formGroupName]="i"
+            class="sucursal-stock">
+            <mat-form-field appearance="outline" class="form-field">
+              <mat-label>Stock en {{ sucursales[i]?.nombre }}</mat-label>
+              <input matInput type="number" formControlName="cantidad">
+            </mat-form-field>
+          </div>
+        </div>
 
         <mat-form-field appearance="outline" class="form-field">
           <mat-label>Stock Mínimo</mat-label>

@@ -25,8 +25,11 @@ import { BannerComponent } from './views/banner/banner.component';
 import { MatSelectModule } from '@angular/material/select';
 import { ComprobanteOrdenComponent } from './views/taller/components/comprobante-orden/comprobante-orden.component';
 import { ConsultaOrdenComponent } from '../../shared/components/consulta-orden/consulta-orden.component';
-
-
+import { CajaComponent } from './views/caja/caja.component';
+import { SucursalesComponent } from './views/sucursales/sucursales.component';
+import { ListaSucursalesComponent } from './views/sucursales/components/lista-sucursales/lista-sucursales.component';
+import { AltaSucursalComponent } from './views/sucursales/components/alta-sucursal/alta-sucursal.component';
+import { DetalleSucursalComponent } from './views/sucursales/components/detalle-sucursal/detalle-sucursal.component';
 
 
 @NgModule({
@@ -54,6 +57,11 @@ import { ConsultaOrdenComponent } from '../../shared/components/consulta-orden/c
     BannerComponent,
     ComprobanteOrdenComponent,
     ConsultaOrdenComponent,
+    CajaComponent,
+    SucursalesComponent,
+    ListaSucursalesComponent,
+    AltaSucursalComponent,
+    DetalleSucursalComponent,
   ],
   imports: [
     CommonModule,

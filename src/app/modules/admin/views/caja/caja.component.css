@@ -1,0 +1,34 @@
+.full-width-table {
+  width: 100%;
+}
+
+.resumen {
+  font-size: 1rem;
+}
+
+.boton-flotante {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+}
+
+.inputToken{
+  background-color: red;
+}
+/* 
+.mat-datepicker-toggle .mat-icon {
+  color: green !important;
+} */
+
+.mat-mdc-form-field .mat-mdc-icon-button .mat-datepicker-toggle-default-icon {
+  fill: #034f70 !important;
+  color: #034f70 !important;
+}
+
+.mat-datepicker-toggle .mat-icon {
+  color: #034f70 !important; /* azul oscuro */
+}
+
+.mat-datepicker-toggle-default-icon {
+  fill: #034f70 !important;
+}

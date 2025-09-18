@@ -3,9 +3,8 @@
 <mat-dialog-content class="contenido-modal">
   <!-- Datos principales -->
   <div class="bloque">
-    <p><strong>Nombre:</strong> {{ producto.nombre }}</p>
     <p><strong>Descripción:</strong> {{ producto.descripcion }}</p>
-    <p><strong>Código interno:</strong> {{ producto.codigo }}</p>
+    <p><strong>Código interno:</strong> {{ producto.codigoBarras }}</p>
   </div>
 
   <!-- Rubros y marca -->
@@ -29,9 +28,9 @@
     <p><strong>Stock:</strong> {{ producto.stock }}</p>
     <p><strong>Destacado:</strong> {{ producto.destacado ? 'Sí' : 'No' }}</p>
     <p><strong>Oferta:</strong> {{ producto.oferta ? 'Sí' : 'No' }}</p>
-    <p><strong>Impuesto Nacional:</strong> {{ producto.impuestoNacional ? 'Sí' : 'No' }}</p>
-    <p *ngIf="producto.impuestoNacional">
-      <strong>Precio sin Impuesto Nacional:</strong> ${{ producto.precioSinImpuestoNacional }}
+    <p><strong>Impuesto Nacional:</strong> {{ producto.precioSinImpuestos ? 'Sí' : 'No' }}</p>
+    <p *ngIf="producto.precioSinImpuestos">
+      <strong>Precio sin Impuesto Nacional:</strong> ${{ producto.precioSinImpuestos }}
     </p>
   </div>
 

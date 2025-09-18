@@ -52,6 +52,18 @@ export class GestionesComponent {
       ruta: '/gestiones/banner',
       disabled: true, // 🚫
     },
+    {
+      titulo: 'Caja',
+      descripcion: 'Gestión de caja',
+      icono: 'fas fa-cash-register',
+      ruta: '/gestiones/caja',
+    },
+    {
+      titulo: 'Sucursales',
+      descripcion: 'Gestión de sucursales',
+      icono: 'fas fa-map-marker-alt',
+      ruta: '/gestiones/sucursales',
+    },
     
   ];
 

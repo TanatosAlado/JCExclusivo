@@ -1,0 +1,28 @@
+<mat-dialog-content class="card-container">
+  <div class="card">
+    <h2 class="card-title">{{ data.sucursal.nombre }}</h2>
+
+    <div class="card-row">
+      <span class="card-label">Dirección:</span>
+      <span class="card-value">{{ data.sucursal.direccion }}</span>
+    </div>
+
+    <div class="card-row">
+      <span class="card-label">Teléfono:</span>
+      <span class="card-value">{{ data.sucursal.telefono || '-' }}</span>
+    </div>
+
+    <div class="card-row">
+      <span class="card-label">Estado:</span>
+      <span class="card-value">
+        <span [ngClass]="data.sucursal.activa ? 'estado-activa' : 'estado-inactiva'">
+          {{ data.sucursal.activa ? 'Activa' : 'Inactiva' }}
+        </span>
+      </span>
+    </div>
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-raised-button color="primary" (click)="cerrar()">Cerrar</button>
+</mat-dialog-actions>

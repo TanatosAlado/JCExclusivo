@@ -16,6 +16,8 @@ import { TallerComponent } from './modules/admin/views/taller/taller.component';
 import { BannerComponent } from './modules/admin/views/banner/banner.component';
 import { LayoutDespachoComponent } from './modules/despacho/components/layout-despacho/layout-despacho.component';
 import { ConsultaOrdenComponent } from './shared/components/consulta-orden/consulta-orden.component';
+import { CajaComponent } from './modules/admin/views/caja/caja.component';
+import { SucursalesComponent } from './modules/admin/views/sucursales/sucursales.component';
 
 const routes: Routes = [
     { path: '', redirectTo: 'inicio', pathMatch: 'prefix' },
@@ -35,6 +37,8 @@ const routes: Routes = [
       { path: 'gifts', component: GiftsComponent },
       { path: 'taller', component: TallerComponent },
       { path: 'banner', component: BannerComponent },
+      { path: 'caja', component: CajaComponent },
+      { path: 'sucursales', component: SucursalesComponent },
     ]
   },
   {path:'productos',component: GrillaItemComponent},

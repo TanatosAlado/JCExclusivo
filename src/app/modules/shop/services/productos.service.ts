@@ -17,8 +17,16 @@ export class ProductosService {
 
   agregarProducto(producto: Producto): Promise<any> {
     console.log('Producto a agregar:', producto);
+
     const ref = collection(this.firestore, 'productos');
-    return addDoc(ref, producto);
+
+    // Convertimos a objeto plano
+    const productoPlano = {
+      ...producto,
+      stockSucursales: producto.stockSucursales || [] // asegurar que sea array simple
+    };
+
+    return addDoc(ref, productoPlano);
   }
 
   editarProducto(producto: Producto): Promise<void> {

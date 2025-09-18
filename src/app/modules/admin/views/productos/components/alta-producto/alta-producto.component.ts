@@ -1,6 +1,7 @@
 import { Component, Inject } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ValidatorFn, AbstractControl, ValidationErrors } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+import { SucursalesService } from 'src/app/modules/admin/services/sucursales.service';
 import { Producto } from 'src/app/modules/shop/models/producto.model';
 import { ProductosService } from 'src/app/modules/shop/services/productos.service';
 
@@ -12,13 +13,15 @@ import { ProductosService } from 'src/app/modules/shop/services/productos.servic
 export class AltaProductoComponent {
 
   productoForm!: FormGroup;
+  sucursales: any[] = [];
 
   constructor(
     @Inject(MAT_DIALOG_DATA) public data: { rubros: string[], subrubros: string[], marcas: string[] },
     private fb: FormBuilder,
     private productosService: ProductosService,
-    private dialogRef: MatDialogRef<AltaProductoComponent>
-  ) {}
+    private dialogRef: MatDialogRef<AltaProductoComponent>,
+    private sucursalesService: SucursalesService
+  ) { }
 
   rubros: string[] = [];
   subrubros: string[] = [];
@@ -35,34 +38,37 @@ export class AltaProductoComponent {
       this.marcas = this.data.marcas || [];
     }
 
-this.productoForm = this.fb.group({
-  // básicos
-  codigoBarras: ['', [Validators.required]],
-  descripcion: ['', Validators.required],
-  imagen: [''],
-  rubro: ['', Validators.required],
-  subrubro: ['', Validators.required],
-  marca: ['', Validators.required],
+    this.obtenerSucursales();
 
-  // precios
-  precioCosto: [0, [Validators.required, Validators.min(0)]],
-  precioSinImpuestos: [0, [Validators.required, Validators.min(0)]], // 👈 nuevo campo obligatorio
+    this.productoForm = this.fb.group({
+      codigoBarras: ['', Validators.required],
+      descripcion: ['', Validators.required],
+      imagen: [''],
+      rubro: ['', Validators.required],
+      subrubro: [''],
+      marca: ['', Validators.required],
 
-  ventaMinorista: [false],
-  precioMinorista: [{ value: 0, disabled: true }, [Validators.min(0)]],
+      precioCosto: [0, [Validators.required, Validators.min(0)]],
+      precioSinImpuestos: [0, [Validators.required, Validators.min(0)]],
 
-  ventaMayorista: [false],
-  precioMayorista: [{ value: 0, disabled: true }, [Validators.min(0)]],
+      ventaMinorista: [false],
+      precioMinorista: [{ value: 0, disabled: true }],
+      ventaMayorista: [false],
+      precioMayorista: [{ value: 0, disabled: true }],
 
-  oferta: [false],
-  precioOferta: [{ value: 0, disabled: true }, [Validators.min(0)]],
+      oferta: [false],
+      precioOferta: [{ value: 0, disabled: true }],
+      destacado: [false],
 
-  destacado: [false],
+      stockMinimo: [0, Validators.min(0)],
 
-  // stock
-  stock: [0, [Validators.min(0)]],
-  stockMinimo: [0, [Validators.min(0)]],
-}, { validators: [this.alMenosUnCanalVenta()] });
+      stockSucursales: this.fb.array(
+        this.sucursales.map(s => this.fb.group({
+          sucursalId: [s.id],
+          cantidad: [0, Validators.min(0)]
+        }))
+      )
+    }, { validators: [this.alMenosUnCanalVenta()] });
 
     this.setupAutocomplete();
     this.setupConditionalFields();
@@ -182,32 +188,26 @@ this.productoForm = this.fb.group({
     const marca = (v.marca || '').toString().toUpperCase();
 
     // armamos el objeto según el modelo nuevo
-    const producto: Producto = {
-      id: '', // lo seteo luego con el docRef.id
-      codigoBarras: v.codigoBarras,
-      descripcion: v.descripcion,
-      precioCosto: Number(v.precioCosto) || 0,
-      precioSinImpuestos: Number(v.precioSinImpuestos) || 0,
-
-      ventaMinorista: !!v.ventaMinorista,
-      precioMinorista: Number(v.precioMinorista) || 0,
-
-      ventaMayorista: !!v.ventaMayorista,
-      precioMayorista: Number(v.precioMayorista) || 0,
-
-      imagen: v.imagen || '',
-      rubro,
-      subrubro,
-      marca,
-      destacado: !!v.destacado,
-
-      oferta: !!v.oferta,
-      precioOferta: Number(v.precioOferta) || 0,
-
-      stock: Number(v.stock) || 0,
-      stockMinimo: Number(v.stockMinimo) || 0,
-    };
-
+    const producto = new Producto(
+      '', // id
+      this.productoForm.value.codigoBarras,
+      this.productoForm.value.descripcion,
+      this.productoForm.value.precioCosto,
+      this.productoForm.value.ventaMinorista,
+      this.productoForm.value.precioMinorista,
+      this.productoForm.value.ventaMayorista,
+      this.productoForm.value.precioMayorista,
+      this.productoForm.value.imagen,
+      this.productoForm.value.rubro,
+      this.productoForm.value.subrubro,
+      this.productoForm.value.marca,
+      this.productoForm.value.destacado,
+      this.productoForm.value.oferta,
+      this.productoForm.value.precioOferta,
+      this.productoForm.value.precioSinImpuestos,
+      this.productoForm.value.stockMinimo,
+      this.productoForm.value.stockSucursales
+    );
     this.productosService.agregarProducto(producto)
       .then((docRef) => {
         producto.id = docRef.id;
@@ -217,6 +217,23 @@ this.productoForm = this.fb.group({
         this.dialogRef.close(producto);
       });
   }
+
+
+obtenerSucursales(): void {
+  this.sucursalesService.obtenerSucursales().subscribe(sucs => {
+    this.sucursales = sucs;
+
+    const stockArray = this.productoForm.get('stockSucursales') as any;
+    stockArray.clear(); // limpia lo que tenga
+
+    sucs.forEach(s => {
+      stockArray.push(this.fb.group({
+        sucursalId: [s.id],
+        cantidad: [0, [Validators.min(0)]]
+      }));
+    });
+  });
+}
 
 
 }

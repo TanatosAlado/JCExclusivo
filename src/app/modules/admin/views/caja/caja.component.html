@@ -1,0 +1,77 @@
+<app-encabezado>
+  Gestión de Caja
+</app-encabezado>
+
+
+<div class="container mt-4">
+
+  <mat-card>
+    <mat-card-title>📒 Libro Diario</mat-card-title>
+    <mat-card-content>
+      <!-- Selector de fecha (hoy por ahora) -->
+      <div class="mb-3">
+        <mat-form-field appearance="outline" color="primary" class="mi-datefield">
+          <mat-label>Fecha</mat-label>
+          <input matInput [matDatepicker]="picker" [(ngModel)]="fechaSeleccionada"
+            (dateChange)="onFechaSeleccionada($event)" class="inputToken">
+          <mat-datepicker-toggle matSuffix [for]="picker">
+            <!-- ponemos el icono explícito para poder estilizarlo de forma fiable -->
+            <mat-icon matDatepickerToggleIcon class="mi-calendar-icon">calendar_today</mat-icon>
+          </mat-datepicker-toggle>
+          <mat-datepicker #picker color="primary"></mat-datepicker>
+        </mat-form-field>
+      </div>
+
+      <!-- Tabla -->
+      <table mat-table [dataSource]="movimientos" class="mat-elevation-z2 full-width-table">
+
+        <!-- Fecha -->
+        <ng-container matColumnDef="fecha">
+          <th mat-header-cell *matHeaderCellDef> Fecha </th>
+          <td mat-cell *matCellDef="let mov">{{ mov.fecha | date:'dd/MM/yyyy' }}</td>
+        </ng-container>
+
+        <!-- Tipo -->
+        <ng-container matColumnDef="tipo">
+          <th mat-header-cell *matHeaderCellDef> Tipo </th>
+          <td mat-cell *matCellDef="let mov">
+            <span [ngClass]="mov.tipo === 'ingreso' ? 'text-success' : 'text-danger'">
+              {{ mov.tipo | titlecase }}
+            </span>
+          </td>
+        </ng-container>
+
+        <!-- Descripción -->
+        <ng-container matColumnDef="descripcion">
+          <th mat-header-cell *matHeaderCellDef> Descripción </th>
+          <td mat-cell *matCellDef="let mov">{{ mov.descripcion }}</td>
+        </ng-container>
+
+        <!-- Monto -->
+        <ng-container matColumnDef="monto">
+          <th mat-header-cell *matHeaderCellDef> Monto </th>
+          <td mat-cell *matCellDef="let mov" [ngClass]="mov.tipo === 'ingreso' ? 'text-success' : 'text-danger'">
+            {{ mov.monto | currency:'ARS':'symbol':'1.2-2' }}
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+      </table>
+
+      <!-- Resumen -->
+      <div class="resumen mt-4">
+        <p><strong>Total ingresos:</strong> <span class="text-success">{{ totalIngresos | currency:'ARS' }}</span></p>
+        <p><strong>Total egresos:</strong> <span class="text-danger">{{ totalEgresos | currency:'ARS' }}</span></p>
+        <p><strong>Saldo del día:</strong> <span [ngClass]="saldo >= 0 ? 'text-success' : 'text-danger'">{{ saldo |
+            currency:'ARS' }}</span></p>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Botón flotante -->
+  <button mat-fab color="primary" class="boton-flotante" (click)="abrirModalGasto()">
+    <mat-icon>add</mat-icon>
+  </button>
+
+</div>

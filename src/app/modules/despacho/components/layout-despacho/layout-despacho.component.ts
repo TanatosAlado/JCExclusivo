@@ -10,7 +10,7 @@ interface ClientePOS {
 interface ProductoPOS {
   id: string;
   codigoBarras: string;
-  nombre: string;
+  descripcion: string;
   precioMinorista: number;
   precioMayorista: number;
 }
@@ -76,36 +76,39 @@ export class LayoutDespachoComponent implements OnInit {
   }
 
   /** Escanear código de barras */
-  async procesarCodigoBarras(codigo: string) {
-    // Si el producto ya está en cache
-    if (this.productoCache[codigo]) {
-      this.agregarAlCarrito(this.productoCache[codigo]);
-      return;
-    }
+async procesarCodigoBarras(codigo: string) {
+  console.log('Procesando código de barras:', codigo);
 
-    // Buscar en Firebase
-    const productosRef = collection(this.firestore, 'productos');
-    const q = query(productosRef, where('codigo', '==', codigo));
-    const snap = await getDocs(q);
+  // Normalizar el código recibido
+  const codigoNormalizado = codigo.trim();
 
-    if (!snap.empty) {
-      const doc = snap.docs[0];
-      const data = doc.data() as any;
-      const producto: ProductoPOS = {
-        id: doc.id,
-        codigoBarras: data.codigoBarras,
-        nombre: data.nombre,
-        precioMinorista: data.precioMinorista,
-        precioMayorista: data.precioMayorista
-      };
-
-      this.productoCache[codigo] = producto; // Cache
-      this.agregarAlCarrito(producto);
-    } else {
-      // Activar búsqueda manual
-      this.modoBusquedaManual = true;
-    }
+  if (this.productoCache[codigoNormalizado]) {
+    this.agregarAlCarrito(this.productoCache[codigoNormalizado]);
+    return;
   }
+
+  // Buscar en Firebase
+  const productosRef = collection(this.firestore, 'productos');
+  const q = query(productosRef, where('codigoBarras', '==', codigoNormalizado));
+  const snap = await getDocs(q);
+
+  if (!snap.empty) {
+    const doc = snap.docs[0];
+    const data = doc.data() as any;
+    const producto: ProductoPOS = {
+      id: doc.id,
+      codigoBarras: data.codigoBarras.trim(),
+      descripcion: data.descripcion,
+      precioMinorista: data.precioMinorista,
+      precioMayorista: data.precioMayorista
+    };
+
+    this.productoCache[codigoNormalizado] = producto; // Cache
+    this.agregarAlCarrito(producto);
+  } else {
+    this.modoBusquedaManual = true;
+  }
+}
 
   /** Agregar producto al carrito */
   agregarAlCarrito(producto: ProductoPOS) {
@@ -120,7 +123,7 @@ export class LayoutDespachoComponent implements OnInit {
     } else {
       this.carrito.push({
         productoId: producto.id,
-        nombre: producto.nombre,
+        nombre: producto.descripcion,
         cantidad: 1,
         precioUnitario: precioBase,
         subtotal: precioBase
@@ -167,6 +170,8 @@ export class LayoutDespachoComponent implements OnInit {
       items: this.carrito,
       total: this.total
     };
+
+    console.log('Venta registrada:', venta);
 
     await addDoc(collection(this.firestore, 'Ventas'), venta);
 

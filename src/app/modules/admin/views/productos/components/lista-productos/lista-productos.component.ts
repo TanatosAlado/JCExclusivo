@@ -171,31 +171,26 @@ onFileChange(event: any) {
 
     // mapear cada fila a Producto
     productosExcel.forEach((v: any) => {
-      const producto: Producto = {
-        id: '', // lo seteo después
-        codigoBarras: v.codigoBarras?.toString() || '',
-        descripcion: v.descripcion || '',
-        precioCosto: this.parseNumber(v.precioCosto) || 0,
-        precioSinImpuestos: this.parseNumber(v.precioSinImpuestos) || 0,
-
-        ventaMinorista: this.parseBoolean(v.ventaMinorista),
-        precioMinorista: this.parseNumber(v.precioMinorista)|| 0,
-
-        ventaMayorista: this.parseBoolean(v.ventaMayorista),
-        precioMayorista: this.parseNumber(v.precioMayorista) || 0,
-
-        imagen: v.imagen || '',
-        rubro: (v.rubro || '').toString().toUpperCase(),
-        subrubro: (v.subrubro || '').toString().toUpperCase(),
-        marca: (v.marca || '').toString().toUpperCase(),
-        destacado: this.parseBoolean(v.destacado),
-
-        oferta: this.parseBoolean(v.oferta),
-        precioOferta: this.parseNumber(v.precioOferta) || 0,
-
-        stock: this.parseNumber(v.stock) || 0,
-        stockMinimo: this.parseNumber(v.stockMinimo) || 0,
-      };
+const producto = new Producto(
+  v.id,
+  v.codigoBarras,
+  v.descripcion,
+  v.precioCosto,
+  v.ventaMinorista,
+  v.precioMinorista,
+  v.ventaMayorista,
+  v.precioMayorista,
+  v.imagen,
+  v.rubro,
+  v.subrubro,
+  v.marca,
+  v.destacado,
+  v.oferta,
+  v.precioOferta,
+  v.precioSinImpuestos,
+  v.stockMinimo,
+  v.stockSucursales || []
+);
 
       // lógica de checks (igual que formulario)
       if (!producto.ventaMinorista) producto.precioMinorista = 0;
