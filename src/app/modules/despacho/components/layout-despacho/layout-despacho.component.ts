@@ -1,5 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { Firestore, collection, query, where, getDocs, addDoc } from '@angular/fire/firestore';
+import Swal from 'sweetalert2';
+import { ProductosCacheService } from '../../services/productos-cache.service';
 
 interface ClientePOS {
   dni: string;
@@ -49,9 +51,14 @@ export class LayoutDespachoComponent implements OnInit {
   modoBusquedaManual: boolean = false;
   busquedaManual: string = '';
 
-  constructor(private firestore: Firestore) {}
+  metodoPago: string | null = null;
+  mostrarErrorPago = false;
 
-  ngOnInit(): void {}
+  constructor(private firestore: Firestore, private productosCache: ProductosCacheService) { }
+
+async ngOnInit() {
+  await this.productosCache.syncProductos();
+}
 
   /** Buscar cliente por DNI */
   async buscarClientePorDNI(dni: string) {
@@ -75,45 +82,24 @@ export class LayoutDespachoComponent implements OnInit {
     }
   }
 
-  /** Escanear código de barras */
 async procesarCodigoBarras(codigo: string) {
-  console.log('Procesando código de barras:', codigo);
+  const producto = await this.productosCache.getProductoPorCodigo(codigo);
 
-  // Normalizar el código recibido
-  const codigoNormalizado = codigo.trim();
-
-  if (this.productoCache[codigoNormalizado]) {
-    this.agregarAlCarrito(this.productoCache[codigoNormalizado]);
-    return;
-  }
-
-  // Buscar en Firebase
-  const productosRef = collection(this.firestore, 'productos');
-  const q = query(productosRef, where('codigoBarras', '==', codigoNormalizado));
-  const snap = await getDocs(q);
-
-  if (!snap.empty) {
-    const doc = snap.docs[0];
-    const data = doc.data() as any;
-    const producto: ProductoPOS = {
-      id: doc.id,
-      codigoBarras: data.codigoBarras.trim(),
-      descripcion: data.descripcion,
-      precioMinorista: data.precioMinorista,
-      precioMayorista: data.precioMayorista
-    };
-
-    this.productoCache[codigoNormalizado] = producto; // Cache
+  if (producto) {
     this.agregarAlCarrito(producto);
+    this.modoBusquedaManual = false;
   } else {
     this.modoBusquedaManual = true;
+    this.busquedaManual = '';
+    this.productosFiltrados = [];
   }
 }
 
+
   /** Agregar producto al carrito */
-  agregarAlCarrito(producto: ProductoPOS) {
-    const precioBase = this.tipoPrecio === 'minorista' 
-      ? producto.precioMinorista 
+  agregarAlCarrito(producto: ProductoPOS, desdeBusquedaManual: boolean = false) {
+    const precioBase = this.tipoPrecio === 'minorista'
+      ? producto.precioMinorista
       : producto.precioMayorista;
 
     const index = this.carrito.findIndex(item => item.productoId === producto.id);
@@ -130,6 +116,12 @@ async procesarCodigoBarras(codigo: string) {
       });
     }
     this.calcularTotal();
+
+    if (desdeBusquedaManual) {
+      this.busquedaManual = '';
+      this.productosFiltrados = [];
+      this.modoBusquedaManual = false;
+    }
   }
 
   /** Editar cantidad */
@@ -160,26 +152,115 @@ async procesarCodigoBarras(codigo: string) {
   }
 
   /** Finalizar venta */
-  async finalizarVenta() {
-    if (this.carrito.length === 0) return;
+async finalizarVenta() {
+  if (this.carrito.length === 0) return;
 
-    const venta = {
-      fecha: new Date().toISOString(),
-      tipoPrecio: this.tipoPrecio,
-      cliente: this.clienteActual ? { dni: this.clienteActual.dni, nombre: this.clienteActual.nombre } : null,
-      items: this.carrito,
-      total: this.total
-    };
-
-    console.log('Venta registrada:', venta);
-
-    await addDoc(collection(this.firestore, 'Ventas'), venta);
-
-    // Reset
-    this.carrito = [];
-    this.total = 0;
-    this.clienteActual = null;
-    this.tipoPrecio = 'minorista';
-    this.productoCache = {};
+  if (!this.metodoPago) {
+    this.mostrarErrorPago = true;
+    return;
   }
+
+  this.mostrarErrorPago = false;
+
+  if (!confirm("¿Desea confirmar la venta por $" + this.total.toFixed(2) + "?")) {
+    return;
+  }
+
+  const venta = {
+    fecha: new Date().toISOString(),
+    tipoPrecio: this.tipoPrecio,
+    cliente: this.clienteActual ? { dni: this.clienteActual.dni, nombre: this.clienteActual.nombre } : null,
+    items: this.carrito,
+    total: this.total,
+    metodoPago: this.metodoPago
+  };
+
+  await addDoc(collection(this.firestore, 'Ventas'), venta);
+
+  // ✅ Mostrar popup éxito
+  Swal.fire({
+    title: '✅ Venta realizada',
+    text: 'La venta fue registrada correctamente.',
+    icon: 'success',
+    showCancelButton: true,
+    confirmButtonText: 'Ver comprobante',
+    cancelButtonText: 'Cerrar'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      this.abrirComprobante(venta);
+    }
+  });
+
+  // Reset
+  this.carrito = [];
+  this.total = 0;
+  this.clienteActual = null;
+  this.tipoPrecio = 'minorista';
+  this.productoCache = {};
+  this.metodoPago = null;
+}
+
+
+
+abrirComprobante(venta: any) {
+  const win = window.open('', '_blank', 'width=800,height=600');
+  if (!win) return;
+
+  win.document.write(`
+    <html>
+      <head>
+        <title>Comprobante de compra</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; }
+          h2 { color: #2c3e50; }
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+          th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+          th { background: #f4f4f4; }
+          .total { font-weight: bold; font-size: 18px; margin-top: 15px; }
+        </style>
+      </head>
+      <body>
+        <h2>🧾 Comprobante de compra</h2>
+        <p><strong>Fecha:</strong> ${new Date(venta.fecha).toLocaleString()}</p>
+        <p><strong>Método de pago:</strong> ${venta.metodoPago}</p>
+        ${venta.cliente ? `<p><strong>Cliente:</strong> ${venta.cliente.nombre} (DNI: ${venta.cliente.dni})</p>` : ''}
+
+        <table>
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Cant.</th>
+              <th>Precio</th>
+              <th>Subtotal</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${venta.items.map((item: any) => `
+              <tr>
+                <td>${item.nombre}</td>
+                <td>${item.cantidad}</td>
+                <td>$${item.precioUnitario.toFixed(2)}</td>
+                <td>$${item.subtotal.toFixed(2)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <p class="total">TOTAL: $${venta.total.toFixed(2)}</p>
+
+        <script>window.print();</script>
+      </body>
+    </html>
+  `);
+  win.document.close();
+}
+
+async filtrarProductos() {
+  if (this.busquedaManual.length > 2) {
+    this.productosFiltrados = await this.productosCache.buscarProductos(this.busquedaManual);
+  } else {
+    this.productosFiltrados = [];
+  }
+}
+
 }
