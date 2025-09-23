@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { Firestore, collection, query, where, getDocs, addDoc } from '@angular/fire/firestore';
+import { Firestore, collection, query, where, getDocs, addDoc, getDoc, updateDoc, doc } from '@angular/fire/firestore';
 import Swal from 'sweetalert2';
 import { ProductosCacheService } from '../../services/productos-cache.service';
 
@@ -175,7 +175,21 @@ async finalizarVenta() {
     metodoPago: this.metodoPago
   };
 
+  
   await addDoc(collection(this.firestore, 'Ventas'), venta);
+
+    for (const item of venta.items) {
+    const productoRef = doc(this.firestore, 'Productos', item.productoId);
+    const productoSnap = await getDoc(productoRef);
+
+    if (productoSnap.exists()) {
+      const productoData = productoSnap.data();
+      const stockActual = productoData['stock'] ?? 0; // por si no existe el campo
+      const nuevoStock = stockActual - item.cantidad;
+
+      await updateDoc(productoRef, { stock: nuevoStock >= 0 ? nuevoStock : 0 });
+    }
+  }
 
   // ✅ Mostrar popup éxito
   Swal.fire({
