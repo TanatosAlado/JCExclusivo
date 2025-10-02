@@ -1,0 +1,29 @@
+<h1 mat-dialog-title>Abrir Caja</h1>
+<div mat-dialog-content [formGroup]="form" class="form-grid">
+  <mat-form-field appearance="outline" class="w-full">
+    <mat-label>Sucursal</mat-label>
+    <mat-select formControlName="sucursalId">
+      <mat-option *ngFor="let s of sucursales" [value]="s.id">
+        {{ s.nombre }}
+      </mat-option>
+    </mat-select>
+    <mat-error *ngIf="form.controls['sucursalId'].hasError('required')">
+      Debes seleccionar una sucursal
+    </mat-error>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="w-full">
+    <mat-label>Monto inicial</mat-label>
+    <input matInput type="number" formControlName="montoInicial">
+    <mat-error *ngIf="form.controls['montoInicial'].hasError('required')">
+      Ingrese el monto inicial
+    </mat-error>
+  </mat-form-field>
+</div>
+
+<div mat-dialog-actions align="end">
+  <button mat-button (click)="cancelar()">Cancelar</button>
+  <button mat-flat-button color="primary" (click)="confirmar()" [disabled]="form.invalid">
+    Abrir
+  </button>
+</div>

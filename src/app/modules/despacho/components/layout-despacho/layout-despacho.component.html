@@ -1,5 +1,50 @@
 <div class="container mt-5 despacho-layout">
-  <div class="row">
+
+  <!-- ===========================
+       PANTALLA INICIAL: SUCURSALES
+       =========================== -->
+  <div *ngIf="!selectedSucursal" class="row">
+    <div class="col-12 mb-3">
+      <h4>Seleccioná la sucursal</h4>
+      <p class="text-muted">Elegí desde qué sucursal vas a operar en el punto de venta.</p>
+    </div>
+
+    <div *ngIf="sucursales.length === 0" class="col-12">
+      <div class="alert alert-info">No hay sucursales registradas.</div>
+    </div>
+
+    <div class="col-md-4 mb-3" *ngFor="let suc of sucursales">
+      <div class="card h-100">
+        <div class="card-body d-flex flex-column">
+          <h5 class="card-title">{{ suc.nombre || 'Sucursal sin nombre' }}</h5>
+          <p class="card-text mb-1"><strong>Dirección:</strong> {{ suc.direccion || '-' }}</p>
+          <p class="card-text mb-3"><strong>Tel:</strong> {{ suc.telefono || '-' }}</p>
+
+          <div class="mt-auto d-flex gap-2">
+            <button class="btn btn-primary btn-sm" (click)="seleccionarSucursal(suc)">Seleccionar</button>
+            <button class="btn btn-outline-secondary btn-sm" (click)="abrirCaja(suc.id)">Abrir caja</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===========================
+       PANTALLA POS: mostrarse luego de elegir sucursal
+       =========================== -->
+  <div *ngIf="selectedSucursal" class="row">
+
+    <div class="col-12 mb-3 d-flex justify-content-between align-items-center">
+      <div>
+        <h4>POS - {{ selectedSucursal.nombre }}</h4>
+        <small class="text-muted">Sucursal: {{ selectedSucursal.direccion || '-' }}</small>
+      </div>
+      <div>
+        <button class="btn btn-sm btn-outline-secondary me-2" (click)="cambiarSucursal()">Cambiar sucursal</button>
+        <span *ngIf="!cajaActiva" class="badge bg-warning text-dark">Caja no abierta</span>
+        <span *ngIf="cajaActiva" class="badge bg-success">Caja abierta ({{ cajaActiva.id }})</span>
+      </div>
+    </div>
 
     <!-- 📍 Columna izquierda: búsqueda y catálogo -->
     <div class="col-md-6 p-3 border-end">
@@ -100,7 +145,6 @@
           Debe seleccionar un método de pago antes de continuar.
         </div>
       </div>
-
 
       <div class="d-flex justify-content-between align-items-center mt-3">
         <h4>Total: ${{ total | number:'1.2-2' }}</h4>
