@@ -205,7 +205,6 @@ export class CheckoutComponent {
     const pagoSeleccionado = !this.showOpcionesPago || !!this.opcionPagoSeleccionada;
 
     if (formularioValido && envioSeleccionado && pagoSeleccionado) {
-      console.log('Formulario válido, se procede a crear el pedido');
       this.createPedido(puntoRestar, puntosSumar);
       if (this.cuponAplicado) {
         this.puntosService.marcarCuponComoUsado(this.cuponAplicado.id);
@@ -219,6 +218,9 @@ export class CheckoutComponent {
   //FUNCION PARA CREAR EL PEDIDO
   createPedido(puntoRestar: number, puntosSumar: number) {
     const carritoCliente = this.clienteEncontrado.carrito;
+
+    console.log('Carrito del cliente:', carritoCliente);
+
     const total = this.generalService.getTotalPrecio(this.clienteEncontrado, this.usarPuntos, this.valorMonetarioPorPunto, this.cuponAplicado);
     let direccion = 'S/E';
     let pago = 'S/P';
@@ -245,6 +247,8 @@ export class CheckoutComponent {
       nombreCliente: this.formCheckout.get('user')?.value, // para invitados también
       apellidoCliente: '', // o lo separás del nombre si querés
     };
+
+    console.log('Creando pedido:', unPedido);
 
     this.pedidoService.createPedido(unPedido).then(async (docRef) => {
       this.updateIdPedido(docRef.id, unPedido);

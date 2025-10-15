@@ -5,6 +5,7 @@ import { ClientesService } from './clientes.service';
 import { CarritoService } from './carrito.service';
 import { doc, Firestore, getDoc } from '@angular/fire/firestore';
 import { collection, getDocs, query, where } from 'firebase/firestore';
+import { Producto } from 'src/app/modules/shop/models/producto.model';
 
 @Injectable({
   providedIn: 'root'
@@ -137,8 +138,9 @@ export class GeneralService {
 
 
   async getProductoByNombre(nombre: string) {
+    console.log('nombre', nombre)
     const productosRef = collection(this.firestore, 'productos');
-    const q = query(productosRef, where('nombre', '==', nombre));
+    const q = query(productosRef, where('id', '==', nombre));
     const querySnapshot = await getDocs(q);
 
     const productos: any[] = [];
@@ -152,7 +154,12 @@ export class GeneralService {
 
   //SERVICIO PARA CARGAR EN EL CARRITO EL PRODUCTO
 
-  cargarProductoCarrito(producto: any, cantidad: number = 1): Promise<boolean> {
+  cargarProductoCarrito(producto: Producto, cantidad: number = 1): Promise<boolean> {
+
+    const calcularStockTotal = (p: any) =>
+    (p.stockSucursales || []).reduce((acc: number, s: any) => acc + (s?.cantidad || 0), 0);
+
+
     return new Promise(async (resolve, reject) => {
       try {
         const clienteEncontrado = await firstValueFrom(this.getCliente());
@@ -175,10 +182,10 @@ export class GeneralService {
               carrito.push({
                 id: producto.id,
                 imagen: producto.imagen,
-                nombre: producto.nombre,
+                nombre: producto.descripcion,
                 cantidad: cantidad,
                 precioOferta: producto.oferta,
-                stock: producto.stock,
+                stock: calcularStockTotal(producto),
                 precioFinal: producto.oferta ? producto.precioOferta : producto.precioMinorista,
               });
             }
@@ -217,17 +224,16 @@ export class GeneralService {
 
         // 🟢 CLIENTE LOGUEADO: actualizar Firebase
         const productoExistente = clienteEncontrado.carrito.find(item => item.id === producto.id);
-
         if (productoExistente) {
           productoExistente.cantidad += cantidad;
         } else {
           clienteEncontrado.carrito.push({
             id: producto.id,
             imagen: producto.imagen,
-            nombre: producto.nombre,
+            nombre: producto.descripcion,
             cantidad: cantidad,
             precioOferta: producto.oferta,
-            stock: producto.stock,
+            stock: calcularStockTotal(producto),
             precioFinal: producto.oferta ? producto.precioOferta : producto.precioMinorista,
           });
         }

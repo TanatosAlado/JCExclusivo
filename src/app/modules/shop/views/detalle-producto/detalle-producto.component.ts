@@ -1,6 +1,11 @@
-import { Component } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { GeneralService } from 'src/app/shared/services/general.service';
+import { Producto } from '../../models/producto.model';
+import { LoginComponent } from 'src/app/modules/auth/views/login/login.component';
+import { Cliente } from 'src/app/modules/auth/models/cliente.model';
+import { ToastService } from 'src/app/shared/services/toast.service';
+import { MatDialog } from '@angular/material/dialog';
 
 @Component({
   selector: 'app-detalle-producto',
@@ -12,8 +17,10 @@ export class DetalleProductoComponent {
   detalleProducto: any[] = [];
   cantidad = 1
   idProducto!: string;
+  loadingCarrito: { [id: string]: boolean } = {};
+  @Input() esMayorista: boolean = false;
 
-  constructor(private generalService:GeneralService, private route:ActivatedRoute){}
+  constructor(private generalService:GeneralService, private route:ActivatedRoute, private toastService: ToastService, private dialog: MatDialog,){}
 
   ngOnInit(){
     // this.getProductoSeleccionado()
@@ -47,13 +54,53 @@ export class DetalleProductoComponent {
   }
 
     //FUNCION PARA CARGAR EL PRODCUTO EN EL CARRO DEL CLIENTE
-  cargaCarrito(id: any) {
-    // let hayUsuario: any = localStorage.getItem('mail')
-    // if (hayUsuario == null) {
-    //   this.sharedService.setMostrarIngreso(true);
-    // } else {
-      this.generalService.cargarProductoCarrito(id,this.cantidad)
-    // }
+  cargaCarrito(producto: Producto) {
+    const cliente = this.generalService.getClienteActual();
+    this.loadingCarrito[producto.id] = true;
 
+    const finalizar = () => this.loadingCarrito[producto.id] = false;
+
+    if (!cliente) {
+      const dialogRef = this.dialog.open(LoginComponent, {
+        width: '400px',
+        disableClose: true,
+        backdropClass: 'custom-backdrop',
+        panelClass: 'custom-dialog'
+      });
+
+      dialogRef.afterClosed().subscribe((clienteLogueado: Cliente) => {
+        if (clienteLogueado) {
+          this.generalService.setCliente(clienteLogueado);
+          localStorage.setItem('cliente', JSON.stringify(clienteLogueado));
+          this.procesarProductoEnCarrito(clienteLogueado, producto, finalizar);
+        } else {
+          this.toastService.toastMessage(
+            'Debes iniciar sesión o continuar como invitado para agregar productos al carrito.',
+            'orange',
+            3000
+          );
+          finalizar();
+        }
+      });
+
+      return;
+    }
+
+    this.procesarProductoEnCarrito(cliente, producto, finalizar);
   }
+
+
+    private procesarProductoEnCarrito(cliente: Cliente, producto: Producto, finalizar: () => void) {
+    this.generalService.cargarProductoCarrito(producto, 1)
+      .then(() => {
+        this.toastService.toastMessage('Producto agregado al carrito', 'green', 2000);
+      })
+      .catch(err => {
+        this.toastService.toastMessage('El producto no pudo agregarse', 'red', 2000);
+        console.error(err);
+      })
+      .finally(finalizar);
+  }
+
+
 }

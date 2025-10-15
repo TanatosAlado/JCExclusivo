@@ -2,7 +2,7 @@
   <img src="../../../../../assets/logo.png" alt="Editar Producto" />
 </div>
 
-<mat-dialog-content [formGroup]="formProducto" class="contenido-modal">
+<mat-dialog-content *ngIf="formProducto" [formGroup]="formProducto" class="contenido-modal">
 
   <!-- Básicos -->
   <div class="form-grid">

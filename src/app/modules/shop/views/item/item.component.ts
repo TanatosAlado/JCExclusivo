@@ -36,6 +36,7 @@ export class ItemComponent {
   }
 
   agregarCarrito(producto: Producto) {
+    console.log('Agregando al carrito:', producto);
     const cliente = this.generalService.getClienteActual();
     this.loadingCarrito[producto.id] = true;
 

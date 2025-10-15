@@ -187,6 +187,7 @@ export class AltaProductoComponent {
     const subrubro = (v.subrubro || '').toString().toUpperCase();
     const marca = (v.marca || '').toString().toUpperCase();
 
+
     // armamos el objeto según el modelo nuevo
     const producto = new Producto(
       '', // id
@@ -203,11 +204,14 @@ export class AltaProductoComponent {
       this.productoForm.value.marca,
       this.productoForm.value.destacado,
       this.productoForm.value.oferta,
-      this.productoForm.value.precioOferta,
+      this.productoForm.value.precioOferta ?? 0,
       this.productoForm.value.precioSinImpuestos,
       this.productoForm.value.stockMinimo,
       this.productoForm.value.stockSucursales
     );
+
+    console.log('Nuevo producto:', producto);
+
     this.productosService.agregarProducto(producto)
       .then((docRef) => {
         producto.id = docRef.id;

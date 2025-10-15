@@ -230,7 +230,12 @@ private parseNumber(value: any): number {
 // Fin Carga Excel
 
 
-
+getStockTotal(element: any): number {
+  if (!element.stockSucursales || !Array.isArray(element.stockSucursales)) {
+    return 0;
+  }
+  return element.stockSucursales.reduce((total, s) => total + (s.cantidad || 0), 0);
+}
 
 
 

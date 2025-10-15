@@ -25,7 +25,24 @@
 
   <!-- Stock y flags -->
   <div class="bloque">
-    <p><strong>Stock:</strong> {{ producto.stock }}</p>
+    <!-- <p><strong>Stock:</strong> {{ producto.stock }}</p> -->
+
+    <div class="bloque">
+      <p><strong>Stock por sucursal:</strong></p>
+      <ul>
+        <li *ngFor="let stock of producto.stockSucursales">
+          🏬 <strong>{{ obtenerNombreSucursal(stock.sucursalId) }}</strong> → {{ stock.cantidad }} unidades
+        </li>
+      </ul>
+
+      <p><strong>Destacado:</strong> {{ producto.destacado ? 'Sí' : 'No' }}</p>
+      <p><strong>Oferta:</strong> {{ producto.oferta ? 'Sí' : 'No' }}</p>
+      <p><strong>Impuesto Nacional:</strong> {{ producto.precioSinImpuestos ? 'Sí' : 'No' }}</p>
+      <p *ngIf="producto.precioSinImpuestos">
+        <strong>Precio sin Impuesto Nacional:</strong> ${{ producto.precioSinImpuestos }}
+      </p>
+    </div>
+
     <p><strong>Destacado:</strong> {{ producto.destacado ? 'Sí' : 'No' }}</p>
     <p><strong>Oferta:</strong> {{ producto.oferta ? 'Sí' : 'No' }}</p>
     <p><strong>Impuesto Nacional:</strong> {{ producto.precioSinImpuestos ? 'Sí' : 'No' }}</p>

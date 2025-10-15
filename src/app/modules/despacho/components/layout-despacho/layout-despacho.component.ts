@@ -6,7 +6,7 @@ import { CajaService } from '../../services/caja.service';
 import { AbrirCajaDialogComponent } from '../abrir-caja-dialog/abrir-caja-dialog.component';
 import { MatDialog } from '@angular/material/dialog';
 import { SucursalesService } from 'src/app/modules/admin/services/sucursales.service'; 
-import { Subscription } from 'rxjs';
+import { firstValueFrom, Subscription } from 'rxjs';
 import { Sucursal } from 'src/app/modules/admin/models/sucursal.model';
 
 interface ClientePOS {
@@ -67,6 +67,8 @@ export class LayoutDespachoComponent implements OnInit, OnDestroy {
   metodoPago: string | null = null;
   mostrarErrorPago = false;
 
+  loadingInicial = false;
+
   constructor(
     private firestore: Firestore,
     private productosCache: ProductosCacheService,
@@ -75,70 +77,38 @@ export class LayoutDespachoComponent implements OnInit, OnDestroy {
     private sucursalesService: SucursalesService
   ) { }
 
+
 async ngOnInit() {
-  // sincronizo cache de productos como antes
-  await this.productosCache.syncProductos();
+  this.loadingInicial = true;
+  try {
+    // 1) sincronizo cache de productos
+    await this.productosCache.syncProductos();
 
-  // limpiar cualquier caja local inválida (si existía y no es de hoy)
-  if (typeof this.cajaService.getCajaActivaLocalValidada === 'function') {
-    this.cajaService.getCajaActivaLocalValidada(); // este método borra la caja si no es de hoy
+    // 2) traigo las sucursales UNA VEZ (sin suscripción continua)
+    const lista = await firstValueFrom(this.sucursalesService.obtenerSucursales());
+    this.sucursales = lista || [];
+
+    console.log('Productos sincronizados y sucursales cargadas:', this.sucursales);
+  } catch (err) {
+    console.error('Error inicializando POS:', err);
+    Swal.fire('Error', 'No se pudieron cargar los datos iniciales. ' + (err as any)?.message, 'error');
+  } finally {
+    this.loadingInicial = false;
   }
-
-  // Cargo sucursales pero NO hago autoselección
-  this.sucursalesSub = this.sucursalesService.obtenerSucursales().subscribe(s => {
-    this.sucursales = s || [];
-    console.log('Sucursales cargadas:', this.sucursales);
-    // intentionally: NO auto-selectamos nada aquí
-  });
 }
 
 
   ngOnDestroy() {
-    this.sucursalesSub?.unsubscribe();
+    
   }
 
-  /** Intentar autoseleccionar una sucursal almacenada:
- * - Primero chequea Firestore por una caja abierta HOY (verificarCajaAbierta).
- * - Si no hay, usa la caja local validada (getCajaActivaLocalValidada).
- * - Si tampoco existe, limpia la selección guardada.
- */
-private async intentarAutoSeleccion(storedSucursalId: string) {
-  const encontrada = this.sucursales.find(x => x.id === storedSucursalId);
-  if (!encontrada) {
-    localStorage.removeItem('sucursalSeleccionada');
-    return;
-  }
 
-  try {
-    // 1) intento verificar en Firestore (método que tenés)
-    const caja = await this.cajaService.verificarCajaAbierta(storedSucursalId);
-    if (caja) {
-      this.selectedSucursal = encontrada;
-      this.cajaActiva = caja;
-      return;
-    }
-  } catch (err) {
-    console.warn('Error consultando caja en Firestore', err);
-    // seguimos al fallback
-  }
-
-  // 2) fallback: revisar la caja local, pero SOLO si es válida (de hoy)
-  const cajaLocal = this.cajaService.getCajaActivaLocalValidada();
-  if (cajaLocal && cajaLocal.sucursalId === storedSucursalId) {
-    this.selectedSucursal = encontrada;
-    this.cajaActiva = cajaLocal;
-    return;
-  }
-
-  // 3) no hay caja válida: limpiar selección guardada y mostrar cards
-  this.cajaService.clearCajaActiva();
-  localStorage.removeItem('sucursalSeleccionada');
-}
 
   /** ---------------------
    * Selección de sucursal
    * --------------------- */
 async seleccionarSucursal(sucursal: Sucursal) {
+  console.log('sucursal:', sucursal)
   // Mostrar un estado de carga si querés (opcional)
   // this.loadingSeleccion = true;
 
@@ -190,18 +160,8 @@ async seleccionarSucursal(sucursal: Sucursal) {
     // y no tocamos localStorage.sucursalSeleccionada
   }
 
-  // this.loadingSeleccion = false;
 }
 
-  /** Comprueba si dos fechas son el mismo día (usa ISO string o Date) */
-  private esMismoDia(fechaIsoOrDate: string | Date | undefined): boolean {
-    if (!fechaIsoOrDate) return false;
-    const d = typeof fechaIsoOrDate === 'string' ? new Date(fechaIsoOrDate) : new Date(fechaIsoOrDate);
-    const now = new Date();
-    return d.getFullYear() === now.getFullYear()
-      && d.getMonth() === now.getMonth()
-      && d.getDate() === now.getDate();
-  }
 
   /** Abrir caja: abre el diálogo y luego sincroniza la caja recién creada */
 abrirCaja(sucursalIdExistente?: string) {

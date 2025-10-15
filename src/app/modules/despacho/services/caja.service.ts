@@ -23,21 +23,50 @@ export class CajaService {
     localStorage.removeItem(this.STORAGE_KEY);
   }
 
-  /** Verificar en Firestore si hay una caja abierta para la sucursal */
+  // /** Verificar en Firestore si hay una caja abierta para la sucursal */
+  // async verificarCajaAbierta(sucursalId: string) {
+  //   const cajasRef = collection(this.firestore, 'Cajas');
+  //   const q = query(cajasRef, where('sucursalId', '==', sucursalId), where('abierta', '==', true));
+  //   const snap = await getDocs(q);
+
+  //   if (!snap.empty) {
+  //     const caja = { id: snap.docs[0].id, ...snap.docs[0].data() };
+  //     this.setCajaActiva(caja); // sincronizar en local
+  //     return caja;
+  //   }
+
+  //   this.clearCajaActiva();
+  //   return null;
+  // }
+
   async verificarCajaAbierta(sucursalId: string) {
-    const cajasRef = collection(this.firestore, 'Cajas');
-    const q = query(cajasRef, where('sucursalId', '==', sucursalId), where('abierta', '==', true));
-    const snap = await getDocs(q);
+  const hoy = new Date();
+  const fechaHoy = hoy.toISOString().split("T")[0]; // 👉 "2025-10-06"
 
-    if (!snap.empty) {
-      const caja = { id: snap.docs[0].id, ...snap.docs[0].data() };
-      this.setCajaActiva(caja); // sincronizar en local
-      return caja;
+  const cajasRef = collection(this.firestore, 'Cajas');
+  const q = query(
+    cajasRef,
+    where('sucursalId', '==', sucursalId),
+    where('abierta', '==', true)
+  );
+
+  const snap = await getDocs(q);
+
+  if (!snap.empty) {
+    // buscamos si alguna caja tiene la fechaApertura de HOY
+    const cajaHoy = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .find(caja => (caja as any).fechaApertura?.startsWith(fechaHoy));
+
+    if (cajaHoy) {
+      console.log("✅ Caja abierta:", cajaHoy);
+      return cajaHoy;
     }
-
-    this.clearCajaActiva();
-    return null;
   }
+
+  console.log("❌ Caja cerrada");
+  return null;
+}
 
   /** Abrir caja */
   async abrirCaja(sucursalId: string, usuarioId: string, montoInicial: number) {

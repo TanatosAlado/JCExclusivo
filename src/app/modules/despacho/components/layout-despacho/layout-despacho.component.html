@@ -22,7 +22,7 @@
 
           <div class="mt-auto d-flex gap-2">
             <button class="btn btn-primary btn-sm" (click)="seleccionarSucursal(suc)">Seleccionar</button>
-            <button class="btn btn-outline-secondary btn-sm" (click)="abrirCaja(suc.id)">Abrir caja</button>
+            <!-- <button class="btn btn-outline-secondary btn-sm" (click)="abrirCaja(suc.id)">Abrir caja</button> -->
           </div>
         </div>
       </div>
@@ -42,7 +42,7 @@
       <div>
         <button class="btn btn-sm btn-outline-secondary me-2" (click)="cambiarSucursal()">Cambiar sucursal</button>
         <span *ngIf="!cajaActiva" class="badge bg-warning text-dark">Caja no abierta</span>
-        <span *ngIf="cajaActiva" class="badge bg-success">Caja abierta ({{ cajaActiva.id }})</span>
+        <span *ngIf="cajaActiva" class="badge bg-success">Caja abierta</span>
       </div>
     </div>
 
