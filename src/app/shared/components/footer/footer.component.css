@@ -1,5 +1,6 @@
 .footer-contenedor {
     padding-bottom: 50px; 
+    z-index: 10;
 }
 
 .footer {

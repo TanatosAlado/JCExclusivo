@@ -13,6 +13,10 @@ app-item {
   width: 20%;
 }
 
+.pagination{
+  z-index: 5;
+}
+
 @media (max-width: 1200px) {
   .col-5-per-row {
     width: 25%;

@@ -26,7 +26,7 @@ export class CarritoComponent {
     private clienteService: ClientesService,
     private router: Router,
     private puntosService: VouchersPuntosService
-  ) {}
+  ) { }
 
   async ngOnInit() {
     this.getCliente();
@@ -115,26 +115,61 @@ export class CarritoComponent {
   }
 
   navigateCheckout() {
-    // Forzar cierre manual quitando clases de Bootstrap
+    const offcanvasElement = document.getElementById('offcanvasCarrito');
+
+    if (offcanvasElement) {
+      const offcanvasInstance = bootstrap.Offcanvas.getInstance(offcanvasElement);
+      if (offcanvasInstance) {
+        // Escuchar el evento oficial que avisa cuando terminó de cerrarse
+        offcanvasElement.addEventListener(
+          'hidden.bs.offcanvas',
+          () => {
+            // 🔹 Limpieza final del body
+            document.body.style.removeProperty('overflow');
+            document.body.style.removeProperty('padding-right');
+            document.body.style.removeProperty('margin-right');
+
+            // 🔹 Quitar backdrop si quedara
+            document.querySelectorAll('.offcanvas-backdrop').forEach(b => b.remove());
+            document.body.classList.remove('offcanvas-backdrop', 'show');
+
+            // 🔹 Ahora sí, navegar
+            this.router.navigate(['checkout']);
+          },
+          { once: true } // para que se ejecute solo una vez
+        );
+
+        // Cerrar el offcanvas (esto dispara el evento anterior)
+        offcanvasInstance.hide();
+      } else {
+        // Si no hay instancia, forzar limpieza
+        document.body.style.removeProperty('overflow');
+        document.body.style.removeProperty('padding-right');
+        document.body.style.removeProperty('margin-right');
+        this.router.navigate(['checkout']);
+      }
+    } else {
+      // Si no hay elemento, ir directo
+      document.body.style.removeProperty('overflow');
+      document.body.style.removeProperty('padding-right');
+      document.body.style.removeProperty('margin-right');
+      this.router.navigate(['checkout']);
+    }
+  }
+
+
+  cerrarCarrito() {
+    const offcanvasElement = document.getElementById('offcanvasCarrito');
+    if (offcanvasElement) {
+      const offcanvasInstance = bootstrap.Offcanvas.getInstance(offcanvasElement);
+      offcanvasInstance?.hide();
+    }
+
+    // 🔥 limpieza manual de backdrop
+    document.querySelectorAll('.offcanvas-backdrop').forEach(b => b.remove());
     document.body.classList.remove('offcanvas-backdrop', 'show');
     document.body.style.overflow = 'auto';
-    document.body.style.paddingRight = '0px';
-    this.cerrarCarrito();
-    this.router.navigate(['checkout']);
   }
-
-cerrarCarrito() {
-  const offcanvasElement = document.getElementById('offcanvasCarrito');
-  if (offcanvasElement) {
-    const offcanvasInstance = bootstrap.Offcanvas.getInstance(offcanvasElement);
-    offcanvasInstance?.hide();
-  }
-
-  // 🔥 limpieza manual de backdrop
-  document.querySelectorAll('.offcanvas-backdrop').forEach(b => b.remove());
-  document.body.classList.remove('offcanvas-backdrop', 'show');
-  document.body.style.overflow = 'auto';
-}
 
   getPuntosPorCompra(): number {
     const total = this.getTotalPrecio();

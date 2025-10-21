@@ -50,17 +50,37 @@
     <div class="col-md-6 p-3 border-end">
 
       <!-- Buscar cliente (opcional) -->
-      <div class="mb-3">
+       <div class="mb-3">
         <label class="form-label">Buscar cliente por DNI (opcional)</label>
+
         <div class="input-group">
           <input type="text" class="form-control" #dniInput placeholder="Ingrese DNI">
-          <button class="btn btn-primary" (click)="buscarClientePorDNI(dniInput.value)">Buscar</button>
+
+          <!-- Botón normal -->
+          <button 
+            class="btn btn-primary" 
+            *ngIf="!buscandoCliente" 
+            (click)="buscarClientePorDNI(dniInput.value)">
+            Buscar
+          </button>
+
+          <!-- Spinner cuando está buscando -->
+          <button class="btn btn-primary" type="button" disabled *ngIf="buscandoCliente">
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            Buscando...
+          </button>
         </div>
+
+        <!-- Resultado exitoso -->
         <div *ngIf="clienteActual" class="mt-2 alert alert-success p-2">
           Cliente: <strong>{{ clienteActual.nombre }}</strong> - Tipo: {{ clienteActual.tipo }}
         </div>
-      </div>
 
+        <!-- Resultado sin coincidencias -->
+        <div *ngIf="!clienteActual && busquedaRealizada && !buscandoCliente" class="mt-2 alert alert-warning p-2">
+          No se encontró ningún cliente con ese DNI.
+        </div>
+      </div>
       <hr>
 
       <!-- Escaneo código de barras -->
@@ -121,38 +141,157 @@
         </tbody>
       </table>
 
-      <!-- Método de pago -->
-      <div class="mt-3">
-        <label class="form-label"><strong>Método de pago</strong></label>
-        <div class="form-check">
-          <input class="form-check-input" type="radio" name="metodoPago" id="efectivo" value="efectivo"
-            [(ngModel)]="metodoPago" (ngModelChange)="mostrarErrorPago=false">
-          <label class="form-check-label" for="efectivo">Efectivo</label>
-        </div>
-        <div class="form-check">
-          <input class="form-check-input" type="radio" name="metodoPago" id="tarjeta" value="tarjeta"
-            [(ngModel)]="metodoPago" (ngModelChange)="mostrarErrorPago=false">
-          <label class="form-check-label" for="tarjeta">Tarjeta</label>
-        </div>
-        <div class="form-check">
-          <input class="form-check-input" type="radio" name="metodoPago" id="transferencia" value="transferencia"
-            [(ngModel)]="metodoPago" (ngModelChange)="mostrarErrorPago=false">
-          <label class="form-check-label" for="transferencia">Transferencia</label>
+
+      <div *ngIf="clienteActual && clienteActual.tipo === 'minorista'">
+
+
+        <!-- Sección: Canjear Puntos -->
+        <div *ngIf="clienteActual && clienteActual.tipo === 'minorista'" class="card mb-3" style="max-width: 500px; margin: auto;">
+          <div class="card-body d-flex justify-content-between align-items-center">
+            <div>
+              <strong>Canjeá tus puntos</strong><br />
+              <small class="text-muted">Puntos disponibles: {{ clienteActual.puntos }}</small>
+            </div>
+            <mat-slide-toggle color="primary" [(ngModel)]="usarPuntos" [disabled]="clienteActual.puntos === 0 || total == 0">
+            </mat-slide-toggle>
+          </div>
         </div>
 
-        <!-- ⚠️ Mensaje si no selecciona -->
-        <div *ngIf="mostrarErrorPago" class="text-danger mt-2">
-          Debe seleccionar un método de pago antes de continuar.
+
+        <!-- Sección: Ingresar Cupón -->
+        <div class="card mb-3" style="max-width: 500px; margin: auto;">
+          <div class="card-body">
+            <div class="d-flex flex-column align-items-center my-4">
+              <label class="form-label fw-bold mb-2 text-center">
+                ¿Tenés un cupón de descuento?
+              </label>
+              <div class="d-flex flex-wrap justify-content-center" style="max-width: 500px; width: 100%;">
+                <input
+                  type="text"
+                  [formControl]="cuponControl"
+                  placeholder="Ingresá tu cupón"
+                  class="form-control rounded mb-2 text-center"
+                  style="height: 40px; flex: 1 1 250px; margin-right: 5px;"
+                />
+                <button
+                  [disabled]="cuponAplicado || cuponControl.disabled"
+                  class="btn btn-primary rounded d-flex align-items-center justify-content-center"
+                  type="button"
+                  (click)="aplicarCupon()"
+                  style="height: 40px; min-width: 70px;"
+                >
+                  Aplicar
+                </button>
+              </div>
+            </div>
+
+            <!-- Cupón aplicado -->
+            <div *ngIf="cuponAplicado" class="d-flex align-items-center bg-success bg-opacity-10 text-success rounded-pill px-3 py-2 mt-3" style="max-width: 450px;">
+              <span class="flex-grow-1 text-truncate">
+                Cupón aplicado: <strong>{{ cuponAplicado.codigo }}</strong> -
+                <ng-container *ngIf="cuponAplicado.tipo === 'porcentaje'">
+                  {{ cuponAplicado.valor }}% OFF
+                </ng-container>
+                <ng-container *ngIf="cuponAplicado.tipo === 'monto'">
+                  ${{ cuponAplicado.valor }} OFF
+                </ng-container>
+              </span>
+              <button 
+                type="button" 
+                class="btn btn-sm btn-outline-danger rounded-circle ms-2 p-1 d-flex align-items-center justify-content-center"
+                style="width: 28px; height: 28px; line-height: 1;"
+                (click)="eliminarCupon()"
+                title="Quitar cupón"
+              >
+                ❌
+              </button>
+            </div>
+
+            <mat-hint *ngIf="cuponInvalido" class="error">
+              {{ mensajeCupon }}
+            </mat-hint>
+
+
+            <!-- Error de cupón -->
+            <div *ngIf="errorCupon" class="text-danger mt-2">
+              {{ errorCupon }}
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+
+      <!-- Método de pago -->
+      <div class="card mb-3" style="max-width: 500px; margin: auto;">
+        <div class="card-body d-flex justify-content-between align-items-center">
+          <label class="form-label"><strong>Método de pago</strong></label>
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="metodoPago" id="efectivo" value="efectivo"
+              [(ngModel)]="metodoPago" (ngModelChange)="mostrarErrorPago=false">
+            <label class="form-check-label" for="efectivo">Efectivo</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="metodoPago" id="tarjeta" value="tarjeta"
+              [(ngModel)]="metodoPago" (ngModelChange)="mostrarErrorPago=false">
+            <label class="form-check-label" for="tarjeta">Tarjeta</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="metodoPago" id="transferencia" value="transferencia"
+              [(ngModel)]="metodoPago" (ngModelChange)="mostrarErrorPago=false">
+            <label class="form-check-label" for="transferencia">Transferencia</label>
+          </div>
+      
+          <!-- ⚠️ Mensaje si no selecciona -->
+          <div *ngIf="mostrarErrorPago" class="text-danger mt-2">
+            Debe seleccionar un método de pago antes de continuar.
+          </div>
         </div>
       </div>
 
-      <div class="d-flex justify-content-between align-items-center mt-3">
-        <h4>Total: ${{ total | number:'1.2-2' }}</h4>
-        <div>
+      <!-- Sección: Descuento por puntos -->
+      <div *ngIf="usarPuntos && clienteActual.puntos > 0" class="card mb-3" style="max-width: 500px; margin: auto;">
+        <div class="card-body">
+          <small class="text-success">
+            Descuento por {{ puntosAplicados }} puntos utilizados:
+            {{ puntosAplicados * valorMonetarioPorPunto | currency }}
+          </small>
+        </div>
+      </div>
+
+      <div class="card mb-3" style="max-width: 500px; margin: auto;">
+        <div class="card-body d-flex justify-content-between align-items-center">
+            <h5 class="m-0">Total a pagar:</h5>
+            <h5 class="m-0 text-primary">
+              <div *ngIf="!clienteActual || clienteActual.tipo === 'mayorista'">
+                {{ total | currency }}
+              </div>
+              <div *ngIf="clienteActual && clienteActual.tipo === 'minorista'">
+                {{ generalService.getTotalPrecioDespacho(total, clienteActual.puntos, usarPuntos, valorMonetarioPorPunto, cuponAplicado) | currency }}
+              </div>
+            </h5>
+        </div>
+      </div>
+
+      <div class="card mb-3" style="max-width: 500px; margin: auto;">
+        <div class="card-body d-flex justify-content-between align-items-center">
           <button class="btn btn-secondary me-2" (click)="carrito=[]; total=0">Cancelar</button>
           <button class="btn btn-success" (click)="finalizarVenta()" [disabled]="carrito.length === 0">
             Finalizar Venta
           </button>
+        </div>
+      </div>
+
+
+      <div *ngIf="clienteActual && clienteActual.tipo === 'minorista'" class="card mb-3" style="max-width: 500px; margin: auto;">
+        <div class="card-body d-flex justify-content-between align-items-center">
+          <small>
+            Esta compra sumará
+            <strong>
+              {{ (generalService.getTotalPrecioDespacho(total, clienteActual.puntos, usarPuntos) / valorParaSumarPunto) | number:'1.0-0' }}
+            </strong>
+            puntos
+          </small>
         </div>
       </div>
 

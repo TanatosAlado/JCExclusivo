@@ -8,11 +8,17 @@ import { MatDialog } from '@angular/material/dialog';
 import { SucursalesService } from 'src/app/modules/admin/services/sucursales.service'; 
 import { firstValueFrom, Subscription } from 'rxjs';
 import { Sucursal } from 'src/app/modules/admin/models/sucursal.model';
+import { FormControl } from '@angular/forms';
+import { VouchersPuntosService } from 'src/app/shared/services/vouchers-puntos.service';
+import { GeneralService } from 'src/app/shared/services/general.service';
+import { InfoEmpresa } from 'src/app/shared/models/infoEmpresa.model';
+import { InfoEmpresaService } from 'src/app/shared/services/info-empresa.service';
 
 interface ClientePOS {
   dni: string;
   nombre: string;
   tipo: 'minorista' | 'mayorista';
+  puntos: number;
 }
 
 interface ProductoPOS {
@@ -52,6 +58,8 @@ export class LayoutDespachoComponent implements OnInit, OnDestroy {
   // Cliente
   clienteActual: ClientePOS | null = null;
   tipoPrecio: 'minorista' | 'mayorista' = 'minorista';
+  buscandoCliente = false;
+  busquedaRealizada = false;
 
   // Cache de productos
   productoCache: { [codigo: string]: ProductoPOS } = {};
@@ -69,12 +77,26 @@ export class LayoutDespachoComponent implements OnInit, OnDestroy {
 
   loadingInicial = false;
 
+  cuponControl = new FormControl('');
+  cuponAplicado: any = null;
+  mensajeCupon: string = '';
+  errorCupon: string = '';
+  cuponInvalido: boolean = false;
+
+  usarPuntos: boolean = false;
+  puntosAplicados: number = 0;
+  valorMonetarioPorPunto: number = 50;
+  valorParaSumarPunto: number = 200;
+  montoParaActivar: number = 50000; // Monto mínimo para activar el modo mayorista
+
   constructor(
     private firestore: Firestore,
     private productosCache: ProductosCacheService,
     private cajaService: CajaService,
     private dialog: MatDialog,
-    private sucursalesService: SucursalesService
+    private sucursalesService: SucursalesService,
+    private puntosService: VouchersPuntosService,
+    public generalService: GeneralService
   ) { }
 
 
@@ -95,13 +117,75 @@ async ngOnInit() {
   } finally {
     this.loadingInicial = false;
   }
+    await this.inicializarValoresPuntos();
+    this.cuponControl.valueChanges.subscribe(() => {
+      if (this.cuponInvalido) {
+        this.cuponInvalido = false;
+        this.mensajeCupon = '';
+      }
+    });
 }
 
+  async inicializarValoresPuntos() {
+    const valores = await this.puntosService.obtenerValoresPuntos();
+    if (valores) {
+      this.valorParaSumarPunto = valores.valorParaSumarPunto;
+      this.valorMonetarioPorPunto = valores.valorMonetarioPorPunto;
+    }
+    
+    this.puntosAplicados = this.getPuntosAplicados(this.carrito);
+
+    const valoresMayoristas = await this.puntosService.obtenerMontosMayoristas();
+    if (valoresMayoristas) {
+      this.montoParaActivar = valoresMayoristas.minimoPrimeraCompra;
+    } 
+
+  }
+
+    getPuntosAplicados(carrito: any): number {
+    const total = carrito.reduce(
+      (sum: number, prod: any) => sum + (prod.precioUnitario * prod.cantidad),
+      0
+    );
+
+    const maxPuntosPorMonto = Math.floor(total / this.valorMonetarioPorPunto);
+    if(this.clienteActual?.puntos){
+      return Math.min(this.clienteActual.puntos, maxPuntosPorMonto);  
+    }
+    else{
+      return 0;  
+    }
+  }
 
   ngOnDestroy() {
     
   }
 
+
+    aplicarCupon() {
+    const codigo = this.cuponControl.value?.trim();
+    if (!codigo) return;
+
+    this.puntosService.obtenerCuponPorCodigo(codigo).then((cupon) => {
+      if (cupon) {
+        this.cuponAplicado = cupon;
+        this.cuponInvalido = false;
+        this.mensajeCupon = '';
+        this.cuponControl.disable(); // Deshabilitamos si es válido
+      } else {
+        this.cuponAplicado = null;
+        this.cuponInvalido = true;
+        this.mensajeCupon = 'Cupón inválido o no disponible ❌';
+      }
+    });
+  }
+
+  eliminarCupon() {
+    this.cuponAplicado = null;
+    this.errorCupon = '';
+    this.cuponControl.enable();
+    this.cuponControl.setValue('');
+  }
 
 
   /** ---------------------
@@ -211,10 +295,15 @@ abrirCaja(sucursalIdExistente?: string) {
     this.cajaService.clearCajaActiva();
   }
 
-  /** --- Resto del comportamiento POS: mantuve tu lógica original (busqueda, carrito, venta) --- */
-
   /** Buscar cliente por DNI */
   async buscarClientePorDNI(dni: string) {
+  if (!dni.trim()) return;
+
+  this.buscandoCliente = true;
+  this.busquedaRealizada = false;
+  this.clienteActual = null;
+
+  try {
     const dniCliente = parseInt(dni, 10);
     const clientesRef = collection(this.firestore, 'Clientes');
     const q = query(clientesRef, where('dni', '==', dniCliente));
@@ -223,17 +312,26 @@ abrirCaja(sucursalIdExistente?: string) {
     if (!snap.empty) {
       const docu = snap.docs[0];
       const data = docu.data() as any;
+
       this.clienteActual = {
         dni: data.dni,
         nombre: data.nombre,
-        tipo: data.tipoCliente || 'minorista'
+        tipo: data.tipoCliente || 'minorista',
+        puntos: data.puntos || 0
       };
+
       this.tipoPrecio = this.clienteActual.tipo;
     } else {
       this.clienteActual = null;
       this.tipoPrecio = 'minorista';
     }
+  } catch (error) {
+    console.error('Error buscando cliente:', error);
+  } finally {
+    this.buscandoCliente = false;
+    this.busquedaRealizada = true;
   }
+}
 
   async procesarCodigoBarras(codigo: string) {
     const producto = await this.productosCache.getProductoPorCodigo(codigo);
@@ -296,6 +394,7 @@ abrirCaja(sucursalIdExistente?: string) {
 
   calcularTotal() {
     this.total = this.carrito.reduce((sum, item) => sum + item.subtotal, 0);
+    this.puntosAplicados = this.getPuntosAplicados(this.carrito);
   }
 
   async finalizarVenta() {

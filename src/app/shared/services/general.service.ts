@@ -92,9 +92,6 @@ export class GeneralService {
   }
 
   //FUNCION PARA OBTENER LA CANTIDAD TOTAL A PAGAR DEL CARRITO DEL CLIENTE
-  //  getTotalPrecio(cliente: any): number {
-  //   return cliente.carrito.reduce((total: number, prod: any) => total + (prod.precioFinal * prod.cantidad), 0);
-  // }
   getTotalPrecio(cliente: any, usarPuntos: boolean = false, valorMonetarioPorPunto: number = 50, cuponAplicado: any = null): number {
     let total = cliente.carrito.reduce(
       (sum: number, prod: any) => sum + (prod.precioFinal * prod.cantidad),
@@ -124,6 +121,43 @@ export class GeneralService {
 
     return total;
   }
+
+
+
+  //FUNCION PARA OBTENER LA CANTIDAD TOTAL A PAGAR DEL CARRITO DEL CLIENTE
+  getTotalPrecioDespacho(subtotal: any, puntos: number = 0, usarPuntos: boolean = false, valorMonetarioPorPunto: number = 50, cuponAplicado: any = null): number {
+    let total = subtotal
+
+    // Aplicar cupón si está disponible
+    if (cuponAplicado && cuponAplicado.activo) {
+      if (cuponAplicado.tipo === 'porcentaje') {
+        const descuento = (cuponAplicado.valor / 100) * total;
+        total -= descuento;
+      } else if (cuponAplicado.tipo === 'monto') {
+        total -= cuponAplicado.valor;
+      }
+
+      // Asegurarse de que el total no sea negativo
+      total = Math.max(total, 0);
+    }
+
+    // Aplicar puntos si corresponde
+    if (usarPuntos && puntos > 0) {
+      const maxPuntosPorMonto = Math.floor(total / valorMonetarioPorPunto);
+      const puntosUsables = Math.min(puntos, maxPuntosPorMonto);
+      const descuento = puntosUsables * valorMonetarioPorPunto;
+      total = Math.max(total - descuento, 0);
+    }
+
+    return total;
+  }
+
+
+
+
+
+
+
 
   //SERVICE PARA TRAER CLIENTE POR ID
   async getProductoById(id: string) {
