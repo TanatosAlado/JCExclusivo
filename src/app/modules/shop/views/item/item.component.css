@@ -110,28 +110,24 @@ a{
   margin-right: 4px;
 }
 
-.color-circle {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  border: 1px solid #ccc;
-  cursor: pointer;
-}
-
-
 .color-options {
   flex-wrap: wrap;
 }
 
 .color-circle {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  border: 1px solid #ddd;
+  border: 2px solid transparent;
   cursor: pointer;
-  transition: transform 0.2s ease;
+  transition: transform 0.2s ease, border 0.2s ease;
 }
 
 .color-circle:hover {
   transform: scale(1.15);
+}
+
+.selected-color {
+  border: 2px solid #034f70; /* tu color corporativo */
+  transform: scale(1.2);
 }

@@ -222,3 +222,32 @@ button {
 .alerta-texto {
   font-size: 15px;
 }
+
+.color-seleccionado {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  margin-top: 5px; /* más espacio respecto a la imagen */
+}
+
+.color-seleccionado .color-circle {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid #333;
+}
+
+.color-seleccionado .color-circle {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid #333;
+  box-shadow: 0 0 2px rgba(0,0,0,0.3);
+  transition: transform 0.2s;
+}
+
+.color-seleccionado .color-circle:hover {
+  transform: scale(1.2);
+  cursor: pointer;
+}

@@ -187,12 +187,9 @@ export class GeneralService {
 
 
   //SERVICIO PARA CARGAR EN EL CARRITO EL PRODUCTO
-
   cargarProductoCarrito(producto: Producto, cantidad: number = 1): Promise<boolean> {
-
     const calcularStockTotal = (p: any) =>
-    (p.stockSucursales || []).reduce((acc: number, s: any) => acc + (s?.cantidad || 0), 0);
-
+      (p.stockSucursales || []).reduce((acc: number, s: any) => acc + (s?.cantidad || 0), 0);
 
     return new Promise(async (resolve, reject) => {
       try {
@@ -209,15 +206,19 @@ export class GeneralService {
             const carritoRaw = localStorage.getItem('carritoInvitado');
             let carrito = carritoRaw ? JSON.parse(carritoRaw) : [];
 
-            const index = carrito.findIndex(item => item.id === producto.id);
+            // ✅ Buscar por codigoBarras en lugar de id
+            const index = carrito.findIndex(item => item.codigoBarras === producto.codigoBarras);
+
             if (index > -1) {
               carrito[index].cantidad += cantidad;
             } else {
               carrito.push({
                 id: producto.id,
+                codigoBarras: producto.codigoBarras, // ✅ nuevo campo
                 imagen: producto.imagen,
                 nombre: producto.descripcion,
-                cantidad: cantidad,
+                color: producto.color, // ✅ opcional, para mostrar en carrito
+                cantidad,
                 precioOferta: producto.oferta,
                 stock: calcularStockTotal(producto),
                 precioFinal: producto.oferta ? producto.precioOferta : producto.precioMinorista,
@@ -226,15 +227,13 @@ export class GeneralService {
 
             localStorage.setItem('carritoInvitado', JSON.stringify(carrito));
             this.carritoService.actualizarCantidadProductosDesdeLocalStorage();
-
-            // 🔄 Refrescar clienteSubject con el nuevo carrito
             const clienteActualizado = new Cliente(
               false,             // administrador
               '',                // apellido
-              [],                // carrito
-              '',                 // cuit
+              carrito,           // carrito (el que acabás de guardar en localStorage)
+              '',                // cuit
               '',                // direccion
-              null,                // dni
+              null,              // dni
               false,             // esMayorista
               true,              // estado
               [],                // historial
@@ -244,28 +243,33 @@ export class GeneralService {
               0,                 // puntos
               '',                // razonSocial
               '',                // telefono
-              'invitado',        // usuario
+              'invitado'         // usuario
             );
+
             this.clienteSubject.next(clienteActualizado);
 
             resolve(true);
           } catch (e) {
             reject('Error al guardar carrito del invitado: ' + e);
           }
-
           return;
         }
 
-        // 🟢 CLIENTE LOGUEADO: actualizar Firebase
-        const productoExistente = clienteEncontrado.carrito.find(item => item.id === producto.id);
+        // 🟢 CLIENTE LOGUEADO
+        const productoExistente = clienteEncontrado.carrito.find(
+          item => item.codigoBarras === producto.codigoBarras // ✅ igual aquí
+        );
+
         if (productoExistente) {
           productoExistente.cantidad += cantidad;
         } else {
           clienteEncontrado.carrito.push({
             id: producto.id,
+            codigoBarras: producto.codigoBarras,
             imagen: producto.imagen,
             nombre: producto.descripcion,
-            cantidad: cantidad,
+            color: producto.color,
+            cantidad,
             precioOferta: producto.oferta,
             stock: calcularStockTotal(producto),
             precioFinal: producto.oferta ? producto.precioOferta : producto.precioMinorista,
@@ -279,12 +283,16 @@ export class GeneralService {
         this.clienteSubject.next(clienteEncontrado);
 
         resolve(true);
-
       } catch (error) {
         reject('Error general en cargarProductoCarrito: ' + error);
       }
     });
   }
+
+
+
+
+  
   //FUNCION PARA FORMATEAR FECHA
   formatearFechaDesdeDate(fecha: Date): string {
     const dia = fecha.getDate().toString().padStart(2, '0');

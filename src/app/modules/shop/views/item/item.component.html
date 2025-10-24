@@ -6,7 +6,8 @@
       alt="Imagen producto"
     />
     <div class="product-action">
-      <a (click)="agregarCarrito(producto)"><i class="fa fa-shopping-cart"></i></a>
+      <a (click)="agregarCarrito()"><i class="fa fa-shopping-cart"></i></a>
+
       <a (click)="verDetalle(producto)"><i class="fa fa-search"></i></a>
     </div>
   </div>
@@ -48,21 +49,27 @@
     </ng-template>
 
     <!-- 🎨 Colores disponibles (color principal + variantes) -->
-    <div class="color-options mt-3 d-flex justify-content-center gap-2">
-      <!-- 🔹 Color principal -->
-      <div
-        class="color-circle border border-dark"
-        [ngStyle]="{ 'background-color': producto.color || '#ccc' }"
-        [attr.title]="'Color principal'"
-      ></div>
+    <div
+      class="color-options mt-3 d-flex justify-content-center gap-2 flex-wrap"
+    >
+    <!-- Color principal -->
+    <div
+      class="color-circle"
+      [ngClass]="{ 'selected-color': selectedColor === (producto.color || '') }"
+      [ngStyle]="{ 'background-color': producto.color || '#ccc' }"
+      (click)="seleccionarColorPrincipal()"
+      [attr.title]="'Color principal'"
+    ></div>
 
-      <!-- 🔹 Variantes -->
-      <div
-        *ngFor="let variante of producto.variantes"
-        class="color-circle"
-        [ngStyle]="{ 'background-color': variante.color || '#ccc' }"
-        [attr.title]="variante.color"
-      ></div>
+    <!-- Variantes -->
+    <div
+      *ngFor="let variante of producto.variantes"
+      class="color-circle"
+      [ngClass]="{ 'selected-color': selectedColor === (variante.color || '') }"
+      [ngStyle]="{ 'background-color': variante.color || '#ccc' }"
+      (click)="seleccionarVariante(variante)"
+      [attr.title]="variante.color"
+    ></div>
     </div>
   </div>
 </div>
