@@ -172,7 +172,7 @@ onFileChange(event: any) {
     // mapear cada fila a Producto
     productosExcel.forEach((v: any) => {
 const producto = new Producto(
-  v.id,
+   v.id,
   v.codigoBarras,
   v.descripcion,
   v.precioCosto,
@@ -189,7 +189,10 @@ const producto = new Producto(
   v.precioOferta,
   v.precioSinImpuestos,
   v.stockMinimo,
-  v.stockSucursales || []
+  v.stockSucursales || [],
+  v.stockMayorista || 0,
+  v.color ?? undefined,          // 🆕 color opcional
+  v.variantes ?? undefined       // 🆕 variantes opcionales
 );
 
       // lógica de checks (igual que formulario)

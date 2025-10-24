@@ -26,7 +26,7 @@
   height: auto;
   border-radius: 20%;
   object-fit: cover;
-  align-items: center;
+  /* align-items: center; */
 }
 
 .variante-row {
@@ -136,39 +136,77 @@
 
 .fadeIn {
   opacity: 0;
-  -webkit-animation: fadeIn ease-in 1;
-  -moz-animation: fadeIn ease-in 1;
   animation: fadeIn ease-in 1;
-
-  -webkit-animation-fill-mode: forwards;
-  -moz-animation-fill-mode: forwards;
   animation-fill-mode: forwards;
-
-  -webkit-animation-duration: 1s;
-  -moz-animation-duration: 1s;
   animation-duration: 1s;
 }
 
-.fadeIn.first {
-  -webkit-animation-delay: 0.4s;
-  -moz-animation-delay: 0.4s;
-  animation-delay: 0.4s;
+.fadeIn.first { animation-delay: 0.4s; }
+.fadeIn.second { animation-delay: 0.5s; }
+.fadeIn.third { animation-delay: 0.6s; }
+.fadeIn.fourth { animation-delay: 0.7s; }
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-.fadeIn.second {
-  -webkit-animation-delay: 0.5s;
-  -moz-animation-delay: 0.5s;
-  animation-delay: 0.5s;
+.ventas-grid mat-checkbox {
+  align-self: center;
 }
 
-.fadeIn.third {
-  -webkit-animation-delay: 0.6s;
-  -moz-animation-delay: 0.6s;
-  animation-delay: 0.6s;
+.variante-card {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  align-items: end;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  background-color: #fafafa;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 
-.fadeIn.fourth {
-  -webkit-animation-delay: 0.7s;
-  -moz-animation-delay: 0.7s;
-  animation-delay: 0.7s;
+.variantes-section h2 {
+  margin-bottom: 0.5rem;
+}
+
+.variantes-section h3 {
+  grid-column: 1 / -1;
+  margin-bottom: 0.5rem;
+  color: #034f70;
+  font-weight: 600;
+}
+
+.seccion-titulo {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #034f70;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  border-left: 4px solid #cb484e;
+  padding-left: 8px;
+}
+
+.color-picker-wrapper {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 6px 0;
+}
+
+.color-label {
+  font-size: 13px;
+  color: #555;
+  margin-bottom: 4px;
+}
+
+.color-input {
+  width: 100%;
+  height: 40px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  background: none;
 }

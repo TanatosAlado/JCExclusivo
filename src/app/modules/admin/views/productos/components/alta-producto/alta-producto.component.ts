@@ -1,5 +1,5 @@
 import { Component, Inject } from '@angular/core';
-import { FormBuilder, FormGroup, Validators, ValidatorFn, AbstractControl, ValidationErrors } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, ValidatorFn, AbstractControl, ValidationErrors, FormArray } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { SucursalesService } from 'src/app/modules/admin/services/sucursales.service';
 import { Producto } from 'src/app/modules/shop/models/producto.model';
@@ -44,6 +44,7 @@ export class AltaProductoComponent {
       codigoBarras: ['', Validators.required],
       descripcion: ['', Validators.required],
       imagen: [''],
+      color: ['#000000'],
       rubro: ['', Validators.required],
       subrubro: [''],
       marca: ['', Validators.required],
@@ -67,7 +68,10 @@ export class AltaProductoComponent {
           sucursalId: [s.id],
           cantidad: [0, Validators.min(0)]
         }))
-      )
+      ),
+      stockMayorista: [0],
+      variantes: this.fb.array([])
+
     }, { validators: [this.alMenosUnCanalVenta()] });
 
     this.setupAutocomplete();
@@ -173,54 +177,151 @@ export class AltaProductoComponent {
     if (!/^\d$/.test(char)) event.preventDefault();
   }
 
-  onSubmit() {
-    if (this.productoForm.invalid) {
-      this.productoForm.markAllAsTouched();
-      return;
-    }
+private sanitizeProductoPayload(v: any) {
+  // 🧼 Normalizo textos principales
+  const rubro = (v?.rubro ?? '').toString().toUpperCase();
+  const subrubro = (v?.subrubro ?? '').toString().toUpperCase();
+  const marca = (v?.marca ?? '').toString().toUpperCase();
+  const color = v?.color ? v.color.toString() : '#000000'; // 🎨 nuevo campo opcional
 
-    // getRawValue para incluir controles deshabilitados (precios)
-    const v = this.productoForm.getRawValue();
+  // 📦 Aseguro stockSucursales sea array y normalizo los valores
+  const stockSucursales = Array.isArray(v?.stockSucursales)
+    ? v.stockSucursales.map((s: any) => ({
+        sucursalId: s?.sucursalId ?? '',
+        cantidad: Number.isFinite(Number(s?.cantidad)) ? Number(s.cantidad) : 0
+      }))
+    : [];
 
-    // normalizo textos a MAYÚSCULAS donde corresponde
-    const rubro = (v.rubro || '').toString().toUpperCase();
-    const subrubro = (v.subrubro || '').toString().toUpperCase();
-    const marca = (v.marca || '').toString().toUpperCase();
+    // 🎨 Variantes (colores, imágenes, stocks, etc.)
+      const variantes =
+        Array.isArray(v?.variantes) && v.variantes.length
+          ? v.variantes
+              .map((varObj: any) => {
+                const color = (varObj?.color ?? '').toString();
+                const codigoBarras = (varObj?.codigoBarras ?? '').toString();
+
+                const stockSucursales = Array.isArray(varObj?.stockSucursales)
+                  ? varObj.stockSucursales.map((s: any) => ({
+                      sucursalId: s?.sucursalId ?? '',
+                      cantidad: Number.isFinite(Number(s?.cantidad)) ? Number(s.cantidad) : 0
+                    }))
+                  : [];
+
+                const stockMayorista = Number.isFinite(Number(varObj?.stockMayorista))
+                  ? Number(varObj.stockMayorista)
+                  : 0;
+
+                const isEmpty = !color && !codigoBarras && stockSucursales.every(s => s.cantidad === 0) && stockMayorista === 0;
+                if (isEmpty) return null;
+
+                return {
+                  color,
+                  ...(codigoBarras ? { codigoBarras } : {}),
+                  stockSucursales,
+                  stockMayorista
+                };
+              })
+              .filter((x: any) => x !== null)
+          : undefined;
 
 
-    // armamos el objeto según el modelo nuevo
-    const producto = new Producto(
-      '', // id
-      this.productoForm.value.codigoBarras,
-      this.productoForm.value.descripcion,
-      this.productoForm.value.precioCosto,
-      this.productoForm.value.ventaMinorista,
-      this.productoForm.value.precioMinorista,
-      this.productoForm.value.ventaMayorista,
-      this.productoForm.value.precioMayorista,
-      this.productoForm.value.imagen,
-      this.productoForm.value.rubro,
-      this.productoForm.value.subrubro,
-      this.productoForm.value.marca,
-      this.productoForm.value.destacado,
-      this.productoForm.value.oferta,
-      this.productoForm.value.precioOferta ?? 0,
-      this.productoForm.value.precioSinImpuestos,
-      this.productoForm.value.stockMinimo,
-      this.productoForm.value.stockSucursales
-    );
+  // 🧱 Retorno sanitizado y seguro
+  return {
+    codigoBarras: (v?.codigoBarras ?? '').toString(),
+    descripcion: (v?.descripcion ?? '').toString(),
+    imagen: (v?.imagen ?? '').toString(),
+    ...(color ? { color } : {}), // ✅ solo incluye color si fue completado
+    rubro,
+    subrubro,
+    marca,
+    precioCosto: Number.isFinite(Number(v?.precioCosto)) ? Number(v.precioCosto) : 0,
+    precioSinImpuestos: Number.isFinite(Number(v?.precioSinImpuestos)) ? Number(v.precioSinImpuestos) : 0,
+    ventaMinorista: !!v?.ventaMinorista,
+    precioMinorista: Number.isFinite(Number(v?.precioMinorista)) ? Number(v.precioMinorista) : 0,
+    ventaMayorista: !!v?.ventaMayorista,
+    precioMayorista: Number.isFinite(Number(v?.precioMayorista)) ? Number(v.precioMayorista) : 0,
+    oferta: !!v?.oferta,
+    precioOferta: Number.isFinite(Number(v?.precioOferta)) ? Number(v.precioOferta) : 0,
+    destacado: !!v?.destacado,
+    stockMinimo: Number.isFinite(Number(v?.stockMinimo)) ? Number(v.stockMinimo) : 0,
+    stockSucursales,
+    stockMayorista: Number.isFinite(Number(v?.stockMayorista)) ? Number(v.stockMayorista) : 0,
+    variantes
+  };
+}
 
-    console.log('Nuevo producto:', producto);
 
-    this.productosService.agregarProducto(producto)
-      .then((docRef) => {
-        producto.id = docRef.id;
-        return this.productosService.actualizarProducto(producto);
-      })
-      .then(() => {
-        this.dialogRef.close(producto);
-      });
+
+onSubmit() {
+  if (this.productoForm.invalid) {
+    this.productoForm.markAllAsTouched();
+    return;
   }
+
+  // getRawValue para incluir controles deshabilitados (precios)
+  const raw = this.productoForm.getRawValue();
+
+  // sanitizo y normalizo
+  const payload = this.sanitizeProductoPayload(raw);
+  if (!payload.color) {
+    payload.color = '#000000';
+  }
+
+  // construyo el Producto respetando el orden del constructor
+const producto = new Producto(
+  '',
+  payload.codigoBarras,
+  payload.descripcion,
+  payload.precioCosto,
+
+  // 🛒 Minorista
+  payload.ventaMinorista,
+  payload.precioMinorista,
+
+  // 🏷️ Mayorista
+  payload.ventaMayorista,
+  payload.precioMayorista,
+
+  // 📸 Imagen
+  payload.imagen,
+
+  // 🧩 Clasificación
+  payload.rubro,
+  payload.subrubro,
+  payload.marca,
+
+  // ⭐ Promociones
+  payload.destacado,
+  payload.oferta,
+  payload.precioOferta ?? 0,
+  payload.precioSinImpuestos,
+
+  // 📦 Stock
+  payload.stockMinimo,
+  payload.stockSucursales,
+  payload.stockMayorista ?? 0,
+
+  // 🎨 Opcionales
+  payload.color,
+  payload.variantes
+);
+
+
+  console.log('Nuevo producto (sanitizado):', producto);
+
+  this.productosService.agregarProducto(producto)
+    .then((docRef) => {
+      producto.id = docRef.id;
+      return this.productosService.actualizarProducto(producto);
+    })
+    .then(() => {
+      this.dialogRef.close(producto);
+    })
+    .catch(err => {
+      console.error('Error al guardar producto:', err);
+      // opcional: mostrar mensaje al usuario
+    });
+}
 
 
 obtenerSucursales(): void {
@@ -237,6 +338,32 @@ obtenerSucursales(): void {
       }));
     });
   });
+}
+
+get variantes(): FormArray {
+  return this.productoForm.get('variantes') as FormArray;
+}
+
+nuevaVariante(): FormGroup {
+  return this.fb.group({
+    color: [''],
+    codigoBarras: [''],
+    stockSucursales: this.fb.array(
+      this.sucursales.map(s => this.fb.group({
+        sucursalId: [s.id],
+        cantidad: [0, [Validators.min(0)]]
+      }))
+    ),
+    stockMayorista: [0, [Validators.min(0)]]
+  });
+}
+
+agregarVariante() {
+  this.variantes.push(this.nuevaVariante());
+}
+
+eliminarVariante(index: number) {
+  this.variantes.removeAt(index);
 }
 
 

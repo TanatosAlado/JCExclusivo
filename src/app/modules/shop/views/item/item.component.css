@@ -117,3 +117,21 @@ a{
   border: 1px solid #ccc;
   cursor: pointer;
 }
+
+
+.color-options {
+  flex-wrap: wrap;
+}
+
+.color-circle {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid #ddd;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.color-circle:hover {
+  transform: scale(1.15);
+}

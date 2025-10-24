@@ -1,46 +1,58 @@
 <div class="imagen-central fadeIn first">
-  <img src="../../../../../assets/logo.png" alt="Login" />
+  <img src="../../../../../assets/logo.png" alt="Logo" />
 </div>
 
-<mat-card class="producto-form-card">
+<mat-card class="producto-form-card fadeIn first">
   <mat-card-content>
     <form [formGroup]="productoForm" (ngSubmit)="onSubmit()">
 
-      <!-- Sección básica -->
+      <!-- 🧾 DATOS BÁSICOS -->
+      <h2 class="seccion-titulo">Datos básicos</h2>
       <div class="form-grid">
-        <mat-form-field appearance="outline" class="form-field fadeIn first">
+        <mat-form-field appearance="outline" class="form-field">
           <mat-label>Código de Barras</mat-label>
           <input matInput formControlName="codigoBarras" required>
         </mat-form-field>
 
-        <mat-form-field appearance="outline" class="form-field fadeIn first">
+        <mat-form-field appearance="outline" class="form-field">
           <mat-label>Rubro</mat-label>
           <input matInput formControlName="rubro">
         </mat-form-field>
 
-        <mat-form-field appearance="outline" class="form-field fadeIn second">
+        <mat-form-field appearance="outline" class="form-field">
           <mat-label>Subrubro</mat-label>
           <input matInput formControlName="subrubro">
         </mat-form-field>
 
-        <mat-form-field appearance="outline" class="form-field fadeIn second">
+        <mat-form-field appearance="outline" class="form-field">
           <mat-label>Marca</mat-label>
           <input matInput formControlName="marca">
         </mat-form-field>
       </div>
 
-      <mat-form-field appearance="outline" class="form-field full-width fadeIn second">
-        <mat-label>Descripción</mat-label>
-        <textarea matInput rows="3" formControlName="descripcion"></textarea>
-      </mat-form-field>
+      <div class="form-grid">
+        <mat-form-field appearance="outline" class="form-field full-width">
+          <mat-label>Descripción</mat-label>
+          <textarea matInput rows="3" formControlName="descripcion"></textarea>
+        </mat-form-field>
+      </div>
 
-      <mat-form-field appearance="outline" class="form-field full-width fadeIn second">
-        <mat-label>URL de Imagen</mat-label>
-        <input matInput type="url" formControlName="imagen" placeholder="https://...">
-      </mat-form-field>
+      <div class="form-grid">
+        <mat-form-field appearance="outline" class="form-field full-width">
+          <mat-label>URL de Imagen</mat-label>
+          <input matInput type="url" formControlName="imagen" placeholder="https://...">
+        </mat-form-field>
 
-      <!-- Sección precios -->
-      <div class="form-grid fadeIn third">
+        <!-- 🎨 Color principal (selector de color) -->
+        <div class="form-field color-picker-wrapper">
+          <label class="color-label">Color principal (opcional)</label>
+          <input type="color" class="color-input" formControlName="color">
+        </div>
+      </div>
+
+      <!-- 💰 PRECIOS -->
+      <h2 class="seccion-titulo">Precios y ventas</h2>
+      <div class="form-grid">
         <mat-form-field appearance="outline" class="form-field">
           <mat-label>Precio Costo</mat-label>
           <input matInput type="number" formControlName="precioCosto" required>
@@ -50,7 +62,9 @@
           <mat-label>Precio sin Impuestos</mat-label>
           <input matInput type="number" formControlName="precioSinImpuestos" required>
         </mat-form-field>
+      </div>
 
+      <div class="form-grid ventas-grid">
         <mat-checkbox formControlName="ventaMinorista">¿Se vende en Minorista?</mat-checkbox>
         <mat-form-field appearance="outline" class="form-field" *ngIf="productoForm.get('ventaMinorista')?.value">
           <mat-label>Precio Minorista</mat-label>
@@ -64,8 +78,9 @@
         </mat-form-field>
       </div>
 
-      <!-- Oferta y destacado -->
-      <div class="form-grid fadeIn third">
+      <!-- ⭐ OFERTAS Y DESTACADOS -->
+      <h2 class="seccion-titulo">Promociones</h2>
+      <div class="form-grid">
         <mat-checkbox formControlName="oferta">¿Está en oferta?</mat-checkbox>
         <mat-form-field appearance="outline" class="form-field" *ngIf="productoForm.get('oferta')?.value">
           <mat-label>Precio de Oferta</mat-label>
@@ -75,7 +90,8 @@
         <mat-checkbox formControlName="destacado">¿Es destacado?</mat-checkbox>
       </div>
 
-      <!-- Stock distribuido -->
+      <!-- 🏬 STOCK -->
+      <h2 class="seccion-titulo">Stock</h2>
       <div class="form-grid fadeIn fourth">
         <div formArrayName="stockSucursales" class="full-width">
           <div *ngFor="let stock of productoForm.get('stockSucursales')['controls']; let i = index" [formGroupName]="i"
@@ -91,10 +107,65 @@
           <mat-label>Stock Mínimo</mat-label>
           <input matInput type="number" formControlName="stockMinimo">
         </mat-form-field>
+
+        <mat-form-field appearance="outline" class="form-field">
+          <mat-label>Stock Mayorista</mat-label>
+          <input matInput type="number" formControlName="stockMayorista">
+        </mat-form-field>
       </div>
 
-      <!-- Botón Guardar -->
-      <div class="acciones fadeIn fou">
+      <!-- 🎨 VARIANTES -->
+      <div class="variantes-section fadeIn fourth">
+        <h2 class="seccion-titulo">Variantes del producto</h2>
+
+        <div formArrayName="variantes">
+          <div *ngFor="let variante of variantes.controls; let i = index" [formGroupName]="i" class="variante-card">
+
+            <h3 class="text-lg font-semibold">Variante {{ i + 1 }}</h3>
+
+            <div class="form-grid">
+              <!-- Selector de color para cada variante -->
+              <div class="form-field color-picker-wrapper">
+                <label class="color-label">Color</label>
+                <input type="color" class="color-input" formControlName="color">
+              </div>
+
+              <mat-form-field appearance="outline" class="form-field">
+                <mat-label>Código de Barras (opcional)</mat-label>
+                <input matInput formControlName="codigoBarras">
+              </mat-form-field>
+            </div>
+
+            <!-- 🏬 STOCK POR SUCURSAL -->
+            <div formArrayName="stockSucursales" class="stock-por-sucursal">
+              <div *ngFor="let stock of variante.get('stockSucursales')['controls']; let j = index" [formGroupName]="j">
+                <mat-form-field appearance="outline" class="form-field">
+                  <mat-label>Stock en {{ sucursales[j]?.nombre }}</mat-label>
+                  <input matInput type="number" formControlName="cantidad">
+                </mat-form-field>
+              </div>
+            </div>
+
+            <!-- 🏷️ STOCK MAYORISTA -->
+            <mat-form-field appearance="outline" class="form-field">
+              <mat-label>Stock Mayorista</mat-label>
+              <input matInput type="number" formControlName="stockMayorista">
+            </mat-form-field>
+
+            <button mat-icon-button color="warn" (click)="eliminarVariante(i)" aria-label="Eliminar variante">
+              <mat-icon>delete</mat-icon>
+            </button>
+
+          </div>
+        </div>
+
+        <button mat-raised-button color="accent" type="button" (click)="agregarVariante()">
+          <mat-icon>add</mat-icon> Agregar Variante
+        </button>
+      </div>
+
+      <!-- 💾 BOTÓN GUARDAR -->
+      <div class="acciones fadeIn fourth">
         <button mat-raised-button color="primary" type="submit" [disabled]="productoForm.invalid">
           Guardar Producto
         </button>
