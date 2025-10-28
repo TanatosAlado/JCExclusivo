@@ -1,13 +1,18 @@
 <h2 mat-dialog-title class="titulo-modal">📦 Detalle del Producto</h2>
 
 <mat-dialog-content class="contenido-modal">
+
   <!-- Datos principales -->
   <div class="bloque">
     <p><strong>Descripción:</strong> {{ producto.descripcion }}</p>
     <p><strong>Código interno:</strong> {{ producto.codigoBarras }}</p>
+    <p><strong>Color principal:</strong>
+      <span *ngIf="producto.color" class="color-dot" [ngStyle]="{ 'background-color': producto.color }"></span>
+      <span *ngIf="!producto.color">—</span>
+    </p>
   </div>
 
-  <!-- Rubros y marca -->
+  <!-- Clasificación -->
   <div class="bloque">
     <p><strong>Rubro:</strong> {{ producto.rubro }}</p>
     <p><strong>Subrubro:</strong> {{ producto.subrubro }}</p>
@@ -23,26 +28,40 @@
     <p *ngIf="producto.oferta"><strong>Precio Oferta:</strong> ${{ producto.precioOferta }}</p>
   </div>
 
-  <!-- Stock y flags -->
+  <!-- Stock principal -->
   <div class="bloque">
-    <!-- <p><strong>Stock:</strong> {{ producto.stock }}</p> -->
+    <p><strong>Stock total:</strong> {{ getStockTotal(producto) }} unidades</p>
 
-    <div class="bloque">
-      <p><strong>Stock por sucursal:</strong></p>
+
+    <p><strong>Stock por sucursal (base):</strong></p>
+    <ul>
+      <li *ngFor="let stock of producto.stockSucursales">
+        🏬 <strong>{{ obtenerNombreSucursal(stock.sucursalId) }}</strong> → {{ stock.cantidad }} unidades
+      </li>
+    </ul>
+    <p><strong>Stock mayorista:</strong> {{ producto.stockMayorista || 0 }}</p>
+  </div>
+
+  <!-- Variantes -->
+  <div class="bloque" *ngIf="producto.variantes && producto.variantes.length > 0">
+    <h3>🎨 Variantes por color</h3>
+    <div *ngFor="let variante of producto.variantes" class="variante-card">
+      <p><strong>Color:</strong> 
+  <span class="color-dot" [ngStyle]="{ 'background-color': variante.color }"></span>
+</p>
+
+      <p><strong>Stock total:</strong> {{ getStockTotalVariante(variante) }} unidades</p>
       <ul>
-        <li *ngFor="let stock of producto.stockSucursales">
+        <li *ngFor="let stock of variante.stockSucursales">
           🏬 <strong>{{ obtenerNombreSucursal(stock.sucursalId) }}</strong> → {{ stock.cantidad }} unidades
         </li>
       </ul>
-
-      <p><strong>Destacado:</strong> {{ producto.destacado ? 'Sí' : 'No' }}</p>
-      <p><strong>Oferta:</strong> {{ producto.oferta ? 'Sí' : 'No' }}</p>
-      <p><strong>Impuesto Nacional:</strong> {{ producto.precioSinImpuestos ? 'Sí' : 'No' }}</p>
-      <p *ngIf="producto.precioSinImpuestos">
-        <strong>Precio sin Impuesto Nacional:</strong> ${{ producto.precioSinImpuestos }}
-      </p>
+      <p><strong>Stock mayorista:</strong> {{ variante.stockMayorista }}</p>
     </div>
+  </div>
 
+  <!-- Flags -->
+  <div class="bloque">
     <p><strong>Destacado:</strong> {{ producto.destacado ? 'Sí' : 'No' }}</p>
     <p><strong>Oferta:</strong> {{ producto.oferta ? 'Sí' : 'No' }}</p>
     <p><strong>Impuesto Nacional:</strong> {{ producto.precioSinImpuestos ? 'Sí' : 'No' }}</p>
@@ -53,8 +72,9 @@
 
   <!-- Imagen -->
   <div *ngIf="producto.imagen" class="product-img">
-    <img [src]="producto.imagen" alt="Imagen del producto">
+    <img [src]="producto.imagen" alt="Imagen del producto" />
   </div>
+
 </mat-dialog-content>
 
 <mat-dialog-actions align="end">

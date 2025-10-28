@@ -22,11 +22,43 @@
   border-radius: 6px;
 }
 
+/* Bloques especiales */
 .precios {
   background: #e3f2fd;
   border-left-color: #1565c0;
 }
 
+/* 🎨 Variantes por color */
+.variante-card {
+  background: #ffffff;
+  border: 1px solid #d0d0d0;
+  border-left: 4px solid #2196f3;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  transition: all 0.2s ease-in-out;
+}
+
+.variante-card:hover {
+  background: #f5faff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.variante-card p {
+  margin: 0.2rem 0;
+}
+
+.variante-card ul {
+  margin: 4px 0 0 16px;
+  padding: 0;
+}
+
+.variante-card li {
+  list-style-type: none;
+  font-size: 0.9rem;
+}
+
+/* Imagen principal */
 .product-img {
   text-align: center;
   margin-top: 15px;
@@ -36,5 +68,20 @@
   max-width: 200px;
   max-height: 200px;
   border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s ease;
+}
+
+.product-img img:hover {
+  transform: scale(1.03);
+}
+
+.color-dot {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid #aaa;
+  margin-left: 6px;
+  vertical-align: middle;
 }

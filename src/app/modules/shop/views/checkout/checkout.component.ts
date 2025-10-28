@@ -15,6 +15,7 @@ import { VouchersPuntosService } from 'src/app/shared/services/vouchers-puntos.s
 import { collection } from 'firebase/firestore/lite';
 import { InfoEmpresa } from 'src/app/shared/models/infoEmpresa.model';
 import { InfoEmpresaService } from 'src/app/shared/services/info-empresa.service';
+import { SucursalesService } from 'src/app/modules/admin/services/sucursales.service';
 
 @Component({
   selector: 'app-checkout',
@@ -56,7 +57,10 @@ export class CheckoutComponent {
   infoEmpresa: InfoEmpresa | null = null;
   montoParaActivar: number = 50000; // Monto mínimo para activar el modo mayorista
 
-  constructor(private infoEmpresaService: InfoEmpresaService, private firestore: Firestore, private fb: FormBuilder, private clienteService: ClientesService, public pedidoService: PedidosService, public generalService: GeneralService, private contadorService: ContadorService, private router: Router, private carritoService: CarritoService, private puntosService: VouchersPuntosService) {
+  sucursales: any[] = []; // lista de sucursales disponibles
+  sucursalSeleccionada: string = ''; // id de la sucursal seleccionada por el cliente
+
+  constructor(private infoEmpresaService: InfoEmpresaService, private firestore: Firestore, private fb: FormBuilder, private clienteService: ClientesService, public pedidoService: PedidosService, public generalService: GeneralService, private contadorService: ContadorService, private router: Router, private carritoService: CarritoService, private puntosService: VouchersPuntosService, private sucursalesService: SucursalesService) {
 
     this.formCheckout = this.fb.group({
       user: ['', [Validators.required]],
@@ -77,7 +81,15 @@ export class CheckoutComponent {
         this.mensajeCupon = '';
       }
     });
+    this.obtenerSucursales(); // 🔹 cargamos sucursales
   }
+
+  obtenerSucursales(): void {
+  this.sucursalesService.obtenerSucursales().subscribe(sucs => {
+    this.sucursales = sucs;
+    // Aquí no necesitamos tocar forms de stock, solo lo dejamos para otros componentes
+  });
+}
 
   async inicializarValoresPuntos() {
     const valores = await this.puntosService.obtenerValoresPuntos();
@@ -216,90 +228,135 @@ export class CheckoutComponent {
   }
 
   //FUNCION PARA CREAR EL PEDIDO
-  createPedido(puntoRestar: number, puntosSumar: number) {
-    const carritoCliente = this.clienteEncontrado.carrito;
+async createPedido(puntoRestar: number, puntosSumar: number) {
+  const carritoCliente = this.clienteEncontrado.carrito;
+  console.log('Carrito del cliente:', carritoCliente);
 
-    console.log('Carrito del cliente:', carritoCliente);
+  const total = this.generalService.getTotalPrecio(
+    this.clienteEncontrado,
+    this.usarPuntos,
+    this.valorMonetarioPorPunto,
+    this.cuponAplicado
+  );
 
-    const total = this.generalService.getTotalPrecio(this.clienteEncontrado, this.usarPuntos, this.valorMonetarioPorPunto, this.cuponAplicado);
-    let direccion = 'S/E';
-    let pago = 'S/P';
-    const envio = this.radioButtonSeleccionado === 'domicilio' ? 'Envío' : 'Retiro';
+  let direccion = 'S/E';
+  let pago = 'S/P';
+  const envio = this.radioButtonSeleccionado === 'domicilio' ? 'Envío' : 'Retiro en sucursal';
 
-    if (this.radioButtonSeleccionado === 'domicilio') {
-      direccion = this.formCheckout.get('domicilioEntrega')?.value;
-      pago = this.opcionPagoSeleccionada === 'efectivo' ? 'Efectivo' : 'Transferencia';
+  if (this.radioButtonSeleccionado === 'domicilio') {
+    direccion = this.formCheckout.get('domicilioEntrega')?.value;
+    pago = this.opcionPagoSeleccionada === 'efectivo' ? 'Efectivo' : 'Transferencia';
+  }
+
+  const unPedido: Pedido = {
+    id: '',
+    nroPedido: this.contador[0]?.contador != null ? this.contador[0].contador + 1 : 1,
+    fecha: this.generalService.formatearFechaDesdeDate(new Date()),
+    user: this.formCheckout.get('user')?.value,
+    mail: this.formCheckout.get('mail')?.value,
+    telefono: this.formCheckout.get('telefono')?.value,
+    domicilioEntrega: direccion,
+    carrito: carritoCliente,
+    entrega: envio,
+    pago: pago,
+    total: total,
+    estado: 'pendiente',
+    nombreCliente: this.formCheckout.get('user')?.value,
+    apellidoCliente: '',
+  };
+
+  console.log('Creando pedido:', unPedido);
+
+  try {
+    const docRef = await this.pedidoService.createPedido(unPedido);
+    this.updateIdPedido(docRef.id, unPedido);
+
+    // 🟢 CLIENTE LOGUEADO
+    if (this.clienteEncontrado.id !== 'invitado') {
+      const historico = {
+        fecha: unPedido.fecha,
+        nroPedido: unPedido.nroPedido,
+        carrito: carritoCliente,
+        entrega: unPedido.entrega,
+        pago: unPedido.pago,
+        total: unPedido.total,
+        id: docRef.id,
+      };
+      this.clienteEncontrado.historial.push(historico);
+      this.clienteEncontrado.carrito = [];
+
+      const puntosGanados = Math.floor(puntosSumar);
+      const puntosGastados = Math.floor(puntoRestar);
+      this.clienteEncontrado.puntos =
+        this.clienteEncontrado.puntos - puntosGastados + puntosGanados;
+
+      if (this.clienteEncontrado.esMayorista && !this.clienteEncontrado.mayoristaActivado) {
+        this.clienteEncontrado.mayoristaActivado = historico.total >= this.montoParaActivar;
+      }
+
+      await this.clienteService.actualizarCliente(this.clienteEncontrado.id, this.clienteEncontrado);
+    } else {
+      // 🟡 INVITADO
+      localStorage.removeItem('carritoInvitado');
     }
 
-    const unPedido: Pedido = {
-      id: '',
-      nroPedido: this.contador[0]?.contador != null ? this.contador[0].contador + 1 : 1,
-      fecha: this.generalService.formatearFechaDesdeDate(new Date()),
-      user: this.formCheckout.get('user')?.value,
-      mail: this.formCheckout.get('mail')?.value,
-      telefono: this.formCheckout.get('telefono')?.value,
-      domicilioEntrega: direccion,
-      carrito: carritoCliente,
-      entrega: envio,
-      pago: pago,
-      total: total,
-      estado: 'pendiente',
-      nombreCliente: this.formCheckout.get('user')?.value, // para invitados también
-      apellidoCliente: '', // o lo separás del nombre si querés
-    };
+    // 🔁 Actualización de stock
+    const sucursalCentralId = 'GtVWr5IHmosOOB8l6u6j';
+    const sucursalADescontar =
+      this.radioButtonSeleccionado === 'farmacia' && this.sucursalSeleccionada
+        ? this.sucursalSeleccionada
+        : sucursalCentralId;
 
-    console.log('Creando pedido:', unPedido);
+    for (const item of carritoCliente) {
+      const productoRef = doc(this.firestore, 'productos', item.id);
+      const productoSnap = await getDoc(productoRef);
 
-    this.pedidoService.createPedido(unPedido).then(async (docRef) => {
-      this.updateIdPedido(docRef.id, unPedido);
+      if (!productoSnap.exists()) continue;
+      const productoData: any = productoSnap.data();
 
-      // 🟢 Si el cliente NO es invitado → actualizar historial y limpiar carrito en Firebase
-      if (this.clienteEncontrado.id !== 'invitado') {
-        const historico = {
-          fecha: unPedido.fecha,
-          nroPedido: unPedido.nroPedido,
-          carrito: carritoCliente,
-          entrega: unPedido.entrega,
-          pago: unPedido.pago,
-          total: unPedido.total,
-          id: docRef.id,
-        };
-        this.clienteEncontrado.historial.push(historico);
-        this.clienteEncontrado.carrito = [];
-        const puntosGanados = Math.floor(puntosSumar);
-        const puntosGastados = Math.floor(puntoRestar);
-        this.clienteEncontrado.puntos = this.clienteEncontrado.puntos - puntosGastados + puntosGanados;
-        if(this.clienteEncontrado.esMayorista && !this.clienteEncontrado.mayoristaActivado) {
-          this.clienteEncontrado.mayoristaActivado = historico.total >= this.montoParaActivar;
+      // Verificamos si corresponde a una variante
+      const variante = productoData.variantes?.find(
+        (v: any) => v.codigoBarras === item.codigoBarras
+      );
+
+      if (variante) {
+        // 🔹 Descontamos stock en la variante
+        const stockSucursal = variante.stockSucursales?.find(
+          (s: any) => s.sucursalId === sucursalADescontar
+        );
+        if (stockSucursal) {
+          stockSucursal.cantidad = Math.max(stockSucursal.cantidad - item.cantidad, 0);
         }
 
-        await this.clienteService.actualizarCliente(this.clienteEncontrado.id, this.clienteEncontrado);
+        // Actualizamos variante dentro del array
+        const nuevasVariantes = productoData.variantes.map((v: any) =>
+          v.codigoBarras === item.codigoBarras ? variante : v
+        );
+        await updateDoc(productoRef, { variantes: nuevasVariantes });
       } else {
-        // 🟡 Si es invitado, limpiamos el localStorage del carrito
-        localStorage.removeItem('carritoInvitado');
-      }
-
-      // 🔁 Siempre actualizamos stock de productos
-      for (const item of carritoCliente) {
-        const productoRef = doc(this.firestore, 'productos', item.id);
-        try {
-          const productoSnap = await getDoc(productoRef);
-          if (productoSnap.exists()) {
-            const productoData: any = productoSnap.data();
-            const stockActual = productoData.stock ?? 0;
-            const cantidadComprada = item.cantidad ?? 0;
-            const stockNuevo = Math.max(stockActual - cantidadComprada, 0);
-            await updateDoc(productoRef, { stock: stockNuevo });
-          }
-        } catch (error) {
-          console.error('Error al actualizar stock:', error);
+        // 🔹 Descontamos stock en el producto principal
+        const stockSucursal = productoData.stockSucursales?.find(
+          (s: any) => s.sucursalId === sucursalADescontar
+        );
+        if (stockSucursal) {
+          stockSucursal.cantidad = Math.max(stockSucursal.cantidad - item.cantidad, 0);
         }
-      }
 
-    }).catch((error) => {
-      console.error('Error al crear pedido:', error);
-    });
+        const nuevoStockSucursales = productoData.stockSucursales.map((s: any) =>
+          s.sucursalId === sucursalADescontar ? stockSucursal : s
+        );
+
+        await updateDoc(productoRef, { stockSucursales: nuevoStockSucursales });
+      }
+    }
+
+    console.log('✅ Pedido creado y stock actualizado correctamente.');
+  } catch (error) {
+    console.error('Error al crear pedido:', error);
   }
+}
+
+
 
 
   //FUNCION PARA ACTUALIZAR EL ID EN EL ARREGLO CLIENTES CON EL DE FIREBASE
