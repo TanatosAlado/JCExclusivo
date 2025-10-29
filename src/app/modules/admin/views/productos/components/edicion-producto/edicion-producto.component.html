@@ -4,7 +4,7 @@
 
 <mat-dialog-content *ngIf="formProducto" [formGroup]="formProducto" class="contenido-modal">
 
-  <!-- Básicos -->
+  <!-- 🔹 Básicos -->
   <div class="form-grid">
     <mat-form-field appearance="outline" class="form-field">
       <mat-label>Código de Barras</mat-label>
@@ -37,7 +37,16 @@
     <input matInput formControlName="imagen" placeholder="https://...">
   </mat-form-field>
 
-  <!-- Precios -->
+  <!-- 🎨 Color principal -->
+  <div class="color-principal">
+    <div class="color-preview" [style.background]="formProducto.get('color')?.value"></div>
+    <mat-form-field appearance="outline" class="form-field">
+      <mat-label>Color principal</mat-label>
+      <input matInput type="color" formControlName="color">
+    </mat-form-field>
+  </div>
+
+  <!-- 💰 Precios -->
   <div class="form-grid">
     <mat-form-field appearance="outline" class="form-field">
       <mat-label>Precio Costo</mat-label>
@@ -64,7 +73,7 @@
     </mat-form-field>
   </div>
 
-  <!-- Oferta y destacado -->
+  <!-- 🏷️ Oferta y destacado -->
   <div class="form-grid">
     <mat-checkbox formControlName="oferta">¿Está en oferta?</mat-checkbox>
     <mat-form-field appearance="outline" class="form-field" *ngIf="formProducto.get('oferta')?.value">
@@ -75,22 +84,69 @@
     <mat-checkbox formControlName="destacado">¿Es destacado?</mat-checkbox>
   </div>
 
-<!-- Stock por sucursal -->
-<div formArrayName="stockSucursales" class="form-grid">
-  <div *ngFor="let sCtrl of stockArray.controls; let i = index" [formGroupName]="i">
-
-    <mat-form-field appearance="outline" class="form-field">
-      <mat-label>{{ sucursales[i].nombre }}</mat-label>
-      <input matInput type="number" formControlName="cantidad">
-    </mat-form-field>
+  <!-- 📦 Stock principal -->
+  <h3>📦 Stock por sucursal (producto principal)</h3>
+  <div formArrayName="stockSucursales" class="form-grid">
+    <div *ngFor="let sCtrl of stockArray.controls; let i = index" [formGroupName]="i">
+      <mat-form-field appearance="outline" class="form-field">
+        <mat-label>{{ sucursales[i].nombre }}</mat-label>
+        <input matInput type="number" formControlName="cantidad">
+      </mat-form-field>
+    </div>
   </div>
-</div>
 
-<mat-form-field appearance="outline" class="form-field">
-  <mat-label>Stock Mínimo</mat-label>
-  <input matInput type="number" formControlName="stockMinimo">
-</mat-form-field>
+  <mat-form-field appearance="outline" class="form-field">
+    <mat-label>Stock Mayorista</mat-label>
+    <input matInput type="number" formControlName="stockMayorista">
+  </mat-form-field>
 
+  <mat-form-field appearance="outline" class="form-field">
+    <mat-label>Stock Mínimo</mat-label>
+    <input matInput type="number" formControlName="stockMinimo">
+  </mat-form-field>
+
+  <!-- 🧩 Variantes -->
+  <div formArrayName="variantes" class="variantes-section">
+    <h3>🎨 Variantes (colores)</h3>
+    <div *ngFor="let varianteCtrl of variantesArray.controls; let i = index" [formGroupName]="i" class="variante-card">
+
+      <div class="color-header">
+        <div class="color-preview" [style.background]="varianteCtrl.get('color')?.value"></div>
+
+        <mat-form-field appearance="outline" class="form-field">
+          <mat-label>Color</mat-label>
+          <input matInput type="color" formControlName="color">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="form-field">
+          <mat-label>Código de Barras</mat-label>
+          <input matInput formControlName="codigoBarras">
+        </mat-form-field>
+
+        <button mat-icon-button color="warn" (click)="eliminarVariante(i)" matTooltip="Eliminar variante">
+          <mat-icon>delete</mat-icon>
+        </button>
+      </div>
+
+      <div formArrayName="stockSucursales" class="form-grid">
+        <div *ngFor="let sCtrl of getStockSucursales(i).controls; let j = index" [formGroupName]="j">
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>{{ sucursales[j]?.nombre }}</mat-label>
+            <input matInput type="number" formControlName="cantidad">
+          </mat-form-field>
+        </div>
+      </div>
+
+      <mat-form-field appearance="outline" class="form-field">
+        <mat-label>Stock Mayorista</mat-label>
+        <input matInput type="number" formControlName="stockMayorista">
+      </mat-form-field>
+
+      <mat-divider></mat-divider>
+    </div>
+
+    <button mat-stroked-button color="primary" (click)="agregarVariante()">+ Agregar Variante</button>
+  </div>
 
 </mat-dialog-content>
 

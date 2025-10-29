@@ -13,20 +13,28 @@
   width: 100%;
 }
 
-.variante-lista {
-  margin-top: 16px;
-}
+/* Imagen superior (logo o preview) */
 .imagen-central {
-    display: flex;
-    justify-content: center; /* Centra horizontalmente */
-    align-items: center;     /* Centra verticalmente si tiene altura */
-  }
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
 .imagen-central img {
   width: 100px;
   height: auto;
   border-radius: 20%;
   object-fit: cover;
-  align-items: center;
+}
+
+/* Variantes */
+.variante-lista {
+  margin-top: 20px;
+  padding: 12px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
 }
 
 .variante-row {
@@ -44,29 +52,66 @@
 .color-picker-container {
   display: flex;
   flex-direction: column;
-  align-items: start;
+  align-items: flex-start;
 }
 
 .color-picker {
   width: 50px;
   height: 36px;
   border: none;
+  cursor: pointer;
+  border-radius: 6px;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.3);
 }
 
+/* Botones de acciones de variantes */
+.btn-variant {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background-color: #1976d2;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.25s;
+}
+
+.btn-variant:hover {
+  background-color: #1565c0;
+}
+
+.btn-remove {
+  background-color: #e53935;
+}
+
+.btn-remove:hover {
+  background-color: #c62828;
+}
+
+/* Imagen preview de la variante */
+.preview-img {
+  margin-top: 8px;
+}
+
+.preview-img img {
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  width: 70px;
+  height: 70px;
+  object-fit: cover;
+}
+
+/* Sección de acciones del modal */
 .acciones {
   margin-top: 24px;
   display: flex;
   justify-content: flex-end;
+  gap: 10px;
 }
 
-.preview-img {
-  margin-top: 8px;
-}
-.preview-img img {
-  border-radius: 4px;
-  border: 1px solid #ccc;
-}
-
+/* Animaciones */
 .fadeInDown {
   -webkit-animation-name: fadeInDown;
   animation-name: fadeInDown;
@@ -93,82 +138,34 @@
 @keyframes fadeInDown {
   0% {
     opacity: 0;
-    -webkit-transform: translate3d(0, -100%, 0);
     transform: translate3d(0, -100%, 0);
   }
 
   100% {
     opacity: 1;
-    -webkit-transform: none;
     transform: none;
-  }
-}
-
-@-webkit-keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
-}
-
-@-moz-keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
   }
 }
 
 .fadeIn {
   opacity: 0;
-  -webkit-animation: fadeIn ease-in 1;
-  -moz-animation: fadeIn ease-in 1;
   animation: fadeIn ease-in 1;
-
-  -webkit-animation-fill-mode: forwards;
-  -moz-animation-fill-mode: forwards;
   animation-fill-mode: forwards;
-
-  -webkit-animation-duration: 1s;
-  -moz-animation-duration: 1s;
   animation-duration: 1s;
 }
 
 .fadeIn.first {
-  -webkit-animation-delay: 0.4s;
-  -moz-animation-delay: 0.4s;
   animation-delay: 0.4s;
 }
 
 .fadeIn.second {
-  -webkit-animation-delay: 0.5s;
-  -moz-animation-delay: 0.5s;
   animation-delay: 0.5s;
 }
 
 .fadeIn.third {
-  -webkit-animation-delay: 0.6s;
-  -moz-animation-delay: 0.6s;
   animation-delay: 0.6s;
 }
 
 .fadeIn.fourth {
-  -webkit-animation-delay: 0.7s;
-  -moz-animation-delay: 0.7s;
   animation-delay: 0.7s;
 }
