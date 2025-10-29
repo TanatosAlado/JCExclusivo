@@ -178,13 +178,11 @@ export class AltaProductoComponent {
   }
 
 private sanitizeProductoPayload(v: any) {
-  // 🧼 Normalizo textos principales
   const rubro = (v?.rubro ?? '').toString().toUpperCase();
   const subrubro = (v?.subrubro ?? '').toString().toUpperCase();
   const marca = (v?.marca ?? '').toString().toUpperCase();
-  const color = v?.color ? v.color.toString() : '#000000'; // 🎨 nuevo campo opcional
+  const color = v?.color ? v.color.toString() : '#000000';
 
-  // 📦 Aseguro stockSucursales sea array y normalizo los valores
   const stockSucursales = Array.isArray(v?.stockSucursales)
     ? v.stockSucursales.map((s: any) => ({
         sucursalId: s?.sucursalId ?? '',
@@ -192,63 +190,55 @@ private sanitizeProductoPayload(v: any) {
       }))
     : [];
 
-    // 🎨 Variantes (colores, imágenes, stocks, etc.)
-      const variantes =
-        Array.isArray(v?.variantes) && v.variantes.length
-          ? v.variantes
-              .map((varObj: any) => {
-                const color = (varObj?.color ?? '').toString();
-                const codigoBarras = (varObj?.codigoBarras ?? '').toString();
+  const variantesRaw = Array.isArray(v?.variantes) ? v.variantes : [];
+  const variantes = variantesRaw
+    .map((varObj: any) => {
+      const colorVar = (varObj?.color ?? '').toString();
+      const codigoBarras = (varObj?.codigoBarras ?? '').toString();
+      const stockVar = Array.isArray(varObj?.stockSucursales)
+        ? varObj.stockSucursales.map((s: any) => ({
+            sucursalId: s?.sucursalId ?? '',
+            cantidad: Number.isFinite(Number(s?.cantidad)) ? Number(s.cantidad) : 0
+          }))
+        : [];
+      const stockMayorista = Number.isFinite(Number(varObj?.stockMayorista)) ? Number(varObj.stockMayorista) : 0;
 
-                const stockSucursales = Array.isArray(varObj?.stockSucursales)
-                  ? varObj.stockSucursales.map((s: any) => ({
-                      sucursalId: s?.sucursalId ?? '',
-                      cantidad: Number.isFinite(Number(s?.cantidad)) ? Number(s.cantidad) : 0
-                    }))
-                  : [];
+      const isEmpty = !colorVar && !codigoBarras && stockVar.every(s => s.cantidad === 0) && stockMayorista === 0;
+      if (isEmpty) return null;
 
-                const stockMayorista = Number.isFinite(Number(varObj?.stockMayorista))
-                  ? Number(varObj.stockMayorista)
-                  : 0;
+      return {
+        color: colorVar,
+        ...(codigoBarras ? { codigoBarras } : {}),
+        stockSucursales: stockVar,
+        stockMayorista
+      };
+    })
+    .filter(x => x !== null);
 
-                const isEmpty = !color && !codigoBarras && stockSucursales.every(s => s.cantidad === 0) && stockMayorista === 0;
-                if (isEmpty) return null;
-
-                return {
-                  color,
-                  ...(codigoBarras ? { codigoBarras } : {}),
-                  stockSucursales,
-                  stockMayorista
-                };
-              })
-              .filter((x: any) => x !== null)
-          : undefined;
-
-
-  // 🧱 Retorno sanitizado y seguro
   return {
     codigoBarras: (v?.codigoBarras ?? '').toString(),
     descripcion: (v?.descripcion ?? '').toString(),
     imagen: (v?.imagen ?? '').toString(),
-    ...(color ? { color } : {}), // ✅ solo incluye color si fue completado
+    color,
     rubro,
     subrubro,
     marca,
     precioCosto: Number.isFinite(Number(v?.precioCosto)) ? Number(v.precioCosto) : 0,
     precioSinImpuestos: Number.isFinite(Number(v?.precioSinImpuestos)) ? Number(v.precioSinImpuestos) : 0,
     ventaMinorista: !!v?.ventaMinorista,
-    precioMinorista: Number.isFinite(Number(v?.precioMinorista)) ? Number(v.precioMinorista) : 0,
+    precioMinorista: Number.isFinite(Number(v?.precioMinorista)) ? Number(v?.precioMinorista) : 0,
     ventaMayorista: !!v?.ventaMayorista,
-    precioMayorista: Number.isFinite(Number(v?.precioMayorista)) ? Number(v.precioMayorista) : 0,
+    precioMayorista: Number.isFinite(Number(v?.precioMayorista)) ? Number(v?.precioMayorista) : 0,
     oferta: !!v?.oferta,
-    precioOferta: Number.isFinite(Number(v?.precioOferta)) ? Number(v.precioOferta) : 0,
+    precioOferta: Number.isFinite(Number(v?.precioOferta)) ? Number(v?.precioOferta) : 0,
     destacado: !!v?.destacado,
-    stockMinimo: Number.isFinite(Number(v?.stockMinimo)) ? Number(v.stockMinimo) : 0,
+    stockMinimo: Number.isFinite(Number(v?.stockMinimo)) ? Number(v?.stockMinimo) : 0,
     stockSucursales,
-    stockMayorista: Number.isFinite(Number(v?.stockMayorista)) ? Number(v.stockMayorista) : 0,
-    variantes
+    stockMayorista: Number.isFinite(Number(v?.stockMayorista)) ? Number(v?.stockMayorista) : 0,
+    variantes // ✅ siempre array, aunque esté vacío
   };
 }
+
 
 
 
