@@ -28,21 +28,61 @@ export class CarritoService {
   }
 
   // SERVICIO PARA ELIMINAR UN PRODUCTO DEL CARRITO ID
-  async deleteProductoCarrito(clienteId: string, productoId: string): Promise<void> {
-    const clienteRef = doc(this.firestore, `Clientes/${clienteId}`);
-    try {
-      const clienteSnap = await getDoc(clienteRef);
-      if (clienteSnap.exists()) {
-        const clienteData = clienteSnap.data();
-        const carritoActual = clienteData['carrito'] || [];
-        const nuevoCarrito = carritoActual.filter((producto: any) => producto.id !== productoId);
-        await updateDoc(clienteRef, { carrito: nuevoCarrito });
-        this.carritoSubject.next(nuevoCarrito);
+  // async deleteProductoCarrito(clienteId: string, productoId: string): Promise<void> {
+  //   const clienteRef = doc(this.firestore, `Clientes/${clienteId}`);
+  //   try {
+  //     const clienteSnap = await getDoc(clienteRef);
+  //     if (clienteSnap.exists()) {
+  //       const clienteData = clienteSnap.data();
+  //       const carritoActual = clienteData['carrito'] || [];
+  //       const nuevoCarrito = carritoActual.filter((producto: any) => producto.id !== productoId);
+  //       await updateDoc(clienteRef, { carrito: nuevoCarrito });
+  //       this.carritoSubject.next(nuevoCarrito);
 
-      }
-    } catch (error) {
-    }
+  //     }
+  //   } catch (error) {
+  //   }
+  // }
+  async deleteProductoCarrito(clienteId: string, uidCarrito: string): Promise<void> {
+  if (clienteId === 'invitado') {
+    // 🔹 Manejo local para el invitado
+    const carritoRaw = localStorage.getItem('carritoInvitado');
+    if (!carritoRaw) return;
+
+    const carrito = JSON.parse(carritoRaw);
+    const nuevoCarrito = carrito.filter((producto: any) => producto.uidCarrito !== uidCarrito);
+
+    // 🔹 Guardar nuevo carrito
+    localStorage.setItem('carritoInvitado', JSON.stringify(nuevoCarrito));
+
+    // 🔹 Notificar cambios
+    this.actualizarCantidadProductosDesdeLocalStorage();
+    this.carritoSubject.next(nuevoCarrito);
+    return;
   }
+
+  // 🔹 Caso usuario logueado (en Firestore)
+  const clienteRef = doc(this.firestore, `Clientes/${clienteId}`);
+  try {
+    const clienteSnap = await getDoc(clienteRef);
+    if (clienteSnap.exists()) {
+      const clienteData = clienteSnap.data();
+      const carritoActual = clienteData['carrito'] || [];
+
+      // 🔹 Filtrar por uidCarrito en lugar de id
+      const nuevoCarrito = carritoActual.filter((producto: any) => producto.uidCarrito !== uidCarrito);
+
+      // 🔹 Actualizar Firestore
+      await updateDoc(clienteRef, { carrito: nuevoCarrito });
+
+      // 🔹 Notificar cambios locales
+      this.carritoSubject.next(nuevoCarrito);
+    }
+  } catch (error) {
+    console.error('Error al eliminar producto del carrito:', error);
+  }
+}
+
 
   actualizarCantidadProductosDesdeLocalStorage(): void {
     const carritoRaw = localStorage.getItem('carritoInvitado');
