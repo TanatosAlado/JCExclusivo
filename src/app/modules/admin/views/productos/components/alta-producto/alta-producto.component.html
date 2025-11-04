@@ -4,21 +4,18 @@
 
   <!-- 🔹 Selección de tipo de producto -->
   <div class="d-flex justify-content-center gap-3 mb-4">
-    <button class="btn btn-outline-primary"
-            (click)="seleccionarTipo('none')"
-            [class.active]="tipoSeleccionado === 'none'">
+    <button class="btn btn-outline-primary" (click)="seleccionarTipo('none')"
+      [class.active]="tipoSeleccionado === 'none'">
       Producto único
     </button>
 
-    <button class="btn btn-outline-primary"
-            (click)="seleccionarTipo('color')"
-            [class.active]="tipoSeleccionado === 'color'">
+    <button class="btn btn-outline-primary" (click)="seleccionarTipo('color')"
+      [class.active]="tipoSeleccionado === 'color'">
       Variante por color
     </button>
 
-    <button class="btn btn-outline-primary"
-            (click)="seleccionarTipo('modelo+color')"
-            [class.active]="tipoSeleccionado === 'modelo+color'">
+    <button class="btn btn-outline-primary" (click)="seleccionarTipo('modelo+color')"
+      [class.active]="tipoSeleccionado === 'modelo+color'">
       Variante por modelo y color
     </button>
   </div>
@@ -120,9 +117,8 @@
           <tr *ngFor="let s of sucursales; let i = index">
             <td>{{ s.nombre }}</td>
             <td>
-              <input type="number"
-                     class="form-control form-control-sm"
-                     [(ngModel)]="producto.stockSucursales[i].cantidad">
+              <input type="number" class="form-control form-control-sm"
+                [(ngModel)]="producto.stockSucursales[i].cantidad">
             </td>
           </tr>
         </tbody>
@@ -136,7 +132,7 @@
     </div>
 
     <div class="mt-4 text-end">
-      <button class="btn btn-success" (click)="guardarProductoUnico()">
+      <button class="btn btn-success" (click)="guardarProducto()">
         Guardar producto
       </button>
     </div>
@@ -146,295 +142,301 @@
 
   <!-- 🔹 Formulario: Producto con variantes por color -->
   <div *ngIf="tipoSeleccionado === 'color'" class="card shadow p-4" [formGroup]="form">
-  <h4 class="mb-3">Producto con variantes por color</h4>
+    <h4 class="mb-3">Producto con variantes por color</h4>
 
-  <!-- 🧩 Datos generales -->
-  <div class="row g-3">
+    <!-- 🧩 Datos generales -->
+    <div class="row g-3">
 
-    <!-- <div class="col-md-4">
+      <!-- <div class="col-md-4">
       <label class="form-label">Código base</label>
       <input type="text" class="form-control" formControlName="codigoBarras">
     </div> -->
 
-    <div class="col-md-8">
-      <label class="form-label">Descripción</label>
-      <input type="text" class="form-control" formControlName="descripcion">
+      <div class="col-md-8">
+        <label class="form-label">Descripción</label>
+        <input type="text" class="form-control" formControlName="descripcion">
+      </div>
+
+      <div class="col-md-12">
+        <label class="form-label">Imagen (URL)</label>
+        <input type="text" class="form-control" placeholder="https://..." formControlName="imagen">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Precio costo</label>
+        <input type="number" class="form-control" formControlName="precioCosto">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Precio sin impuestos</label>
+        <input type="number" class="form-control" formControlName="precioSinImpuestos">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Precio minorista</label>
+        <input type="number" class="form-control" formControlName="precioMinorista">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Precio mayorista</label>
+        <input type="number" class="form-control" formControlName="precioMayorista">
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">Rubro</label>
+        <input type="text" class="form-control" formControlName="rubro">
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">Subrubro</label>
+        <input type="text" class="form-control" formControlName="subrubro">
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">Marca</label>
+        <input type="text" class="form-control" formControlName="marca">
+      </div>
+
+      <div class="col-md-6 d-flex align-items-center">
+        <input type="checkbox" class="form-check-input me-2" formControlName="destacado">
+        <label class="form-check-label">Destacado</label>
+      </div>
+
+      <div class="col-md-6 d-flex align-items-center">
+        <input type="checkbox" class="form-check-input me-2" formControlName="oferta">
+        <label class="form-check-label">En oferta</label>
+      </div>
+
+      <div class="col-md-6" *ngIf="form.get('oferta')?.value">
+        <label class="form-label">Precio oferta</label>
+        <input type="number" class="form-control" formControlName="precioOferta">
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">Stock mínimo</label>
+        <input type="number" class="form-control" formControlName="stockMinimo">
+      </div>
     </div>
 
-    <div class="col-md-12">
-      <label class="form-label">Imagen (URL)</label>
-      <input type="text" class="form-control" placeholder="https://..." formControlName="imagen">
+    <hr class="my-4">
+
+    <!-- 🎨 Variantes por color -->
+    <div formArrayName="variantes">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5>Variantes por color</h5>
+        <button type="button" class="btn btn-sm btn-outline-primary" (click)="agregarVarianteColor()">
+          + Agregar color
+        </button>
+      </div>
+
+      <div *ngFor="let variante of variantes.controls; let i = index" [formGroupName]="i"
+        class="card mb-3 border-0 shadow-sm p-3">
+
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="m-0">Color {{ i + 1 }}</h6>
+          <button type="button" class="btn btn-sm btn-outline-danger"
+            (click)="eliminarVarianteColor(i)">Eliminar</button>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Color</label>
+            <input type="text" class="form-control" formControlName="color" placeholder="Ej: Rojo">
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">Código de barras</label>
+            <input type="text" class="form-control" formControlName="codigoBarras">
+          </div>
+        </div>
+
+        <!-- 🏪 Stock por sucursal -->
+        <div class="mt-3" formArrayName="stockSucursales">
+          <h6>Stock por sucursal</h6>
+          <table class="table table-sm">
+            <thead>
+              <tr>
+                <th>Sucursal</th>
+                <th style="width: 150px;">Cantidad</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let stock of variante.get('stockSucursales')['controls']; let j = index" [formGroupName]="j">
+                <td>{{ getNombreSucursal(stock.get('sucursalId')?.value) }}</td>
+                <td>
+                  <input type="number" formControlName="cantidad" class="form-control form-control-sm" min="0">
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 📦 Stock mayorista -->
+        <div class="col-md-4 mt-3">
+          <label class="form-label">Stock mayorista</label>
+          <input type="number" formControlName="stockMayorista" class="form-control" min="0">
+        </div>
+      </div>
     </div>
 
-    <div class="col-md-3">
-      <label class="form-label">Precio costo</label>
-      <input type="number" class="form-control" formControlName="precioCosto">
-    </div>
-
-    <div class="col-md-3">
-      <label class="form-label">Precio sin impuestos</label>
-      <input type="number" class="form-control" formControlName="precioSinImpuestos">
-    </div>
-
-    <div class="col-md-3">
-      <label class="form-label">Precio minorista</label>
-      <input type="number" class="form-control" formControlName="precioMinorista">
-    </div>
-
-    <div class="col-md-3">
-      <label class="form-label">Precio mayorista</label>
-      <input type="number" class="form-control" formControlName="precioMayorista">
-    </div>
-
-    <div class="col-md-4">
-      <label class="form-label">Rubro</label>
-      <input type="text" class="form-control" formControlName="rubro">
-    </div>
-
-    <div class="col-md-4">
-      <label class="form-label">Subrubro</label>
-      <input type="text" class="form-control" formControlName="subrubro">
-    </div>
-
-    <div class="col-md-4">
-      <label class="form-label">Marca</label>
-      <input type="text" class="form-control" formControlName="marca">
-    </div>
-
-    <div class="col-md-6 d-flex align-items-center">
-      <input type="checkbox" class="form-check-input me-2" formControlName="destacado">
-      <label class="form-check-label">Destacado</label>
-    </div>
-
-    <div class="col-md-6 d-flex align-items-center">
-      <input type="checkbox" class="form-check-input me-2" formControlName="oferta">
-      <label class="form-check-label">En oferta</label>
-    </div>
-
-    <div class="col-md-6" *ngIf="form.get('oferta')?.value">
-      <label class="form-label">Precio oferta</label>
-      <input type="number" class="form-control" formControlName="precioOferta">
-    </div>
-
-    <div class="col-md-6">
-      <label class="form-label">Stock mínimo</label>
-      <input type="number" class="form-control" formControlName="stockMinimo">
-    </div>
-  </div>
-
-  <hr class="my-4">
-
-  <!-- 🎨 Variantes por color -->
-  <div formArrayName="variantes">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <h5>Variantes por color</h5>
-      <button type="button" class="btn btn-sm btn-outline-primary" (click)="agregarVarianteColor()">
-        + Agregar color
+    <div class="mt-4 text-end">
+      <button class="btn btn-success" (click)="guardarProducto()">
+        Guardar producto con variantes
       </button>
     </div>
-
-    <div *ngFor="let variante of variantes.controls; let i = index" [formGroupName]="i"
-         class="card mb-3 border-0 shadow-sm p-3">
-
-      <div class="d-flex justify-content-between align-items-center mb-2">
-        <h6 class="m-0">Color {{ i + 1 }}</h6>
-        <button type="button" class="btn btn-sm btn-outline-danger" (click)="eliminarVarianteColor(i)">Eliminar</button>
-      </div>
-
-      <div class="row g-3">
-        <div class="col-md-6">
-          <label class="form-label">Color</label>
-          <input type="text" class="form-control" formControlName="color" placeholder="Ej: Rojo">
-        </div>
-
-        <div class="col-md-6">
-          <label class="form-label">Código de barras</label>
-          <input type="text" class="form-control" formControlName="codigoBarras">
-        </div>
-      </div>
-
-      <!-- 🏪 Stock por sucursal -->
-      <div class="mt-3" formArrayName="stockSucursales">
-        <h6>Stock por sucursal</h6>
-        <table class="table table-sm">
-          <thead>
-            <tr>
-              <th>Sucursal</th>
-              <th style="width: 150px;">Cantidad</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let stock of variante.get('stockSucursales')['controls']; let j = index" [formGroupName]="j">
-              <td>{{ getNombreSucursal(stock.get('sucursalId')?.value) }}</td>
-              <td>
-                <input type="number" formControlName="cantidad" class="form-control form-control-sm" min="0">
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- 📦 Stock mayorista -->
-      <div class="col-md-4 mt-3">
-        <label class="form-label">Stock mayorista</label>
-        <input type="number" formControlName="stockMayorista" class="form-control" min="0">
-      </div>
-    </div>
   </div>
 
-  <div class="mt-4 text-end">
-    <button class="btn btn-success" (click)="guardarProductoColor()">
-      Guardar producto con variantes
-    </button>
-  </div>
-</div>
+  <!-- 🧩 Sección PRODUCTO MODELO + COLOR -->
+  <!-- 🧩 Producto con variantes por modelo y color -->
+  <div *ngIf="tipoSeleccionado === 'modelo+color'" class="card shadow p-4" [formGroup]="form">
 
-<!-- 🧩 Sección PRODUCTO MODELO + COLOR -->
-<!-- 🧩 Producto con variantes por modelo y color -->
-<div *ngIf="tipoSeleccionado === 'modelo+color'" class="card shadow p-4" [formGroup]="form">
+    <h4 class="mb-3">Producto con variantes por modelo y color</h4>
 
-  <h4 class="mb-3">Producto con variantes por modelo y color</h4>
+    <!-- 🔹 Datos generales -->
+    <div class="row g-3">
 
-  <!-- 🔹 Datos generales -->
-  <div class="row g-3">
+      <div class="col-md-8">
+        <label class="form-label">Descripción</label>
+        <input type="text" class="form-control" formControlName="descripcion">
+      </div>
 
-    <div class="col-md-8">
-      <label class="form-label">Descripción</label>
-      <input type="text" class="form-control" formControlName="descripcion">
+      <div class="col-md-12">
+        <label class="form-label">Imagen (URL)</label>
+        <input type="text" class="form-control" placeholder="https://..." formControlName="imagen">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Precio costo</label>
+        <input type="number" class="form-control" formControlName="precioCosto">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Precio sin impuestos</label>
+        <input type="number" class="form-control" formControlName="precioSinImpuestos">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Precio minorista</label>
+        <input type="number" class="form-control" formControlName="precioMinorista">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Precio mayorista</label>
+        <input type="number" class="form-control" formControlName="precioMayorista">
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">Rubro</label>
+        <input type="text" class="form-control" formControlName="rubro">
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">Subrubro</label>
+        <input type="text" class="form-control" formControlName="subrubro">
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">Marca</label>
+        <input type="text" class="form-control" formControlName="marca">
+      </div>
+
+      <div class="col-md-6 d-flex align-items-center">
+        <input type="checkbox" class="form-check-input me-2" formControlName="destacado">
+        <label class="form-check-label">Destacado</label>
+      </div>
+
+      <div class="col-md-6 d-flex align-items-center">
+        <input type="checkbox" class="form-check-input me-2" formControlName="oferta">
+        <label class="form-check-label">En oferta</label>
+      </div>
+
+      <div class="col-md-6" *ngIf="form.get('oferta')?.value">
+        <label class="form-label">Precio oferta</label>
+        <input type="number" class="form-control" formControlName="precioOferta">
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">Stock mínimo</label>
+        <input type="number" class="form-control" formControlName="stockMinimo">
+      </div>
     </div>
 
-    <div class="col-md-12">
-      <label class="form-label">Imagen (URL)</label>
-      <input type="text" class="form-control" placeholder="https://..." formControlName="imagen">
-    </div>
+    <hr class="my-4">
 
-    <div class="col-md-3">
-      <label class="form-label">Precio costo</label>
-      <input type="number" class="form-control" formControlName="precioCosto">
-    </div>
+    <!-- 🧱 Modelos y colores -->
+    <h5 class="mb-3 fw-bold text-primary">Variantes por modelo y color</h5>
 
-    <div class="col-md-3">
-      <label class="form-label">Precio sin impuestos</label>
-      <input type="number" class="form-control" formControlName="precioSinImpuestos">
-    </div>
+    <button class="btn btn-success btn-sm mb-3" (click)="agregarModelo()">+ Agregar modelo</button>
 
-    <div class="col-md-3">
-      <label class="form-label">Precio minorista</label>
-      <input type="number" class="form-control" formControlName="precioMinorista">
-    </div>
+    <div formArrayName="variantes">
+      <div *ngFor="let modelo of getVariantes().controls; let i = index" [formGroupName]="i"
+        class="card mb-3 shadow-sm">
 
-    <div class="col-md-3">
-      <label class="form-label">Precio mayorista</label>
-      <input type="number" class="form-control" formControlName="precioMayorista">
-    </div>
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="fw-bold text-secondary">Modelo {{ i + 1 }}</h6>
+            <button type="button" class="btn btn-outline-danger btn-sm" (click)="eliminarModelo(i)">Eliminar
+              modelo</button>
+          </div>
 
-    <div class="col-md-4">
-      <label class="form-label">Rubro</label>
-      <input type="text" class="form-control" formControlName="rubro">
-    </div>
+          <!-- Nombre del modelo -->
+          <div class="mb-3">
+            <label class="form-label">Nombre del modelo</label>
+            <input type="text" formControlName="modelo" class="form-control" placeholder="Ej: iPhone 14">
+          </div>
 
-    <div class="col-md-4">
-      <label class="form-label">Subrubro</label>
-      <input type="text" class="form-control" formControlName="subrubro">
-    </div>
+          <!-- 🎨 Colores dentro de cada modelo -->
+          <div formArrayName="colores" class="ms-3">
+            <h6 class="fw-bold">Colores disponibles</h6>
+            <button class="btn btn-primary btn-sm mb-2" (click)="agregarColor(i)">+ Agregar color</button>
 
-    <div class="col-md-4">
-      <label class="form-label">Marca</label>
-      <input type="text" class="form-control" formControlName="marca">
-    </div>
+            <div *ngFor="let color of getColores(i).controls; let j = index" [formGroupName]="j"
+              class="border p-3 rounded mb-2 bg-light">
 
-    <div class="col-md-6 d-flex align-items-center">
-      <input type="checkbox" class="form-check-input me-2" formControlName="destacado">
-      <label class="form-check-label">Destacado</label>
-    </div>
+              <div class="row g-3">
+                <div class="col-md-3">
+                  <label class="form-label">Color</label>
+                  <input type="text" formControlName="color" class="form-control" placeholder="Ej: Rojo">
+                </div>
 
-    <div class="col-md-6 d-flex align-items-center">
-      <input type="checkbox" class="form-check-input me-2" formControlName="oferta">
-      <label class="form-check-label">En oferta</label>
-    </div>
+                <div class="col-md-3">
+                  <label class="form-label">Código de barras</label>
+                  <input type="text" formControlName="codigoBarras" class="form-control" placeholder="EAN / interno">
+                </div>
 
-    <div class="col-md-6" *ngIf="form.get('oferta')?.value">
-      <label class="form-label">Precio oferta</label>
-      <input type="number" class="form-control" formControlName="precioOferta">
-    </div>
+                <div class="col-md-3">
+                  <label class="form-label">Stock mayorista</label>
+                  <input type="number" formControlName="stockMayorista" class="form-control">
+                </div>
 
-    <div class="col-md-6">
-      <label class="form-label">Stock mínimo</label>
-      <input type="number" class="form-control" formControlName="stockMinimo">
-    </div>
-  </div>
-
-  <hr class="my-4">
-
-  <!-- 🧱 Modelos y colores -->
-  <h5 class="mb-3 fw-bold text-primary">Variantes por modelo y color</h5>
-
-  <button class="btn btn-success btn-sm mb-3" (click)="agregarModelo()">+ Agregar modelo</button>
-
-  <div formArrayName="variantes">
-    <div *ngFor="let modelo of getVariantes().controls; let i = index" [formGroupName]="i" class="card mb-3 shadow-sm">
-
-      <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <h6 class="fw-bold text-secondary">Modelo {{ i + 1 }}</h6>
-          <button type="button" class="btn btn-outline-danger btn-sm" (click)="eliminarModelo(i)">Eliminar modelo</button>
-        </div>
-
-        <!-- Nombre del modelo -->
-        <div class="mb-3">
-          <label class="form-label">Nombre del modelo</label>
-          <input type="text" formControlName="modelo" class="form-control" placeholder="Ej: iPhone 14">
-        </div>
-
-        <!-- 🎨 Colores dentro de cada modelo -->
-        <div formArrayName="colores" class="ms-3">
-          <h6 class="fw-bold">Colores disponibles</h6>
-          <button class="btn btn-primary btn-sm mb-2" (click)="agregarColor(i)">+ Agregar color</button>
-
-          <div *ngFor="let color of getColores(i).controls; let j = index" [formGroupName]="j" class="border p-3 rounded mb-2 bg-light">
-
-            <div class="row g-3">
-              <div class="col-md-3">
-                <label class="form-label">Color</label>
-                <input type="text" formControlName="color" class="form-control" placeholder="Ej: Rojo">
+                <div class="col-md-3 d-flex align-items-end">
+                  <button class="btn btn-outline-danger btn-sm" (click)="eliminarColor(i, j)">Eliminar color</button>
+                </div>
               </div>
 
-              <div class="col-md-3">
-                <label class="form-label">Código de barras</label>
-                <input type="text" formControlName="codigoBarras" class="form-control" placeholder="EAN / interno">
-              </div>
-
-              <div class="col-md-3">
-                <label class="form-label">Stock mayorista</label>
-                <input type="number" formControlName="stockMayorista" class="form-control">
-              </div>
-
-              <div class="col-md-3 d-flex align-items-end">
-                <button class="btn btn-outline-danger btn-sm" (click)="eliminarColor(i, j)">Eliminar color</button>
-              </div>
-            </div>
-
-            <!-- 🏪 Stock por sucursal -->
-            <div formArrayName="stockSucursales" class="mt-2">
-              <div *ngFor="let suc of getStockSucursales(i, j).controls; let s = index" [formGroupName]="s" class="d-flex align-items-center gap-2 mb-1">
-                <label class="text-muted small w-25">{{ getNombreSucursal(suc.get('sucursalId')?.value) }}</label>
-                <input type="number" formControlName="cantidad" class="form-control form-control-sm w-50">
+              <!-- 🏪 Stock por sucursal -->
+              <div formArrayName="stockSucursales" class="mt-2">
+                <div *ngFor="let suc of getStockSucursales(i, j).controls; let s = index" [formGroupName]="s"
+                  class="d-flex align-items-center gap-2 mb-1">
+                  <label class="text-muted small w-25">{{ getNombreSucursal(suc.get('sucursalId')?.value) }}</label>
+                  <input type="number" formControlName="cantidad" class="form-control form-control-sm w-50">
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- 💾 Guardar -->
+    <div class="mt-4 text-end">
+      <button class="btn btn-success" (click)="guardarProducto()">
+        Guardar producto con variantes
+      </button>
+    </div>
   </div>
 
-  <!-- 💾 Guardar -->
-  <div class="mt-4 text-end">
-    <button class="btn btn-success" (click)="guardarProductoModeloColor()">
-      Guardar producto con variantes
-    </button>
-  </div>
-</div>
-
 
 
 </div>
+
