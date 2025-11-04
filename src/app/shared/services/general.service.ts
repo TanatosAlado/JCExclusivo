@@ -321,3 +321,6 @@ export class GeneralService {
     return `${dia}/${mes}/${anio} ${horas}:${minutos}`;
   }
 }
+
+
+

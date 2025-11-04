@@ -18,6 +18,7 @@ import { Producto, VarianteProducto } from 'src/app/modules/shop/models/producto
 import { ProductosService } from 'src/app/modules/shop/services/productos.service';
 import { v4 as uuidv4 } from 'uuid';
 
+
 @Component({
   selector: 'app-alta-producto',
   templateUrl: './alta-producto.component.html',
@@ -63,7 +64,7 @@ export class AltaProductoComponent implements OnInit {
     'none' // tipoVariantes
   );
 
-  constructor(private fb: FormBuilder, private sucursalService: SucursalesService) { }
+  constructor(private fb: FormBuilder, private sucursalService: SucursalesService, private firestore: Firestore) { }
 
   ngOnInit(): void {
     // 1) Primero creamos el form (siempre primero)
@@ -357,36 +358,147 @@ export class AltaProductoComponent implements OnInit {
     return this.stockTotal + (this.form.get('stockMayorista')!.value || 0);
   }
 
-  // ---------- guardar (stub) ----------
-  async guardarProducto() {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
+
+async guardarProducto() {
+  // imprimimos form por debug (te sirve para ver variantes)
+  const formValue = this.form ? this.form.value : {};
+  console.log('Guardando producto — form.value:', formValue);
+  console.log('Guardando producto — producto (modelo ngModel):', this.producto);
+
+  try {
+    // -------- PRODUCTO ÚNICO (usa this.producto porque la UI usa ngModel) --------
+    if (this.tipoSeleccionado === 'none') {
+      const payloadUnico = {
+        // si querés un "nombre" distinto, podés usar otro campo; acá uso descripcion como nombre
+        nombre: this.producto.descripcion || '',
+        descripcion: this.producto.descripcion || '',
+        codigoBarras: this.producto.codigoBarras || '',
+        precioCosto: Number(this.producto.precioCosto || 0),
+        precioSinImpuestos: Number(this.producto.precioSinImpuestos || 0),
+        precioMinorista: Number(this.producto.precioMinorista || 0),
+        precioMayorista: Number(this.producto.precioMayorista || 0),
+        oferta: Boolean(this.producto.oferta),
+        precioOferta: this.producto.oferta ? Number(this.producto.precioOferta || 0) : null,
+        destacado: Boolean(this.producto.destacado),
+        imagen: this.producto.imagen || '',
+        rubro: this.producto.rubro || '',
+        subrubro: this.producto.subrubro || '',
+        marca: this.producto.marca || '',
+        stockMayorista: Number(this.producto.stockMayorista || 0),
+        stockSucursales: this.mapStockSucursales(this.producto.stockSucursales),
+        stockMinimo: Number(this.producto.stockMinimo || 0),
+        tipoVariantes: 'none',
+        fechaAlta: new Date()
+      };
+
+      console.log('Producto único a guardar (payload):', payloadUnico);
+
+      // usa collection/addDoc como ya usabas
+      const productosRef = collection(this.firestore, 'productos');
+      await addDoc(productosRef, payloadUnico);
+
+      console.log('✅ Producto único guardado correctamente.');
+      // opcional: reset UI
+      // this.resetFormAndModel();
       return;
     }
 
+    // -------- PRODUCTO CON VARIANTES POR COLOR (usa this.form.value) --------
+    if (this.tipoSeleccionado === 'color') {
+      const idPadre = uuidv4();
+      const base = formValue; // ya tienes descripción, imagen, precios, etc en el form
+      const productosRef = collection(this.firestore, 'productos');
 
-    this.guardando = true;
-    try {
-      // por ahora solo mostramos el payload en consola
-      const payload = this.form.value;
-      console.log('Producto listo para guardar:', payload);
-      // TODO: en el siguiente paso integramos con Firestore
+      // si no hay variantes en form, salimos
+      const variantesArr = formValue.variantes || [];
+      for (const v of variantesArr) {
+        const doc = {
+          productoPadre: idPadre,
+          nombre: `${base.descripcion} - ${v.color || ''}`.trim(),
+          descripcion: base.descripcion || '',
+          codigoBarras: v.codigoBarras || '',
+          precioCosto: Number(base.precioCosto || 0),
+          precioSinImpuestos: Number(base.precioSinImpuestos || 0),
+          precioMinorista: Number(v.precioMinorista ?? base.precioMinorista ?? 0),
+          precioMayorista: Number(v.precioMayorista ?? base.precioMayorista ?? 0),
+          oferta: Boolean(base.oferta),
+          precioOferta: base.oferta ? Number(base.precioOferta || 0) : null,
+          destacado: Boolean(base.destacado),
+          imagen: base.imagen || '',
+          rubro: base.rubro || '',
+          subrubro: base.subrubro || '',
+          marca: base.marca || '',
+          color: v.color || '',
+          stockMayorista: Number(v.stockMayorista || 0),
+          stockSucursales: this.mapStockSucursales(v.stockSucursales),
+          tipoVariantes: 'color',
+          fechaAlta: new Date()
+        };
+        await addDoc(productosRef, doc);
+      }
 
-
-      // reset limpio manteniendo modo en 'none'
-      const modo = this.form.get('modo')!.value;
-      this.form.reset({ modo });
-      this.actualizarStockSucursalesBase();
-      this.variantes.clear();
-
-
-    } catch (err) {
-      console.error(err);
-      alert('Error al preparar el guardado');
-    } finally {
-      this.guardando = false;
+      console.log('✅ Variantes por color guardadas.');
+      return;
     }
+
+    // -------- PRODUCTO CON MODELO + COLOR --------
+    if (this.tipoSeleccionado === 'modelo+color') {
+      const idPadre = uuidv4();
+      const base = formValue;
+      const productosRef = collection(this.firestore, 'productos');
+
+      const modelos = (formValue.variantes || []);
+      for (const modelo of modelos) {
+        const modeloNombre = modelo.modelo || '';
+        const colores = (modelo.colores || []);
+        for (const color of colores) {
+          const doc = {
+            productoPadre: idPadre,
+            nombre: `${base.descripcion} - ${modeloNombre} - ${color.color || ''}`.trim(),
+            descripcion: base.descripcion || '',
+            modelo: modeloNombre,
+            color: color.color || '',
+            codigoBarras: color.codigoBarras || '',
+            precioCosto: Number(base.precioCosto || 0),
+            precioSinImpuestos: Number(base.precioSinImpuestos || 0),
+            precioMinorista: Number(color.precioMinorista ?? base.precioMinorista ?? 0),
+            precioMayorista: Number(color.precioMayorista ?? base.precioMayorista ?? 0),
+            oferta: Boolean(base.oferta),
+            precioOferta: base.oferta ? Number(base.precioOferta || 0) : null,
+            destacado: Boolean(base.destacado),
+            imagen: base.imagen || '',
+            rubro: base.rubro || '',
+            subrubro: base.subrubro || '',
+            marca: base.marca || '',
+            stockMayorista: Number(color.stockMayorista || 0),
+            stockSucursales: this.mapStockSucursales(color.stockSucursales),
+            tipoVariantes: 'modelo+color',
+            fechaAlta: new Date()
+          };
+          await addDoc(productosRef, doc);
+        }
+      }
+
+      console.log('✅ Variantes por modelo+color guardadas.');
+      return;
+    }
+
+    console.warn('Tipo seleccionado desconocido:', this.tipoSeleccionado);
+  } catch (err) {
+    console.error('Error guardando producto:', err);
+    alert('Error al guardar el producto. Revisa la consola.');
   }
+}
+
+private mapStockSucursales(stockArray: any[] | undefined): { [id: string]: number } {
+  const out: { [id: string]: number } = {};
+  if (!stockArray || !Array.isArray(stockArray)) return out;
+  stockArray.forEach(s => {
+    if (s && s.sucursalId) out[s.sucursalId] = Number(s.cantidad || 0);
+  });
+  return out;
+}
+
 
   agregarVarianteColor() {
     if (!this.sucursales || this.sucursales.length === 0) {
