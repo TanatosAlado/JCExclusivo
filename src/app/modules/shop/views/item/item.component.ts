@@ -20,7 +20,8 @@ export class ItemComponent {
   loadingCarrito: { [id: string]: boolean } = {};
 
   selectedVariante: any = null;   // objeto que representará la "versión" seleccionada
-  selectedColor: string = '';
+selectedModelo: any = null;
+selectedColor: any = null;
 
   constructor(
     private generalService: GeneralService,
@@ -29,11 +30,48 @@ export class ItemComponent {
     private router: Router
   ) { }
 
-  ngOnInit() {
-    // Por defecto el color principal queda seleccionado
-    // this.selectedVariante = { ...this.producto };
-    // this.selectedColor = this.producto.color;
-    this.seleccionarColorPrincipal();
+ngOnInit(): void {
+  // Si hay modelos
+  // if (this.producto?.modelos?.length) {
+  //   this.selectedModelo = this.producto.modelos[0];
+  //   // Tomar el primer color del modelo si existe
+  //   this.selectedColor = this.selectedModelo?.variantesColor?.[0] || null;
+  // } 
+  // // Si no hay modelos pero hay variantes en producto
+  // else if (this.producto?.variantes?.length) {
+  //   this.selectedModelo = null;
+  //   this.selectedColor = this.producto.variantes[0];
+  // }
+  // // Si no hay variantes, tomar color base
+  // else if (this.producto?.color) {
+  //   this.selectedModelo = null;
+  //   this.selectedColor = { color: this.producto.color };
+  // }
+}
+
+  
+// Al seleccionar modelo desde el botón
+seleccionarModelo(modelo: any) {
+  this.selectedModelo = modelo;
+  this.selectedColor = modelo?.variantesColor?.[0] || null;
+}
+
+// Al seleccionar color
+seleccionarColor(colorVar: any) {
+  this.selectedColor = colorVar;
+}
+
+// Seleccionar un color dentro del modelo elegido
+seleccionarVariante(colorVar: any) {
+  this.selectedColor = colorVar.color || '';
+  this.selectedVariante = this.buildProductoSeleccionado(colorVar);
+}
+
+  getStockTotalActual(): number {
+    if (this.selectedColor?.stockSucursales?.length) {
+      return this.selectedColor.stockSucursales.reduce((a: number, b: any) => a + (b.cantidad || 0), 0);
+    }
+    return 0;
   }
 
 
@@ -58,7 +96,7 @@ export class ItemComponent {
       stockMinimo: this.producto.stockMinimo,
       stockSucursales: this.producto.stockSucursales || [],
       stockMayorista: this.producto.stockMayorista || 0,
-      color: this.producto.color || '',      // color principal por defecto
+  //    color: this.producto.color || '',      // color principal por defecto
       // cualquier otro campo que necesites
     };
 
@@ -70,7 +108,7 @@ export class ItemComponent {
     return {
       ...base,
       codigoBarras: variante.codigoBarras ?? base.codigoBarras,
-      color: variante.color ?? base.color,
+     // color: variante.color ?? base.color,
       stockSucursales: variante.stockSucursales ?? base.stockSucursales,
       stockMayorista: typeof variante.stockMayorista !== 'undefined' ? variante.stockMayorista : base.stockMayorista,
       imagen: variante.imagen ?? base.imagen
@@ -144,14 +182,14 @@ export class ItemComponent {
   }
 
   // Selecciona una variante (cuando el usuario hace click en un circulito variante)
-  seleccionarVariante(variante: any) {
-    this.selectedColor = variante.color || '';
-    this.selectedVariante = this.buildProductoSeleccionado(variante);
-  }
+  // seleccionarVariante(variante: any) {
+  //   this.selectedColor = variante.color || '';
+  //   this.selectedVariante = this.buildProductoSeleccionado(variante);
+  // }
 
   // Selecciona el color principal
   seleccionarColorPrincipal() {
-    this.selectedColor = this.producto.color || '';
+ //   this.selectedColor = this.producto.color || '';
     this.selectedVariante = this.buildProductoSeleccionado(undefined); // sin variante -> base
   }
 

@@ -131,3 +131,9 @@ a{
   border: 2px solid #034f70; /* tu color corporativo */
   transform: scale(1.2);
 }
+
+.btn-outline-primary.active {
+  background-color: #034f70;
+  color: white;
+  border-color: #034f70;
+}

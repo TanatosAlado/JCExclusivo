@@ -217,7 +217,7 @@ export class GeneralService {
                 codigoBarras: producto.codigoBarras, // ✅ nuevo campo
                 imagen: producto.imagen,
                 nombre: producto.descripcion,
-                color: producto.color, // ✅ opcional, para mostrar en carrito
+           //     color: producto.color, // ✅ opcional, para mostrar en carrito
                 cantidad,
                 precioOferta: producto.oferta,
                 stock: calcularStockTotal(producto),
@@ -268,7 +268,7 @@ export class GeneralService {
             codigoBarras: producto.codigoBarras,
             imagen: producto.imagen,
             nombre: producto.descripcion,
-            color: producto.color,
+    //        color: producto.color,
             cantidad,
             precioOferta: producto.oferta,
             stock: calcularStockTotal(producto),
