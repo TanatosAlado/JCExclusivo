@@ -1,176 +1,440 @@
-<div class="imagen-central fadeIn first">
-  <img src="../../../../../../../assets/logo.png" alt="Logo" />
+<div class="container mt-4">
+
+  <h2 class="mb-4 text-center">Alta de producto</h2>
+
+  <!-- 🔹 Selección de tipo de producto -->
+  <div class="d-flex justify-content-center gap-3 mb-4">
+    <button class="btn btn-outline-primary"
+            (click)="seleccionarTipo('none')"
+            [class.active]="tipoSeleccionado === 'none'">
+      Producto único
+    </button>
+
+    <button class="btn btn-outline-primary"
+            (click)="seleccionarTipo('color')"
+            [class.active]="tipoSeleccionado === 'color'">
+      Variante por color
+    </button>
+
+    <button class="btn btn-outline-primary"
+            (click)="seleccionarTipo('modelo+color')"
+            [class.active]="tipoSeleccionado === 'modelo+color'">
+      Variante por modelo y color
+    </button>
+  </div>
+
+  <hr>
+
+  <!-- 🔹 Formulario: Producto Único -->
+  <div *ngIf="tipoSeleccionado === 'none'" class="card shadow p-4">
+
+    <h4 class="mb-3">Datos del producto único</h4>
+
+    <div class="row g-3">
+
+      <div class="col-md-4">
+        <label class="form-label">Código de barras</label>
+        <input type="text" class="form-control" [(ngModel)]="producto.codigoBarras">
+      </div>
+
+      <div class="col-md-8">
+        <label class="form-label">Descripción</label>
+        <input type="text" class="form-control" [(ngModel)]="producto.descripcion">
+      </div>
+
+      <!-- 🔹 Imagen -->
+      <div class="col-md-12">
+        <label class="form-label">URL de la imagen</label>
+        <input type="text" class="form-control" placeholder="https://..." [(ngModel)]="producto.imagen">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Precio costo</label>
+        <input type="number" class="form-control" [(ngModel)]="producto.precioCosto">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Precio sin impuestos</label>
+        <input type="number" class="form-control" [(ngModel)]="producto.precioSinImpuestos">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Precio minorista</label>
+        <input type="number" class="form-control" [(ngModel)]="producto.precioMinorista">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Precio mayorista</label>
+        <input type="number" class="form-control" [(ngModel)]="producto.precioMayorista">
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">Rubro</label>
+        <input type="text" class="form-control" [(ngModel)]="producto.rubro">
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">Subrubro</label>
+        <input type="text" class="form-control" [(ngModel)]="producto.subrubro">
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">Marca</label>
+        <input type="text" class="form-control" [(ngModel)]="producto.marca">
+      </div>
+
+      <div class="col-md-6 d-flex align-items-center">
+        <input type="checkbox" class="form-check-input me-2" [(ngModel)]="producto.destacado">
+        <label class="form-check-label">Destacado</label>
+      </div>
+
+      <div class="col-md-6 d-flex align-items-center">
+        <input type="checkbox" class="form-check-input me-2" [(ngModel)]="producto.oferta">
+        <label class="form-check-label">En oferta</label>
+      </div>
+
+      <div class="col-md-6" *ngIf="producto.oferta">
+        <label class="form-label">Precio oferta</label>
+        <input type="number" class="form-control" [(ngModel)]="producto.precioOferta">
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">Stock mínimo</label>
+        <input type="number" class="form-control" [(ngModel)]="producto.stockMinimo">
+      </div>
+    </div>
+
+    <hr class="my-4">
+
+    <!-- 🔹 Stock por sucursal -->
+    <h5>Stock por sucursal</h5>
+    <div class="table-responsive">
+      <table class="table table-sm align-middle">
+        <thead>
+          <tr>
+            <th>Sucursal</th>
+            <th style="width: 150px;">Cantidad</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let s of sucursales; let i = index">
+            <td>{{ s.nombre }}</td>
+            <td>
+              <input type="number"
+                     class="form-control form-control-sm"
+                     [(ngModel)]="producto.stockSucursales[i].cantidad">
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 🔹 Stock mayorista -->
+    <div class="col-md-4 mt-3">
+      <label class="form-label">Stock mayorista</label>
+      <input type="number" class="form-control" [(ngModel)]="producto.stockMayorista">
+    </div>
+
+    <div class="mt-4 text-end">
+      <button class="btn btn-success" (click)="guardarProductoUnico()">
+        Guardar producto
+      </button>
+    </div>
+
+  </div>
+
+
+  <!-- 🔹 Formulario: Producto con variantes por color -->
+  <div *ngIf="tipoSeleccionado === 'color'" class="card shadow p-4" [formGroup]="form">
+  <h4 class="mb-3">Producto con variantes por color</h4>
+
+  <!-- 🧩 Datos generales -->
+  <div class="row g-3">
+
+    <!-- <div class="col-md-4">
+      <label class="form-label">Código base</label>
+      <input type="text" class="form-control" formControlName="codigoBarras">
+    </div> -->
+
+    <div class="col-md-8">
+      <label class="form-label">Descripción</label>
+      <input type="text" class="form-control" formControlName="descripcion">
+    </div>
+
+    <div class="col-md-12">
+      <label class="form-label">Imagen (URL)</label>
+      <input type="text" class="form-control" placeholder="https://..." formControlName="imagen">
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label">Precio costo</label>
+      <input type="number" class="form-control" formControlName="precioCosto">
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label">Precio sin impuestos</label>
+      <input type="number" class="form-control" formControlName="precioSinImpuestos">
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label">Precio minorista</label>
+      <input type="number" class="form-control" formControlName="precioMinorista">
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label">Precio mayorista</label>
+      <input type="number" class="form-control" formControlName="precioMayorista">
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label">Rubro</label>
+      <input type="text" class="form-control" formControlName="rubro">
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label">Subrubro</label>
+      <input type="text" class="form-control" formControlName="subrubro">
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label">Marca</label>
+      <input type="text" class="form-control" formControlName="marca">
+    </div>
+
+    <div class="col-md-6 d-flex align-items-center">
+      <input type="checkbox" class="form-check-input me-2" formControlName="destacado">
+      <label class="form-check-label">Destacado</label>
+    </div>
+
+    <div class="col-md-6 d-flex align-items-center">
+      <input type="checkbox" class="form-check-input me-2" formControlName="oferta">
+      <label class="form-check-label">En oferta</label>
+    </div>
+
+    <div class="col-md-6" *ngIf="form.get('oferta')?.value">
+      <label class="form-label">Precio oferta</label>
+      <input type="number" class="form-control" formControlName="precioOferta">
+    </div>
+
+    <div class="col-md-6">
+      <label class="form-label">Stock mínimo</label>
+      <input type="number" class="form-control" formControlName="stockMinimo">
+    </div>
+  </div>
+
+  <hr class="my-4">
+
+  <!-- 🎨 Variantes por color -->
+  <div formArrayName="variantes">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h5>Variantes por color</h5>
+      <button type="button" class="btn btn-sm btn-outline-primary" (click)="agregarVarianteColor()">
+        + Agregar color
+      </button>
+    </div>
+
+    <div *ngFor="let variante of variantes.controls; let i = index" [formGroupName]="i"
+         class="card mb-3 border-0 shadow-sm p-3">
+
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h6 class="m-0">Color {{ i + 1 }}</h6>
+        <button type="button" class="btn btn-sm btn-outline-danger" (click)="eliminarVarianteColor(i)">Eliminar</button>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Color</label>
+          <input type="text" class="form-control" formControlName="color" placeholder="Ej: Rojo">
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">Código de barras</label>
+          <input type="text" class="form-control" formControlName="codigoBarras">
+        </div>
+      </div>
+
+      <!-- 🏪 Stock por sucursal -->
+      <div class="mt-3" formArrayName="stockSucursales">
+        <h6>Stock por sucursal</h6>
+        <table class="table table-sm">
+          <thead>
+            <tr>
+              <th>Sucursal</th>
+              <th style="width: 150px;">Cantidad</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let stock of variante.get('stockSucursales')['controls']; let j = index" [formGroupName]="j">
+              <td>{{ getNombreSucursal(stock.get('sucursalId')?.value) }}</td>
+              <td>
+                <input type="number" formControlName="cantidad" class="form-control form-control-sm" min="0">
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 📦 Stock mayorista -->
+      <div class="col-md-4 mt-3">
+        <label class="form-label">Stock mayorista</label>
+        <input type="number" formControlName="stockMayorista" class="form-control" min="0">
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-4 text-end">
+    <button class="btn btn-success" (click)="guardarProductoColor()">
+      Guardar producto con variantes
+    </button>
+  </div>
 </div>
 
-<mat-card class="producto-form-card fadeIn first">
-  <mat-card-content>
-    <form [formGroup]="productoForm" (ngSubmit)="onSubmit()">
+<!-- 🧩 Sección PRODUCTO MODELO + COLOR -->
+<!-- 🧩 Producto con variantes por modelo y color -->
+<div *ngIf="tipoSeleccionado === 'modelo+color'" class="card shadow p-4" [formGroup]="form">
 
-      <!-- 🧾 DATOS BÁSICOS -->
-      <h2 class="seccion-titulo">Datos básicos</h2>
-      <div class="form-grid">
-        <mat-form-field appearance="outline" class="form-field">
-          <mat-label>Código de Barras</mat-label>
-          <input matInput formControlName="codigoBarras" required>
-        </mat-form-field>
+  <h4 class="mb-3">Producto con variantes por modelo y color</h4>
 
-        <mat-form-field appearance="outline" class="form-field">
-          <mat-label>Rubro</mat-label>
-          <input matInput formControlName="rubro">
-        </mat-form-field>
+  <!-- 🔹 Datos generales -->
+  <div class="row g-3">
 
-        <mat-form-field appearance="outline" class="form-field">
-          <mat-label>Subrubro</mat-label>
-          <input matInput formControlName="subrubro">
-        </mat-form-field>
+    <div class="col-md-8">
+      <label class="form-label">Descripción</label>
+      <input type="text" class="form-control" formControlName="descripcion">
+    </div>
 
-        <mat-form-field appearance="outline" class="form-field">
-          <mat-label>Marca</mat-label>
-          <input matInput formControlName="marca">
-        </mat-form-field>
-      </div>
+    <div class="col-md-12">
+      <label class="form-label">Imagen (URL)</label>
+      <input type="text" class="form-control" placeholder="https://..." formControlName="imagen">
+    </div>
 
-      <div class="form-grid">
-        <mat-form-field appearance="outline" class="form-field full-width">
-          <mat-label>Descripción</mat-label>
-          <textarea matInput rows="3" formControlName="descripcion"></textarea>
-        </mat-form-field>
-      </div>
+    <div class="col-md-3">
+      <label class="form-label">Precio costo</label>
+      <input type="number" class="form-control" formControlName="precioCosto">
+    </div>
 
-      <div class="form-grid">
-        <mat-form-field appearance="outline" class="form-field full-width">
-          <mat-label>URL de Imagen</mat-label>
-          <input matInput type="url" formControlName="imagen" placeholder="https://...">
-        </mat-form-field>
+    <div class="col-md-3">
+      <label class="form-label">Precio sin impuestos</label>
+      <input type="number" class="form-control" formControlName="precioSinImpuestos">
+    </div>
 
-        <!-- 🎨 Color principal (selector de color) -->
-        <div class="form-field color-picker-wrapper">
-          <label class="color-label">Color principal (opcional)</label>
-          <input type="color" class="color-input" formControlName="color">
-        </div>
-      </div>
+    <div class="col-md-3">
+      <label class="form-label">Precio minorista</label>
+      <input type="number" class="form-control" formControlName="precioMinorista">
+    </div>
 
-      <!-- 💰 PRECIOS -->
-      <h2 class="seccion-titulo">Precios y ventas</h2>
-      <div class="form-grid">
-        <mat-form-field appearance="outline" class="form-field">
-          <mat-label>Precio Costo</mat-label>
-          <input matInput type="number" formControlName="precioCosto" required>
-        </mat-form-field>
+    <div class="col-md-3">
+      <label class="form-label">Precio mayorista</label>
+      <input type="number" class="form-control" formControlName="precioMayorista">
+    </div>
 
-        <mat-form-field appearance="outline" class="form-field">
-          <mat-label>Precio sin Impuestos</mat-label>
-          <input matInput type="number" formControlName="precioSinImpuestos" required>
-        </mat-form-field>
-      </div>
+    <div class="col-md-4">
+      <label class="form-label">Rubro</label>
+      <input type="text" class="form-control" formControlName="rubro">
+    </div>
 
-      <div class="form-grid ventas-grid">
-        <mat-checkbox formControlName="ventaMinorista">¿Se vende en Minorista?</mat-checkbox>
-        <mat-form-field appearance="outline" class="form-field" *ngIf="productoForm.get('ventaMinorista')?.value">
-          <mat-label>Precio Minorista</mat-label>
-          <input matInput type="number" formControlName="precioMinorista">
-        </mat-form-field>
+    <div class="col-md-4">
+      <label class="form-label">Subrubro</label>
+      <input type="text" class="form-control" formControlName="subrubro">
+    </div>
 
-        <mat-checkbox formControlName="ventaMayorista">¿Se vende en Mayorista?</mat-checkbox>
-        <mat-form-field appearance="outline" class="form-field" *ngIf="productoForm.get('ventaMayorista')?.value">
-          <mat-label>Precio Mayorista</mat-label>
-          <input matInput type="number" formControlName="precioMayorista">
-        </mat-form-field>
-      </div>
+    <div class="col-md-4">
+      <label class="form-label">Marca</label>
+      <input type="text" class="form-control" formControlName="marca">
+    </div>
 
-      <!-- ⭐ OFERTAS Y DESTACADOS -->
-      <h2 class="seccion-titulo">Promociones</h2>
-      <div class="form-grid">
-        <mat-checkbox formControlName="oferta">¿Está en oferta?</mat-checkbox>
-        <mat-form-field appearance="outline" class="form-field" *ngIf="productoForm.get('oferta')?.value">
-          <mat-label>Precio de Oferta</mat-label>
-          <input matInput type="number" formControlName="precioOferta">
-        </mat-form-field>
+    <div class="col-md-6 d-flex align-items-center">
+      <input type="checkbox" class="form-check-input me-2" formControlName="destacado">
+      <label class="form-check-label">Destacado</label>
+    </div>
 
-        <mat-checkbox formControlName="destacado">¿Es destacado?</mat-checkbox>
-      </div>
+    <div class="col-md-6 d-flex align-items-center">
+      <input type="checkbox" class="form-check-input me-2" formControlName="oferta">
+      <label class="form-check-label">En oferta</label>
+    </div>
 
-      <!-- 🏬 STOCK -->
-      <h2 class="seccion-titulo">Stock</h2>
-      <div class="form-grid fadeIn fourth">
-        <div formArrayName="stockSucursales" class="full-width">
-          <div *ngFor="let stock of productoForm.get('stockSucursales')['controls']; let i = index" [formGroupName]="i"
-            class="sucursal-stock">
-            <mat-form-field appearance="outline" class="form-field">
-              <mat-label>Stock en {{ sucursales[i]?.nombre }}</mat-label>
-              <input matInput type="number" formControlName="cantidad">
-            </mat-form-field>
-          </div>
+    <div class="col-md-6" *ngIf="form.get('oferta')?.value">
+      <label class="form-label">Precio oferta</label>
+      <input type="number" class="form-control" formControlName="precioOferta">
+    </div>
+
+    <div class="col-md-6">
+      <label class="form-label">Stock mínimo</label>
+      <input type="number" class="form-control" formControlName="stockMinimo">
+    </div>
+  </div>
+
+  <hr class="my-4">
+
+  <!-- 🧱 Modelos y colores -->
+  <h5 class="mb-3 fw-bold text-primary">Variantes por modelo y color</h5>
+
+  <button class="btn btn-success btn-sm mb-3" (click)="agregarModelo()">+ Agregar modelo</button>
+
+  <div formArrayName="variantes">
+    <div *ngFor="let modelo of getVariantes().controls; let i = index" [formGroupName]="i" class="card mb-3 shadow-sm">
+
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="fw-bold text-secondary">Modelo {{ i + 1 }}</h6>
+          <button type="button" class="btn btn-outline-danger btn-sm" (click)="eliminarModelo(i)">Eliminar modelo</button>
         </div>
 
-        <mat-form-field appearance="outline" class="form-field">
-          <mat-label>Stock Mínimo</mat-label>
-          <input matInput type="number" formControlName="stockMinimo">
-        </mat-form-field>
+        <!-- Nombre del modelo -->
+        <div class="mb-3">
+          <label class="form-label">Nombre del modelo</label>
+          <input type="text" formControlName="modelo" class="form-control" placeholder="Ej: iPhone 14">
+        </div>
 
-        <mat-form-field appearance="outline" class="form-field">
-          <mat-label>Stock Mayorista</mat-label>
-          <input matInput type="number" formControlName="stockMayorista">
-        </mat-form-field>
-      </div>
+        <!-- 🎨 Colores dentro de cada modelo -->
+        <div formArrayName="colores" class="ms-3">
+          <h6 class="fw-bold">Colores disponibles</h6>
+          <button class="btn btn-primary btn-sm mb-2" (click)="agregarColor(i)">+ Agregar color</button>
 
-      <!-- 🎨 VARIANTES -->
-      <div class="variantes-section fadeIn fourth">
-        <h2 class="seccion-titulo">Variantes del producto</h2>
+          <div *ngFor="let color of getColores(i).controls; let j = index" [formGroupName]="j" class="border p-3 rounded mb-2 bg-light">
 
-        <div formArrayName="variantes">
-          <div *ngFor="let variante of variantes.controls; let i = index" [formGroupName]="i" class="variante-card">
-
-            <h3 class="text-lg font-semibold">Variante {{ i + 1 }}</h3>
-
-            <div class="form-grid">
-              <!-- Selector de color para cada variante -->
-              <div class="form-field color-picker-wrapper">
-                <label class="color-label">Color</label>
-                <input type="color" class="color-input" formControlName="color">
+            <div class="row g-3">
+              <div class="col-md-3">
+                <label class="form-label">Color</label>
+                <input type="text" formControlName="color" class="form-control" placeholder="Ej: Rojo">
               </div>
 
-              <mat-form-field appearance="outline" class="form-field">
-                <mat-label>Código de Barras (opcional)</mat-label>
-                <input matInput formControlName="codigoBarras">
-              </mat-form-field>
-            </div>
+              <div class="col-md-3">
+                <label class="form-label">Código de barras</label>
+                <input type="text" formControlName="codigoBarras" class="form-control" placeholder="EAN / interno">
+              </div>
 
-            <!-- 🏬 STOCK POR SUCURSAL -->
-            <div formArrayName="stockSucursales" class="stock-por-sucursal">
-              <div *ngFor="let stock of variante.get('stockSucursales')['controls']; let j = index" [formGroupName]="j">
-                <mat-form-field appearance="outline" class="form-field">
-                  <mat-label>Stock en {{ sucursales[j]?.nombre }}</mat-label>
-                  <input matInput type="number" formControlName="cantidad">
-                </mat-form-field>
+              <div class="col-md-3">
+                <label class="form-label">Stock mayorista</label>
+                <input type="number" formControlName="stockMayorista" class="form-control">
+              </div>
+
+              <div class="col-md-3 d-flex align-items-end">
+                <button class="btn btn-outline-danger btn-sm" (click)="eliminarColor(i, j)">Eliminar color</button>
               </div>
             </div>
 
-            <!-- 🏷️ STOCK MAYORISTA -->
-            <mat-form-field appearance="outline" class="form-field">
-              <mat-label>Stock Mayorista</mat-label>
-              <input matInput type="number" formControlName="stockMayorista">
-            </mat-form-field>
-
-            <button mat-icon-button color="warn" (click)="eliminarVariante(i)" aria-label="Eliminar variante">
-              <mat-icon>delete</mat-icon>
-            </button>
-
+            <!-- 🏪 Stock por sucursal -->
+            <div formArrayName="stockSucursales" class="mt-2">
+              <div *ngFor="let suc of getStockSucursales(i, j).controls; let s = index" [formGroupName]="s" class="d-flex align-items-center gap-2 mb-1">
+                <label class="text-muted small w-25">{{ getNombreSucursal(suc.get('sucursalId')?.value) }}</label>
+                <input type="number" formControlName="cantidad" class="form-control form-control-sm w-50">
+              </div>
+            </div>
           </div>
         </div>
-
-        <button mat-raised-button color="accent" type="button" (click)="agregarVariante()">
-          <mat-icon>add</mat-icon> Agregar Variante
-        </button>
       </div>
+    </div>
+  </div>
 
-      <!-- 💾 BOTÓN GUARDAR -->
-      <div class="acciones fadeIn fourth">
-        <button mat-raised-button color="primary" type="submit" [disabled]="productoForm.invalid">
-          Guardar Producto
-        </button>
-      </div>
+  <!-- 💾 Guardar -->
+  <div class="mt-4 text-end">
+    <button class="btn btn-success" (click)="guardarProductoModeloColor()">
+      Guardar producto con variantes
+    </button>
+  </div>
+</div>
 
-    </form>
-  </mat-card-content>
-</mat-card>
+
+
+</div>
