@@ -206,19 +206,15 @@ export class GeneralService {
             const carritoRaw = localStorage.getItem('carritoInvitado');
             let carrito = carritoRaw ? JSON.parse(carritoRaw) : [];
 
-            // 🔹 Generar identificador único por producto + color
-            const uidCarrito = `${producto.id}_${producto.color || 'sincolor'}`;
-
-            // 🔹 Buscar el producto existente por uidCarrito
-            const index = carrito.findIndex(item => item.uidCarrito === uidCarrito);
+            // ✅ Buscar por codigoBarras en lugar de id
+            const index = carrito.findIndex(item => item.codigoBarras === producto.codigoBarras);
 
             if (index > -1) {
               carrito[index].cantidad += cantidad;
             } else {
               carrito.push({
-                uidCarrito, // 🆕 identificador único por variante
                 id: producto.id,
-                codigoBarras: producto.codigoBarras,
+                codigoBarras: producto.codigoBarras, // ✅ nuevo campo
                 imagen: producto.imagen,
                 nombre: producto.descripcion,
            //     color: producto.color, // ✅ opcional, para mostrar en carrito
@@ -229,17 +225,12 @@ export class GeneralService {
               });
             }
 
-            // 🔹 Guardar carrito actualizado en localStorage
             localStorage.setItem('carritoInvitado', JSON.stringify(carrito));
-
-            // 🔹 Actualizar cantidad total (badges, etc.)
             this.carritoService.actualizarCantidadProductosDesdeLocalStorage();
-
-            // 🔹 Emitir nuevo cliente invitado actualizado
             const clienteActualizado = new Cliente(
               false,             // administrador
               '',                // apellido
-              carrito,           // carrito actualizado
+              carrito,           // carrito (el que acabás de guardar en localStorage)
               '',                // cuit
               '',                // direccion
               null,              // dni
@@ -264,23 +255,15 @@ export class GeneralService {
           return;
         }
 
-
         // 🟢 CLIENTE LOGUEADO
-        // const productoExistente = clienteEncontrado.carrito.find(
-        //   item => item.codigoBarras === producto.codigoBarras // ✅ igual aquí
-        // );
-        const uidCarrito = `${producto.id}_${producto.color || 'sincolor'}`;
-
-        // buscar por el identificador único
         const productoExistente = clienteEncontrado.carrito.find(
-          item => item.uidCarrito === uidCarrito
+          item => item.codigoBarras === producto.codigoBarras // ✅ igual aquí
         );
 
         if (productoExistente) {
           productoExistente.cantidad += cantidad;
         } else {
           clienteEncontrado.carrito.push({
-            uidCarrito, // 🔹 identificador único
             id: producto.id,
             codigoBarras: producto.codigoBarras,
             imagen: producto.imagen,
