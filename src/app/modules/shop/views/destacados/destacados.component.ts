@@ -19,18 +19,24 @@ export class DestacadosComponent {
 ) {}
 
 
-  ngOnInit(): void {
+ngOnInit(): void {
   this.authService.getUsuarioActual().subscribe(cliente => {
     this.esMayorista = cliente?.esMayorista ?? false;
 
-    this.productosService.obtenerProductos().subscribe((productos) => {
+    this.productosService.obtenerProductosAgrupados().subscribe((productos) => {
       this.destacados = productos.filter(p =>
         p.destacado &&
-        (this.esMayorista ? p.ventaMayorista : p.ventaMinorista)
+        (this.esMayorista ? p.precioMayorista : p.precioMinorista)
       );
     });
   });
-  }
+}
+
+// 👇 método para usar directamente en el HTML
+getPrecioVisible(producto: Producto): number {
+  return this.esMayorista ? producto.precioMayorista : producto.precioMinorista;
+}
+
 
 
 }

@@ -239,10 +239,16 @@
         </div>
 
         <div class="row g-3">
-          <div class="col-md-6">
-            <label class="form-label">Color</label>
-            <input type="text" class="form-control" formControlName="color" placeholder="Ej: Rojo">
-          </div>
+        <div class="col-md-6">
+          <label class="form-label">Color</label>
+          <input
+            type="color"
+            class="form-control form-control-color"
+            formControlName="color"
+            title="Elegir color"
+            style="width: 60px; height: 40px; cursor: pointer;"
+          />
+        </div>
 
           <div class="col-md-6">
             <label class="form-label">Código de barras</label>
@@ -394,10 +400,17 @@
               class="border p-3 rounded mb-2 bg-light">
 
               <div class="row g-3">
-                <div class="col-md-3">
-                  <label class="form-label">Color</label>
-                  <input type="text" formControlName="color" class="form-control" placeholder="Ej: Rojo">
-                </div>
+              <div class="col-md-3">
+                <label class="form-label">Color</label>
+                <input
+                  type="color"
+                  formControlName="color"
+                  class="form-control form-control-color"
+                  title="Elegir color"
+                  style="width: 60px; height: 40px; cursor: pointer;"
+                />
+              </div>
+
 
                 <div class="col-md-3">
                   <label class="form-label">Código de barras</label>

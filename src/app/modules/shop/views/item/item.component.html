@@ -1,0 +1,122 @@
+<div class="product-item bg-light mb-4">
+    <!-- 🖼 Imagen principal -->
+    <div class="product-img position-relative overflow-hidden">
+        <img class="img-fluid w-100" [src]="
+        selectedVariante?.imagen ||
+        producto.imagen ||
+        '../../../../../assets/imagenes/No disponible.png'
+      " alt="Imagen producto" />
+
+        <div class="product-action">
+            <a (click)="agregarCarrito(producto)"><i class="fa fa-shopping-cart"></i></a>
+            <a (click)="verDetalle(producto)"><i class="fa fa-search"></i></a>
+        </div>
+    </div>
+
+    <!-- 🧾 Info del producto -->
+    <div class="text-center py-4">
+        <!-- Descripción -->
+        <a class="h6 text-decoration-none text-truncate" href="">
+            {{ producto.descripcion }}
+        </a>
+
+        <!-- 🔹 Precios -->
+        <ng-container *ngIf="esMayorista; else vistaMinorista">
+            <div class="d-flex align-items-center justify-content-center mt-2">
+                <h5>
+                    {{
+                    selectedVariante?.precioMayorista ||
+                    producto.precioMayorista | currency
+                    }}
+                </h5>
+            </div>
+        </ng-container>
+
+        <ng-template #vistaMinorista>
+            <div class="d-flex align-items-center justify-content-center mt-2">
+                <!-- Si está en oferta -->
+                <ng-container *ngIf="selectedVariante?.oferta || producto.oferta; else sinOferta">
+                    <h5>
+                        {{
+                        (selectedVariante?.precioOferta || producto.precioOferta)
+                        | currency
+                        }}
+                    </h5>
+                    <h6 class="text-muted ms-2">
+                        <del>{{
+                            (selectedVariante?.precioMinorista || producto.precioMinorista)
+                            | currency
+                            }}</del>
+                    </h6>
+                </ng-container>
+
+                <!-- Si no está en oferta -->
+                <ng-template #sinOferta>
+                    <h5>
+                        {{
+                        (selectedVariante?.precioMinorista ||
+                        producto.precioMinorista) | currency
+                        }}
+                    </h5>
+                </ng-template>
+            </div>
+
+            <div class="small text-muted">
+                Precio sin impuestos:
+                {{ producto.precioSinImpuestos | currency }}
+            </div>
+        </ng-template>
+
+
+        <!-- 🎨 Variantes -->
+        <div *ngIf="producto.variantes?.length > 0" class="mt-3">
+            <!-- Si tiene modelo+color -->
+            <div *ngIf="producto.tipoVariantes === 'modelo+color'" class="mb-3">
+                <!-- <label class="fw-bold">Modelo:</label> -->
+                <div class="modelos-container">
+                    <button *ngFor="let modelo of modelosUnicos" class="btn btn-outline-primary btn-sm"
+                        (click)="seleccionarModelo(modelo)" [class.active]="modeloSeleccionado === modelo">
+                        {{ modelo }}
+                    </button>
+                </div>
+            </div>
+
+            <!-- Si tiene color o modelo+color -->
+            <div *ngIf="producto.tipoVariantes === 'color' || producto.tipoVariantes === 'modelo+color'">
+                <!-- <label class="fw-bold">Color:</label> -->
+
+                <!-- Colores del modelo seleccionado (si hay) -->
+                <div *ngIf="coloresFiltrados?.length > 0; else sinColores" class="d-flex flex-wrap gap-2 mt-2 colores-container">
+                    <div *ngFor="let variante of coloresFiltrados" class="d-flex align-items-center gap-2 color-wrapper">
+                        <div class="color-option" [title]="variante.color || '(sin color)'"
+                            [ngStyle]="{ 'background-color': (variante.color || '#ddd') }"
+                            (click)="seleccionarVariante(variante)" [class.selected]="selectedVariante === variante"
+                            style="width:28px;height:28px;border-radius:50%;border:1px solid #999;cursor:pointer">
+                        </div>
+                        <!-- nombre al lado del circulito -->
+                        <!-- <div class="small text-muted" style="min-width:70px">
+                            {{ variante.color || '(sin color)' }}
+                        </div> -->
+                    </div>
+                </div>
+
+
+                <!-- Si no hay colores aún -->
+                <ng-template #sinColores>
+                    <div class="text-muted small mt-2">
+                        <em>Seleccione un modelo para ver los colores</em>
+                    </div>
+                </ng-template>
+            </div>
+
+
+        </div>
+
+
+
+        <!-- 📦 Si no tiene variantes -->
+        <!-- <div *ngIf="!producto.variantes?.length" class="mt-3 small text-muted">
+            Stock total: {{ getStockTotal(producto) }}
+        </div> -->
+    </div>
+</div>

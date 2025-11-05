@@ -137,3 +137,63 @@ a{
   color: white;
   border-color: #034f70;
 }
+
+
+
+.color-circle {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid #ddd;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.color-circle:hover {
+  transform: scale(1.1);
+}
+
+.color-circle.selected {
+  border: 2px solid #034f70;
+  box-shadow: 0 0 5px rgba(3, 79, 112, 0.5);
+}
+
+.color-option {
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  border: 1px solid #ddd;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.color-option:hover {
+  transform: scale(1.1);
+}
+
+.color-option.selected {
+  transform: scale(1.15);
+  border: 2px solid #000;
+}
+
+.colores-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center; /* 🔹 centra horizontalmente */
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.color-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.modelos-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center; /* 🔹 centra horizontalmente */
+  gap: 8px;
+  margin-top: 8px;
+}

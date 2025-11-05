@@ -1,138 +1,127 @@
-import { Component, Input, ViewEncapsulation } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 import { Producto } from '../../models/producto.model';
+import { AuthService } from 'src/app/modules/auth/services/auth.service';
+import { Router } from '@angular/router';
+import { LoginComponent } from 'src/app/modules/auth/views/login/login.component';
+import { Cliente } from 'src/app/modules/auth/models/cliente.model';
 import { GeneralService } from 'src/app/shared/services/general.service';
 import { ToastService } from 'src/app/shared/services/toast.service';
 import { MatDialog } from '@angular/material/dialog';
-import { LoginComponent } from 'src/app/modules/auth/views/login/login.component';
-import { Cliente } from 'src/app/modules/auth/models/cliente.model';
-import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-item',
   templateUrl: './item.component.html',
-  styleUrls: ['./item.component.css'],
-  encapsulation: ViewEncapsulation.None
+  styleUrls: ['./item.component.css']
 })
-export class ItemComponent {
+export class ItemComponent implements OnInit {
 
   @Input() producto!: Producto;
   @Input() esMayorista: boolean = false;
+
+  selectedVariante: any = null;
+  varianteSeleccionada: number | null = null;
   loadingCarrito: { [id: string]: boolean } = {};
 
-  selectedVariante: any = null;   // objeto que representará la "versión" seleccionada
-selectedModelo: any = null;
-selectedColor: any = null;
+  modelosUnicos: string[] = [];
+  modeloSeleccionado: string | null = null;
+  coloresFiltrados: any[] = [];
 
   constructor(
+    private authService: AuthService,
+    private router: Router,
     private generalService: GeneralService,
     private toastService: ToastService,
     private dialog: MatDialog,
-    private router: Router
-  ) { }
+  ) {}
 
-ngOnInit(): void {
-  // Si hay modelos
-  // if (this.producto?.modelos?.length) {
-  //   this.selectedModelo = this.producto.modelos[0];
-  //   // Tomar el primer color del modelo si existe
-  //   this.selectedColor = this.selectedModelo?.variantesColor?.[0] || null;
-  // } 
-  // // Si no hay modelos pero hay variantes en producto
-  // else if (this.producto?.variantes?.length) {
-  //   this.selectedModelo = null;
-  //   this.selectedColor = this.producto.variantes[0];
-  // }
-  // // Si no hay variantes, tomar color base
-  // else if (this.producto?.color) {
-  //   this.selectedModelo = null;
-  //   this.selectedColor = { color: this.producto.color };
-  // }
-}
+  ngOnInit(): void {
+    // detectar si el cliente es mayorista
+    this.authService.getUsuarioActual().subscribe(cliente => {
+      this.esMayorista = cliente?.esMayorista ?? false;
+    });
 
-  
-// Al seleccionar modelo desde el botón
-seleccionarModelo(modelo: any) {
-  this.selectedModelo = modelo;
-  this.selectedColor = modelo?.variantesColor?.[0] || null;
-}
+    // seguridad: si no hay producto, salimos
+    if (!this.producto) return;
 
-// Al seleccionar color
-seleccionarColor(colorVar: any) {
-  this.selectedColor = colorVar;
-}
+    // DEBUG: ver variantes crudas en consola (quitar cuando esté ok)
+    console.log('item ngOnInit - variantes:', this.producto.variantes);
 
-// Seleccionar un color dentro del modelo elegido
-seleccionarVariante(colorVar: any) {
-  this.selectedColor = colorVar.color || '';
-  this.selectedVariante = this.buildProductoSeleccionado(colorVar);
-}
+    // Si el producto tiene variantes...
+    if (Array.isArray(this.producto.variantes) && this.producto.variantes.length > 0) {
+      // Creá una función de normalización para evitar problemas de mayúsculas/espacios
+      const normalize = (s: any) => (typeof s === 'string' ? s.trim().toLowerCase() : '');
 
-  getStockTotalActual(): number {
-    if (this.selectedColor?.stockSucursales?.length) {
-      return this.selectedColor.stockSucursales.reduce((a: number, b: any) => a + (b.cantidad || 0), 0);
+      // obtener modelos únicos normalizados pero mostrar la versión "amigable"
+      const modelosMap = new Map<string, string>(); // key = normalized, value = first original
+      this.producto.variantes.forEach(v => {
+        const raw = v?.modelo ?? '';
+        const key = normalize(raw);
+        if (key && !modelosMap.has(key)) {
+          modelosMap.set(key, raw.trim());
+        }
+      });
+      this.modelosUnicos = Array.from(modelosMap.values());
+
+      // Si el producto es solo variantes por color (sin modelos), mostramos colores ya
+      if (this.producto.tipoVariantes === 'color') {
+        this.coloresFiltrados = this.producto.variantes.slice();
+      }
+
+      // Si queremos preseleccionar la primera variante disponible:
+      if (this.coloresFiltrados.length === 0 && this.producto.tipoVariantes !== 'modelo+color') {
+        this.selectedVariante = this.producto.variantes[0];
+        this.varianteSeleccionada = 0;
+      }
     }
-    return 0;
   }
 
+  // Cuando elegimos un modelo (pasamos la etiqueta tal como la mostramos)
+  seleccionarModelo(modeloLabel: string) {
+    this.modeloSeleccionado = modeloLabel;
+    const normalize = (s: any) => (typeof s === 'string' ? s.trim().toLowerCase() : '');
+    const key = normalize(modeloLabel);
 
-  private buildProductoSeleccionado(variante?: any) {
-    // Datos base del producto (campos mínimos que tu carrito/servicios esperan)
-    const base = {
-      id: this.producto.id,
-      codigoBarras: this.producto.codigoBarras,
-      descripcion: this.producto.descripcion,
-      precioCosto: this.producto.precioCosto,
-      ventaMinorista: this.producto.ventaMinorista,
-      precioMinorista: this.producto.precioMinorista,
-      ventaMayorista: this.producto.ventaMayorista,
-      precioMayorista: this.producto.precioMayorista,
-      imagen: this.producto.imagen,
-      rubro: this.producto.rubro,
-      subrubro: this.producto.subrubro,
-      marca: this.producto.marca,
-      oferta: this.producto.oferta,
-      precioOferta: this.producto.precioOferta,
-      precioSinImpuestos: this.producto.precioSinImpuestos,
-      stockMinimo: this.producto.stockMinimo,
-      stockSucursales: this.producto.stockSucursales || [],
-      stockMayorista: this.producto.stockMayorista || 0,
-  //    color: this.producto.color || '',      // color principal por defecto
-      // cualquier otro campo que necesites
-    };
+    // Filtramos variantes cuyo modelo normalizado coincida
+    this.coloresFiltrados = (this.producto.variantes || []).filter(v => normalize(v?.modelo) === key);
 
-    if (!variante) {
-      return base;
-    }
+    console.log('Seleccionado modelo:', modeloLabel, '-> coloresFiltrados:', this.coloresFiltrados);
 
-    // Si existe variante, sobrescribimos solo lo necesario (codigoBarras, color, stocks, imagen si la variante la tiene)
-    return {
-      ...base,
-      codigoBarras: variante.codigoBarras ?? base.codigoBarras,
-     // color: variante.color ?? base.color,
-      stockSucursales: variante.stockSucursales ?? base.stockSucursales,
-      stockMayorista: typeof variante.stockMayorista !== 'undefined' ? variante.stockMayorista : base.stockMayorista,
-      imagen: variante.imagen ?? base.imagen
-    };
+    // limpiar selección previa de variante
+    this.selectedVariante = null;
+    this.varianteSeleccionada = null;
   }
 
-  calcularDescuento(producto: Producto): number {
-    const precioBase = this.esMayorista ? producto.precioMayorista : producto.precioMinorista;
-    if (producto.oferta && producto.precioOferta < precioBase) {
-      const descuento = 100 - (producto.precioOferta * 100) / precioBase;
-      return Math.round(descuento);
+  // Acepta tanto índice (number) como objeto variante
+  seleccionarVariante(arg: number | any) {
+    if (typeof arg === 'number') {
+      const idx = arg as number;
+      this.selectedVariante = this.producto.variantes?.[idx] ?? null;
+      this.varianteSeleccionada = idx;
+    } else {
+      // arg es la variante misma
+      this.selectedVariante = arg;
+      this.varianteSeleccionada = this.producto.variantes?.indexOf(arg) ?? null;
     }
-    return 0;
+    console.log('Variante seleccionada:', this.selectedVariante);
   }
 
-  // 🔹 Al agregar al carrito, usamos la variante seleccionada
-  agregarCarrito() {
-    const productoSeleccionado = this.selectedVariante || this.buildProductoSeleccionado(undefined);
-    console.log('Agregando al carrito (seleccionado):', productoSeleccionado);
+  // Suma stock (busca propiedad 'cantidad' o 'stock' por compatibilidad)
+  getStockTotal(item: any): number {
+    if (!item) return 0;
+    const arr = Array.isArray(item.stockSucursales) ? item.stockSucursales : [];
+    return arr.reduce((sum: number, s: any) => {
+      // soporte para 'cantidad' o 'stock'
+      const c = (s && (s.cantidad ?? s.stock)) || 0;
+      return sum + Number(c);
+    }, 0);
+  }
 
+  // Agregar al carrito (igual que ya tenías)
+  agregarCarrito(producto: Producto) {
+    console.log('Agregando al carrito:', producto);
     const cliente = this.generalService.getClienteActual();
-    this.loadingCarrito[productoSeleccionado.id] = true;
-
-    const finalizar = () => this.loadingCarrito[productoSeleccionado.id] = false;
+    this.loadingCarrito[producto.id] = true;
+    const finalizar = () => this.loadingCarrito[producto.id] = false;
 
     if (!cliente) {
       const dialogRef = this.dialog.open(LoginComponent, {
@@ -146,7 +135,7 @@ seleccionarVariante(colorVar: any) {
         if (clienteLogueado) {
           this.generalService.setCliente(clienteLogueado);
           localStorage.setItem('cliente', JSON.stringify(clienteLogueado));
-          this.procesarProductoEnCarrito(clienteLogueado, productoSeleccionado, finalizar);
+          this.procesarProductoEnCarrito(clienteLogueado, producto, finalizar);
         } else {
           this.toastService.toastMessage(
             'Debes iniciar sesión o continuar como invitado para agregar productos al carrito.',
@@ -160,9 +149,8 @@ seleccionarVariante(colorVar: any) {
       return;
     }
 
-    this.procesarProductoEnCarrito(cliente, productoSeleccionado, finalizar);
+    this.procesarProductoEnCarrito(cliente, producto, finalizar);
   }
-
 
   private procesarProductoEnCarrito(cliente: Cliente, producto: Producto, finalizar: () => void) {
     this.generalService.cargarProductoCarrito(producto, 1)
@@ -176,22 +164,7 @@ seleccionarVariante(colorVar: any) {
       .finally(finalizar);
   }
 
-  // Navegamos al detalle usando el id (mejor que descripcion porque es único)
   verDetalle(producto: Producto) {
-    this.router.navigate([`producto/${producto.id}`]);
+    this.router.navigate(['/shop/item', producto.id]);
   }
-
-  // Selecciona una variante (cuando el usuario hace click en un circulito variante)
-  // seleccionarVariante(variante: any) {
-  //   this.selectedColor = variante.color || '';
-  //   this.selectedVariante = this.buildProductoSeleccionado(variante);
-  // }
-
-  // Selecciona el color principal
-  seleccionarColorPrincipal() {
- //   this.selectedColor = this.producto.color || '';
-    this.selectedVariante = this.buildProductoSeleccionado(undefined); // sin variante -> base
-  }
-
-
 }
