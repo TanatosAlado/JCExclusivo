@@ -197,3 +197,9 @@ a{
   gap: 8px;
   margin-top: 8px;
 }
+
+.product-action a.disabled {
+  cursor: default;
+  opacity: 0.5;
+  pointer-events: none; /* evita clicks */
+}

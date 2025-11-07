@@ -118,6 +118,11 @@ export class ItemComponent implements OnInit {
 
   // Agregar al carrito (igual que ya tenías)
   agregarCarrito(producto: Producto) {
+    if (producto.tipoVariantes && producto.tipoVariantes !== 'none') {
+      console.warn('Intento de agregar al carrito un producto con variantes. Redirigir a detalle en su lugar.');
+      // opcional: podés mostrar un toast informando al usuario
+      return;
+    }
     console.log('Agregando al carrito:', producto);
     const cliente = this.generalService.getClienteActual();
     this.loadingCarrito[producto.id] = true;
@@ -165,6 +170,6 @@ export class ItemComponent implements OnInit {
   }
 
   verDetalle(producto: Producto) {
-    this.router.navigate(['/shop/item', producto.id]);
+    this.router.navigate(['/producto', producto.id]);
   }
 }

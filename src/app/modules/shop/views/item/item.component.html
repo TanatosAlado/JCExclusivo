@@ -7,10 +7,29 @@
         '../../../../../assets/imagenes/No disponible.png'
       " alt="Imagen producto" />
 
-        <div class="product-action">
-            <a (click)="agregarCarrito(producto)"><i class="fa fa-shopping-cart"></i></a>
-            <a (click)="verDetalle(producto)"><i class="fa fa-search"></i></a>
-        </div>
+<div class="product-action">
+  <!-- Mostrar botón de carrito solo si no tiene variantes -->
+  <a *ngIf="producto.tipoVariantes === 'none'; else carritoDeshabilitado"
+     (click)="agregarCarrito(producto)"
+     title="Agregar al carrito">
+    <i class="fa fa-shopping-cart"></i>
+  </a>
+
+  <!-- Template para carrito deshabilitado (mismo ícono pero gris y con tooltip) -->
+  <ng-template #carritoDeshabilitado>
+    <a class="disabled" title="Producto con variantes. Abrí el detalle para seleccionar la variante">
+      <i class="fa fa-shopping-cart"></i>
+    </a>
+  </ng-template>
+
+  <!-- Lupa / Ver detalle (si tiene variantes mostramos tooltip que lo indique) -->
+  <a (click)="verDetalle(producto)"
+     [title]="producto.tipoVariantes && producto.tipoVariantes !== 'none' 
+               ? 'Este producto tiene variantes. Abrí el detalle para elegir modelo/color.' 
+               : 'Ver detalle del producto'">
+    <i class="fa fa-search"></i>
+  </a>
+</div>
     </div>
 
     <!-- 🧾 Info del producto -->
@@ -69,10 +88,10 @@
 
 
         <!-- 🎨 Variantes -->
-        <div *ngIf="producto.variantes?.length > 0" class="mt-3">
-            <!-- Si tiene modelo+color -->
+        <!-- <div *ngIf="producto.variantes?.length > 0" class="mt-3">
+       
             <div *ngIf="producto.tipoVariantes === 'modelo+color'" class="mb-3">
-                <!-- <label class="fw-bold">Modelo:</label> -->
+           
                 <div class="modelos-container">
                     <button *ngFor="let modelo of modelosUnicos" class="btn btn-outline-primary btn-sm"
                         (click)="seleccionarModelo(modelo)" [class.active]="modeloSeleccionado === modelo">
@@ -81,11 +100,9 @@
                 </div>
             </div>
 
-            <!-- Si tiene color o modelo+color -->
+         
             <div *ngIf="producto.tipoVariantes === 'color' || producto.tipoVariantes === 'modelo+color'">
-                <!-- <label class="fw-bold">Color:</label> -->
-
-                <!-- Colores del modelo seleccionado (si hay) -->
+         
                 <div *ngIf="coloresFiltrados?.length > 0; else sinColores" class="d-flex flex-wrap gap-2 mt-2 colores-container">
                     <div *ngFor="let variante of coloresFiltrados" class="d-flex align-items-center gap-2 color-wrapper">
                         <div class="color-option" [title]="variante.color || '(sin color)'"
@@ -93,15 +110,11 @@
                             (click)="seleccionarVariante(variante)" [class.selected]="selectedVariante === variante"
                             style="width:28px;height:28px;border-radius:50%;border:1px solid #999;cursor:pointer">
                         </div>
-                        <!-- nombre al lado del circulito -->
-                        <!-- <div class="small text-muted" style="min-width:70px">
-                            {{ variante.color || '(sin color)' }}
-                        </div> -->
+                   
                     </div>
                 </div>
 
 
-                <!-- Si no hay colores aún -->
                 <ng-template #sinColores>
                     <div class="text-muted small mt-2">
                         <em>Seleccione un modelo para ver los colores</em>
@@ -110,7 +123,7 @@
             </div>
 
 
-        </div>
+        </div> -->
 
 
 

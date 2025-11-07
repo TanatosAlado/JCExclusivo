@@ -1,57 +1,92 @@
-<div class="container" *ngFor="let producto of detalleProducto">
+<div class="container" *ngIf="producto">
+  <!-- 🖼 Imagen -->
   <div class="left">
     <div class="image-container">
-      <img [src]="producto.imagen" class="card-img-top" [alt]="producto.nombre">
+      <img [src]="selectedVariante?.imagen || producto.imagen" class="card-img-top" [alt]="producto.descripcion" />
     </div>
   </div>
 
+  <!-- 📋 Detalle -->
   <div class="right">
-    <div class="breadcrumb">
-      <a>Inicio ></a>
-      <a>Marca ></a>
-      <a>{{ producto.marca }}</a>
-    </div>
+    <h3>{{ producto.descripcion }}</h3>
 
-    <div class="descripcion">
-      <p *ngIf="producto.descripcion">{{ producto.descripcion }}</p>
-    </div>
+    <p *ngIf="producto.marca" class="text-muted">Marca: {{ producto.marca }}</p>
 
+    <!-- 🔹 Precio -->
     <div class="precios">
-      <!-- Vista MAYORISTA -->
       <ng-container *ngIf="esMayorista; else vistaMinorista">
-        <h3 class="precio-principal">
-          {{ producto.precioMayorista | currency }}
-        </h3>
+        <h3>{{ selectedVariante?.precioMayorista || producto.precioMayorista | currency }}</h3>
       </ng-container>
 
-      <!-- Vista MINORISTA -->
       <ng-template #vistaMinorista>
-        <div class="precios-minorista">
-          <h3 *ngIf="producto.oferta" class="precio-oferta">
-            {{ producto.precioOferta | currency }}
-          </h3>
-          <h4 *ngIf="producto.oferta" class="precio-tachado">
-            <del>{{ producto.precioMinorista | currency }}</del>
-          </h4>
-          <h3 *ngIf="!producto.oferta" class="precio-principal">
-            {{ producto.precioMinorista | currency }}
-          </h3>
+        <div *ngIf="producto.oferta; else sinOferta">
+          <h3 class="text-danger">{{ producto.precioOferta | currency }}</h3>
+          <del>{{ producto.precioMinorista | currency }}</del>
         </div>
-
-        <div class="impuesto">
-          Precio sin impuestos: {{ producto.precioSinImpuestos | currency }}
-        </div>
+        <ng-template #sinOferta>
+          <h3>{{ producto.precioMinorista | currency }}</h3>
+        </ng-template>
       </ng-template>
     </div>
 
-    <div class="carrito">
-      <div class="cantidad-container">
-        <button (click)="disminuirCantidad()">-</button>
-        <input type="text" [(ngModel)]="cantidad" readonly>
-        <button (click)="aumentarCantidad()">+</button>
-      </div>
+    <!-- 🎨 Variantes -->
+        <div *ngIf="producto.variantes?.length > 0" class="mt-3">
+       
+            <div *ngIf="producto.tipoVariantes === 'modelo+color'" class="mb-3">
+           
+                <div class="modelos-container">
+                    <button *ngFor="let modelo of modelosUnicos" class="btn btn-outline-primary btn-sm"
+                        (click)="seleccionarModelo(modelo)" [class.active]="modeloSeleccionado === modelo">
+                        {{ modelo }}
+                    </button>
+                </div>
+            </div>
 
-      <button (click)="cargaCarrito(producto)" class="agregar-carrito">
+         
+            <div *ngIf="producto.tipoVariantes === 'color' || producto.tipoVariantes === 'modelo+color'">
+         
+                <div *ngIf="coloresFiltrados?.length > 0; else sinColores" class="d-flex flex-wrap gap-2 mt-2 colores-container">
+                    <div *ngFor="let variante of coloresFiltrados" class="d-flex align-items-center gap-2 color-wrapper">
+                        <div class="color-option" [title]="variante.color || '(sin color)'"
+                            [ngStyle]="{ 'background-color': (variante.color || '#ddd') }"
+                            (click)="seleccionarVariante(variante)" [class.selected]="selectedVariante === variante"
+                            style="width:28px;height:28px;border-radius:50%;border:1px solid #999;cursor:pointer">
+                        </div>
+                   
+                    </div>
+                </div>
+
+
+                <ng-template #sinColores>
+                    <div class="text-muted small mt-2">
+                        <em>Seleccione un modelo para ver los colores</em>
+                    </div>
+                </ng-template>
+            </div>
+
+
+        </div>
+
+    <!-- <div *ngIf="producto.tipoVariantes === 'color' || modeloSeleccionado">
+      <h5>Colores</h5>
+      <div class="d-flex flex-wrap gap-2 mt-2">
+        <div *ngFor="let variante of coloresFiltrados"
+             class="color-option"
+             [ngStyle]="{ 'background-color': variante.color }"
+             (click)="seleccionarVariante(variante)"
+             [class.selected]="selectedVariante === variante"
+             style="width:30px;height:30px;border-radius:50%;cursor:pointer;border:1px solid #999">
+        </div>
+      </div>
+    </div> -->
+
+    <!-- 🛒 Botón carrito -->
+    <div class="carrito mt-4">
+      <button (click)="disminuirCantidad()">-</button>
+      <input type="text" [(ngModel)]="cantidad" readonly />
+      <button (click)="aumentarCantidad()">+</button>
+
+      <button class="agregar-carrito" (click)="cargaCarrito(producto)">
         AGREGAR AL CARRITO
       </button>
     </div>

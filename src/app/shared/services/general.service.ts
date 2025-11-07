@@ -160,15 +160,51 @@ export class GeneralService {
 
 
   //SERVICE PARA TRAER CLIENTE POR ID
-  async getProductoById(id: string) {
-    const productoRef = doc(this.firestore, `productos/${id}`);
-    const productoSnap = await getDoc(productoRef);
-    if (productoSnap.exists()) {
-      return [{ id: productoSnap.id, ...productoSnap.data() }];
+  // async getProductoById(id: string) {
+  //   const productoRef = doc(this.firestore, `productos/${id}`);
+  //   const productoSnap = await getDoc(productoRef);
+  //   if (productoSnap.exists()) {
+  //     return [{ id: productoSnap.id, ...productoSnap.data() }];
+  //   }
+  //   return [];
+  // }
+
+async getProductoById(id: string) {
+  const productoRef = doc(this.firestore, `productos/${id}`);
+  const productoSnap = await getDoc(productoRef);
+
+  if (!productoSnap.exists()) return null;
+
+  const producto: any = { id: productoSnap.id, ...productoSnap.data() };
+
+  let idPadre = producto.id;
+
+  // 👇 Si el producto tiene un padre, usamos ese id
+  if (producto.productoPadre) {
+    idPadre = producto.productoPadre;
+    console.log('📎 Es una variante, padre:', idPadre);
+
+    // Traemos los datos del padre
+    const padreRef = doc(this.firestore, `productos/${idPadre}`);
+    const padreSnap = await getDoc(padreRef);
+    if (padreSnap.exists()) {
+      Object.assign(producto, { ...padreSnap.data(), id: padreSnap.id });
     }
-    return [];
   }
 
+  // 🔹 Ahora traemos las variantes del padre
+  const variantesRef = collection(this.firestore, 'productos');
+  const q = query(variantesRef, where('productoPadre', '==', idPadre));
+  const querySnapshot = await getDocs(q);
+
+  producto.variantes = querySnapshot.docs.map(docSnap => ({
+    id: docSnap.id,
+    ...docSnap.data()
+  }));
+
+  console.log('📦 Variantes encontradas:', producto.variantes.length);
+  return producto;
+}
 
 
   async getProductoByNombre(nombre: string) {
