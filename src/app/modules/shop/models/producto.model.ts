@@ -21,6 +21,7 @@ export class Producto {
     public id: string,
     public codigoBarras: string, // sigue existiendo para productos sin variantes
     public descripcion: string,
+    public subdescripcion: string, 
     public precioCosto: number,
     public ventaMinorista: boolean,
     public precioMinorista: number,

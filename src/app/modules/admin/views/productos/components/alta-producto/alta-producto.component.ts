@@ -44,6 +44,7 @@ export class AltaProductoComponent implements OnInit {
     '', // id
     '', // codigoBarras
     '', // descripcion
+    '', // subdescripcion
     0,  // precioCosto
     false, // ventaMinorista
     0, // precioMinorista
@@ -73,6 +74,7 @@ export class AltaProductoComponent implements OnInit {
 
       // campos generales
       descripcion: ['', Validators.required],
+      subdescripcion: [''],
       rubro: ['', Validators.required],
       subrubro: [''],
       marca: [''],
@@ -252,6 +254,7 @@ export class AltaProductoComponent implements OnInit {
         //    formValue.codigoBarras,       // codigoBarras (producto base)
         '',
         formValue.descripcion,
+        formValue.subdescripcion,
         formValue.precioCosto,
         formValue.ventaMinorista,
         formValue.precioMinorista,
@@ -300,6 +303,7 @@ export class AltaProductoComponent implements OnInit {
         uuidv4(),
         '', // código general no aplica
         formValue.descripcion,
+        formValue.subdescripcion,
         formValue.precioCosto,
         formValue.ventaMinorista,
         formValue.precioMinorista,
@@ -390,6 +394,7 @@ export class AltaProductoComponent implements OnInit {
           // si querés un "nombre" distinto, podés usar otro campo; acá uso descripcion como nombre
           nombre: this.producto.descripcion || '',
           descripcion: this.producto.descripcion || '',
+          subdesripcion: this.producto.subdescripcion || '',
           codigoBarras: this.producto.codigoBarras || '',
           precioCosto: Number(this.producto.precioCosto || 0),
           precioSinImpuestos: Number(this.producto.precioSinImpuestos || 0),

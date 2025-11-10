@@ -80,7 +80,7 @@ export class ListaProductosComponent {
   abrirModalAltaProducto(): void {
   const dialogRef = this.dialog.open(AltaProductoComponent, {
     width: '90vw',
-    maxWidth: '600px',
+    maxWidth: '750px',
     height: 'auto',
     maxHeight: '90vh',
     panelClass: 'custom-dialog-container',
@@ -175,6 +175,7 @@ const producto = new Producto(
    v.id,
   v.codigoBarras,
   v.descripcion,
+  v.subdescripcion,
   v.precioCosto,
   v.ventaMinorista,
   v.precioMinorista,
