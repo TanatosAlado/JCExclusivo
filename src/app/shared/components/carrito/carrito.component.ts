@@ -180,4 +180,5 @@ export class CarritoComponent {
   getTotalPrecio(): number {
     return this.carrito.reduce((acc, prod) => acc + (prod.precioFinal * prod.cantidad), 0);
   }
+
 }

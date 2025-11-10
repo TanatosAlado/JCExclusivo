@@ -85,6 +85,7 @@ ngOnInit() {
   }
 
   cargaCarrito(producto: Producto) {
+    console.log('Agregando al carrito desde Detalle:', producto);
     const cliente = this.generalService.getClienteActual();
     if (!cliente) {
       const dialogRef = this.dialog.open(LoginComponent, {
@@ -114,16 +115,29 @@ ngOnInit() {
     this.procesarProductoEnCarrito(cliente, producto);
   }
 
-  private procesarProductoEnCarrito(cliente: Cliente, producto: Producto) {
-    const productoFinal = this.selectedVariante || producto;
+private procesarProductoEnCarrito(cliente: Cliente, producto: Producto) {
+  // Si hay variante seleccionada, combinamos sus datos con el producto base
+  const productoFinal: Producto = this.selectedVariante
+    ? {
+        ...producto,
+        ...this.selectedVariante,
+        id: `${producto.id}-${this.selectedVariante.modelo || this.selectedVariante.color || 'base'}`,
+        stockTotal: producto.stockTotal || 0,
+        stockGlobal: producto.stockGlobal || 0
+      } as Producto
+    : producto;
 
-    this.generalService.cargarProductoCarrito(this.producto as Producto, this.cantidad)
-      .then(() => {
-        this.toastService.toastMessage('Producto agregado al carrito', 'green', 2000);
-      })
-      .catch(err => {
-        this.toastService.toastMessage('El producto no pudo agregarse', 'red', 2000);
-        console.error(err);
-      });
-  }
+  console.log('🛒 Agregando al carrito:', productoFinal);
+
+  this.generalService.cargarProductoCarrito(productoFinal, this.cantidad)
+    .then(() => {
+      this.toastService.toastMessage('Producto agregado al carrito', 'green', 2000);
+    })
+    .catch(err => {
+      this.toastService.toastMessage('El producto no pudo agregarse', 'red', 2000);
+      console.error(err);
+    });
+}
+
+
 }

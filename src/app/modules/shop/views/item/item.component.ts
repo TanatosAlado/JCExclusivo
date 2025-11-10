@@ -123,7 +123,7 @@ export class ItemComponent implements OnInit {
       // opcional: podés mostrar un toast informando al usuario
       return;
     }
-    console.log('Agregando al carrito:', producto);
+    console.log('Agregando al carrito desde Item:', producto);
     const cliente = this.generalService.getClienteActual();
     this.loadingCarrito[producto.id] = true;
     const finalizar = () => this.loadingCarrito[producto.id] = false;

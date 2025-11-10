@@ -231,12 +231,6 @@ button {
   margin-top: 5px; /* más espacio respecto a la imagen */
 }
 
-.color-seleccionado .color-circle {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  border: 1px solid #333;
-}
 
 .color-seleccionado .color-circle {
   width: 20px;
@@ -250,4 +244,10 @@ button {
 .color-seleccionado .color-circle:hover {
   transform: scale(1.2);
   cursor: pointer;
+}
+
+
+.modelo-texto {
+  font-size: 0.8rem;
+  color: #333;
 }
