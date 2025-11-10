@@ -394,7 +394,7 @@ export class AltaProductoComponent implements OnInit {
           // si querés un "nombre" distinto, podés usar otro campo; acá uso descripcion como nombre
           nombre: this.producto.descripcion || '',
           descripcion: this.producto.descripcion || '',
-          subdesripcion: this.producto.subdescripcion || '',
+          subdescripcion: this.producto.subdescripcion || '',
           codigoBarras: this.producto.codigoBarras || '',
           precioCosto: Number(this.producto.precioCosto || 0),
           precioSinImpuestos: Number(this.producto.precioSinImpuestos || 0),
