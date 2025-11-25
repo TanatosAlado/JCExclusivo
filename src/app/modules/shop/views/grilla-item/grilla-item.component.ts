@@ -50,6 +50,16 @@ export class GrillaItemComponent {
   }
 
   filtrarProductos() {
+
+console.table(
+  this.productosOriginal.map(p => ({
+    descripcion: p.descripcion,
+    ventaMayorista: p.ventaMayorista,
+    ventaMinorista: p.ventaMinorista
+  }))
+);
+
+
     if (this.filtroRubro) {
       this.subrubros = [
         ...new Set(
