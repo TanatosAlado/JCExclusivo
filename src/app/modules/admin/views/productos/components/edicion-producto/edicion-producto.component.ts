@@ -27,56 +27,62 @@ export class EdicionProductoComponent {
     });
   }
 
-  private crearFormulario(): void {
-    this.formProducto = this.fb.group({
-      codigoBarras: [this.producto.codigoBarras, Validators.required],
-      descripcion: [this.producto.descripcion, Validators.required],
-      imagen: [this.producto.imagen],
-      rubro: [this.producto.rubro, Validators.required],
-      subrubro: [this.producto.subrubro, Validators.required],
-      marca: [this.producto.marca, Validators.required],
+private crearFormulario(): void {
+  this.formProducto = this.fb.group({
+    codigoBarras: [this.producto.codigoBarras, Validators.required],
+    descripcion: [this.producto.descripcion, Validators.required],
+    subdescripcion: [ (this.producto as any).subdescripcion || '' ], // si usás subdescripcion
+    imagen: [this.producto.imagen],
+    color: [ (this.producto as any).color || '#000000' ], // 🔹 CONTROL QUE FALTABA
+    rubro: [this.producto.rubro, Validators.required],
+    subrubro: [this.producto.subrubro, Validators.required],
+    marca: [this.producto.marca, Validators.required],
 
-      precioCosto: [this.producto.precioCosto, [Validators.required, Validators.min(0)]],
-      precioSinImpuestos: [this.producto.precioSinImpuestos, [Validators.required, Validators.min(0)]],
+    precioCosto: [this.producto.precioCosto, [Validators.required, Validators.min(0)]],
+    precioSinImpuestos: [this.producto.precioSinImpuestos, [Validators.required, Validators.min(0)]],
 
-      ventaMinorista: [this.producto.ventaMinorista ?? false],
-      precioMinorista: [this.producto.precioMinorista],
-      ventaMayorista: [this.producto.ventaMayorista ?? false],
-      precioMayorista: [this.producto.precioMayorista],
+    ventaMinorista: [this.producto.ventaMinorista ?? false],
+    precioMinorista: [this.producto.precioMinorista],
+    ventaMayorista: [this.producto.ventaMayorista ?? false],
+    precioMayorista: [this.producto.precioMayorista],
 
-      oferta: [this.producto.oferta ?? false],
-      precioOferta: [this.producto.precioOferta],
-      destacado: [this.producto.destacado ?? false],
+    oferta: [this.producto.oferta ?? false],
+    precioOferta: [this.producto.precioOferta],
+    destacado: [this.producto.destacado ?? false],
 
-      stockMinimo: [this.producto.stockMinimo, [Validators.min(0)]],
-      stockMayorista: [this.producto.stockMayorista || 0],
+    stockMinimo: [this.producto.stockMinimo, [Validators.min(0)]],
+    stockMayorista: [this.producto.stockMayorista || 0],
 
-      stockSucursales: this.fb.array(
-        this.sucursales.map(s => this.fb.group({
-          sucursalId: [s.id],
-          cantidad: [this.producto.stockSucursales?.find(ss => ss.sucursalId === s.id)?.cantidad || 0, [Validators.min(0)]]
-        }))
-      ),
+    stockSucursales: this.fb.array(
+      this.sucursales.map(s => this.fb.group({
+        sucursalId: [s.id],
+        cantidad: [this.producto.stockSucursales?.find(ss => ss.sucursalId === s.id)?.cantidad || 0, [Validators.min(0)]]
+      }))
+    ),
 
-      variantes: this.fb.array(
-        (this.producto.variantes || []).map(v =>
-          this.fb.group({
-            color: [v.color || '#000000'],
-            codigoBarras: [v.codigoBarras || ''],
-            stockMayorista: [v.stockMayorista || 0],
-            stockSucursales: this.fb.array(
-              this.sucursales.map(s => this.fb.group({
-                sucursalId: [s.id],
-                cantidad: [v.stockSucursales?.find(ss => ss.sucursalId === s.id)?.cantidad || 0]
-              }))
-            )
-          })
-        )
+    variantes: this.fb.array(
+      (this.producto.variantes || []).map((v: any) =>
+        this.fb.group({
+          id: [v.id || null],
+          modelo: [v.modelo || null],               // 🔹 soporte modelo (modelo+color)
+          color: [v.color || '#000000'],
+          codigoBarras: [v.codigoBarras || ''],
+          imagen: [v.imagen || ''],
+          stockMayorista: [v.stockMayorista || 0],
+          stockSucursales: this.fb.array(
+            this.sucursales.map(s => this.fb.group({
+              sucursalId: [s.id],
+              cantidad: [v.stockSucursales?.find(ss => ss.sucursalId === s.id)?.cantidad || 0]
+            }))
+          )
+        })
       )
-    });
+    )
+  });
 
-    this.setupConditionalFields();
-  }
+  this.setupConditionalFields();
+}
+
 
   private setupConditionalFields(): void {
     const toggleControl = (control: string, condition: string) => {
@@ -91,20 +97,23 @@ export class EdicionProductoComponent {
     toggleControl('precioOferta', 'oferta');
   }
 
-  agregarVariante(): void {
-    const grupo = this.fb.group({
-      color: ['#000000'],
-      codigoBarras: [''],
-      stockMayorista: [0],
-      stockSucursales: this.fb.array(
-        this.sucursales.map(s => this.fb.group({
-          sucursalId: [s.id],
-          cantidad: [0]
-        }))
-      )
-    });
-    this.variantesArray.push(grupo);
-  }
+agregarVariante(): void {
+  const grupo = this.fb.group({
+    id: [null],
+    modelo: [null],            // opcional
+    color: ['#000000'],
+    codigoBarras: [''],
+    imagen: [''],
+    stockMayorista: [0],
+    stockSucursales: this.fb.array(
+      this.sucursales.map(s => this.fb.group({
+        sucursalId: [s.id],
+        cantidad: [0]
+      }))
+    )
+  });
+  this.variantesArray.push(grupo);
+}
 
   eliminarVariante(index: number): void {
     this.variantesArray.removeAt(index);
@@ -125,13 +134,16 @@ export class EdicionProductoComponent {
         sucursalId: s.sucursalId,
         cantidad: Number(s.cantidad) || 0
       })),
-      variantes: valores.variantes.map((v: any) => ({
-        color: v.color,
-        codigoBarras: v.codigoBarras,
-        stockMayorista: Number(v.stockMayorista),
-        stockSucursales: v.stockSucursales.map((s: any) => ({
-          sucursalId: s.sucursalId,
-          cantidad: Number(s.cantidad) || 0
+        variantes: valores.variantes.map((v: any) => ({
+          id: v.id || undefined,
+          modelo: v.modelo || null,
+          color: v.color,
+          codigoBarras: v.codigoBarras,
+          imagen: v.imagen || null,
+          stockMayorista: Number(v.stockMayorista),
+          stockSucursales: v.stockSucursales.map((s: any) => ({
+            sucursalId: s.sucursalId,
+            cantidad: Number(s.cantidad) || 0
         }))
       }))
     };

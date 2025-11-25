@@ -2,75 +2,74 @@
 
 <mat-dialog-content class="contenido-modal">
 
-  <!-- Datos principales -->
+  <!-- ============================== -->
+  <!-- DATOS PRINCIPALES DEL PRODUCTO -->
+  <!-- ============================== -->
   <div class="bloque">
     <p><strong>Descripción:</strong> {{ producto.descripcion }}</p>
-    <p><strong>Código interno:</strong> {{ producto.codigoBarras }}</p>
-    <p><strong>Color principal:</strong>
-      <span *ngIf="producto.color" class="color-dot" [ngStyle]="{ 'background-color': producto.color }"></span>
-      <span *ngIf="!producto.color">—</span>
+    <p><strong>Código interno:</strong> {{ producto.codigoBarras || '—' }}</p>
+
+    <!-- Color principal -->
+    <p *ngIf="producto.color">
+      <strong>Color principal:</strong>
+      <span class="color-dot" [ngStyle]="{ 'background-color': producto.color }"></span>
     </p>
   </div>
 
-  <!-- Clasificación -->
+  <!-- CLASIFICACIÓN -->
   <div class="bloque">
     <p><strong>Rubro:</strong> {{ producto.rubro }}</p>
     <p><strong>Subrubro:</strong> {{ producto.subrubro }}</p>
     <p><strong>Marca:</strong> {{ producto.marca }}</p>
   </div>
 
-  <!-- Precios -->
+  <!-- PRECIOS -->
   <div class="bloque precios">
     <p><strong>Precio Minorista:</strong> ${{ producto.precioMinorista }}</p>
+
     <p *ngIf="producto.precioMayorista > 0">
       <strong>Precio Mayorista:</strong> ${{ producto.precioMayorista }}
     </p>
-    <p *ngIf="producto.oferta"><strong>Precio Oferta:</strong> ${{ producto.precioOferta }}</p>
+
+    <p *ngIf="producto.oferta">
+      <strong>Precio Oferta:</strong> ${{ producto.precioOferta }}
+    </p>
   </div>
 
-  <!-- Stock principal -->
+  <!-- STOCK -->
   <div class="bloque">
-    <p><strong>Stock total:</strong> {{ getStockTotal(producto) }} unidades</p>
+    <p><strong>Stock total:</strong> {{ stockTotal }} unidades</p>
 
-
-    <p><strong>Stock por sucursal (base):</strong></p>
+    <!-- Stock por sucursal -->
+    <p><strong>Stock por sucursal:</strong></p>
     <ul>
       <li *ngFor="let stock of producto.stockSucursales">
-        🏬 <strong>{{ obtenerNombreSucursal(stock.sucursalId) }}</strong> → {{ stock.cantidad }} unidades
+        🏬 <strong>{{ obtenerNombreSucursal(stock.sucursalId) }}</strong>
+        → {{ stock.cantidad }} unidades
       </li>
     </ul>
+
     <p><strong>Stock mayorista:</strong> {{ producto.stockMayorista || 0 }}</p>
   </div>
 
-  <!-- Variantes -->
-  <div class="bloque" *ngIf="producto.variantes && producto.variantes.length > 0">
-    <h3>🎨 Variantes por color</h3>
-    <div *ngFor="let variante of producto.variantes" class="variante-card">
-      <p><strong>Color:</strong> 
-  <span class="color-dot" [ngStyle]="{ 'background-color': variante.color }"></span>
-</p>
-
-      <p><strong>Stock total:</strong> {{ getStockTotalVariante(variante) }} unidades</p>
-      <ul>
-        <li *ngFor="let stock of variante.stockSucursales">
-          🏬 <strong>{{ obtenerNombreSucursal(stock.sucursalId) }}</strong> → {{ stock.cantidad }} unidades
-        </li>
-      </ul>
-      <p><strong>Stock mayorista:</strong> {{ variante.stockMayorista }}</p>
-    </div>
+  <!-- MENSAJE: TIENE VARIANTES -->
+  <div class="bloque" *ngIf="producto.variantes?.length > 0">
+    <p>📍 <strong>Este producto tiene variantes disponibles.</strong></p>
+    <p style="font-size: 0.85rem;">(futuro: podríamos listarlas o permitir ver una por una)</p>
   </div>
 
-  <!-- Flags -->
+  <!-- FLAGS -->
   <div class="bloque">
     <p><strong>Destacado:</strong> {{ producto.destacado ? 'Sí' : 'No' }}</p>
     <p><strong>Oferta:</strong> {{ producto.oferta ? 'Sí' : 'No' }}</p>
     <p><strong>Impuesto Nacional:</strong> {{ producto.precioSinImpuestos ? 'Sí' : 'No' }}</p>
+
     <p *ngIf="producto.precioSinImpuestos">
       <strong>Precio sin Impuesto Nacional:</strong> ${{ producto.precioSinImpuestos }}
     </p>
   </div>
 
-  <!-- Imagen -->
+  <!-- IMAGEN -->
   <div *ngIf="producto.imagen" class="product-img">
     <img [src]="producto.imagen" alt="Imagen del producto" />
   </div>

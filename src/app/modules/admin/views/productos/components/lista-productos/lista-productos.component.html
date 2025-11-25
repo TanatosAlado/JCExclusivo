@@ -38,11 +38,43 @@
           <td mat-cell *matCellDef="let element"> {{element.rubro}} / {{element.subrubro}} </td>
         </ng-container>
 
+        <!-- Variantes Column -->
+        <ng-container matColumnDef="tipo">
+          <th mat-header-cell *matHeaderCellDef class="cabecera"> Variante </th>
+          <td mat-cell *matCellDef="let row">
+
+            <!-- Si tiene modelo + color -->
+            <ng-container *ngIf="row.tipoVariantes === 'modelo+color'">
+              {{ row.modelo }} /
+              <span 
+                class="color-dot"
+                [style.backgroundColor]="row.color"
+                [title]="row.color">
+              </span>
+            </ng-container>
+
+            <!-- Si solo tiene color -->
+            <ng-container *ngIf="row.tipoVariantes === 'color'">
+              <span 
+                class="color-dot"
+                [style.backgroundColor]="row.color"
+                [title]="row.color">
+              </span>
+            </ng-container>
+
+            <!-- Si no tiene variantes -->
+            <ng-container *ngIf="row.tipoVariantes === 'none'">
+              -
+            </ng-container>
+
+          </td>
+        </ng-container>
+
         <!-- Stock Column -->
         <ng-container matColumnDef="stock">
           <th mat-header-cell *matHeaderCellDef class="cabecera"> Stock </th>
           <td mat-cell *matCellDef="let element">
-            {{ getStockTotal(element) }}
+            {{ element.stockTotal }}
           </td>
         </ng-container>
 
