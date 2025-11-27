@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { GeneralService } from 'src/app/shared/services/general.service';
 import { Producto, VarianteProducto } from '../../models/producto.model';
 import { ToastService } from 'src/app/shared/services/toast.service';
@@ -27,7 +27,8 @@ export class DetalleProductoComponent {
     private route: ActivatedRoute,
     private generalService: GeneralService,
     private toastService: ToastService,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private router: Router
   ) {}
 
 ngOnInit() {
@@ -137,6 +138,10 @@ private procesarProductoEnCarrito(cliente: Cliente, producto: Producto) {
       this.toastService.toastMessage('El producto no pudo agregarse', 'red', 2000);
       console.error(err);
     });
+}
+
+volverATienda() {
+  this.router.navigate(['/inicio']);   // 👉 Ajustá la ruta si tu tienda tiene otro path
 }
 
 

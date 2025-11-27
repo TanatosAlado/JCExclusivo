@@ -1,3 +1,10 @@
+<!-- 🔙 VOLVER A LA TIENDA -->
+<div class="volver-container">
+  <button class="btn-volver" (click)="volverATienda()">
+    ← Volver a la tienda
+  </button>
+</div>
+
 <div class="container" *ngIf="producto">
   <!-- 🖼 Imagen -->
   <div class="left">
@@ -67,19 +74,6 @@
 
 
         </div>
-
-    <!-- <div *ngIf="producto.tipoVariantes === 'color' || modeloSeleccionado">
-      <h5>Colores</h5>
-      <div class="d-flex flex-wrap gap-2 mt-2">
-        <div *ngFor="let variante of coloresFiltrados"
-             class="color-option"
-             [ngStyle]="{ 'background-color': variante.color }"
-             (click)="seleccionarVariante(variante)"
-             [class.selected]="selectedVariante === variante"
-             style="width:30px;height:30px;border-radius:50%;cursor:pointer;border:1px solid #999">
-        </div>
-      </div>
-    </div> -->
 
     <!-- 🛒 Botón carrito -->
     <div class="carrito mt-4">
