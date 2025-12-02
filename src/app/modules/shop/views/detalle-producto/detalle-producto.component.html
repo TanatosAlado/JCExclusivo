@@ -38,42 +38,79 @@
     </div>
 
     <!-- 🎨 Variantes -->
-        <div *ngIf="producto.variantes?.length > 0" class="mt-3">
-       
-            <div *ngIf="producto.tipoVariantes === 'modelo+color'" class="mb-3">
-           
-                <div class="modelos-container">
-                    <button *ngFor="let modelo of modelosUnicos" class="btn btn-outline-primary btn-sm"
-                        (click)="seleccionarModelo(modelo)" [class.active]="modeloSeleccionado === modelo">
-                        {{ modelo }}
-                    </button>
-                </div>
-            </div>
+    <div *ngIf="producto.variantes?.length > 0" class="mt-3">
 
-         
-            <div *ngIf="producto.tipoVariantes === 'color' || producto.tipoVariantes === 'modelo+color'">
-         
-                <div *ngIf="coloresFiltrados?.length > 0; else sinColores" class="d-flex flex-wrap gap-2 mt-2 colores-container">
-                    <div *ngFor="let variante of coloresFiltrados" class="d-flex align-items-center gap-2 color-wrapper">
-                        <div class="color-option" [title]="variante.color || '(sin color)'"
-                            [ngStyle]="{ 'background-color': (variante.color || '#ddd') }"
-                            (click)="seleccionarVariante(variante)" [class.selected]="selectedVariante === variante"
-                            style="width:28px;height:28px;border-radius:50%;border:1px solid #999;cursor:pointer">
-                        </div>
-                   
-                    </div>
-                </div>
+      <div *ngIf="producto.tipoVariantes === 'modelo+color'" class="mb-3">
 
-
-                <ng-template #sinColores>
-                    <div class="text-muted small mt-2">
-                        <em>Seleccione un modelo para ver los colores</em>
-                    </div>
-                </ng-template>
-            </div>
-
-
+        <div class="modelos-container">
+          <button *ngFor="let modelo of modelosUnicos" class="btn btn-outline-primary btn-sm"
+            (click)="seleccionarModelo(modelo)" [class.active]="modeloSeleccionado === modelo">
+            {{ modelo }}
+          </button>
         </div>
+      </div>
+
+
+      <div *ngIf="producto.tipoVariantes === 'color' || producto.tipoVariantes === 'modelo+color'">
+
+        <div *ngIf="coloresFiltrados?.length > 0; else sinColores"
+          class="d-flex flex-wrap gap-2 mt-2 colores-container">
+          <div *ngFor="let variante of coloresFiltrados" class="d-flex align-items-center gap-2 color-wrapper">
+            <div class="color-option" [title]="variante.color || '(sin color)'"
+              [ngStyle]="{ 'background-color': (variante.color || '#ddd') }" (click)="seleccionarVariante(variante)"
+              [class.selected]="selectedVariante === variante"
+              style="width:28px;height:28px;border-radius:50%;border:1px solid #999;cursor:pointer">
+            </div>
+            <div class="color-wrapper position-relative">
+
+
+
+            </div>
+
+          </div>
+        </div>
+
+
+        <ng-template #sinColores>
+          <div class="text-muted small mt-2">
+            <em>Seleccione un modelo para ver los colores</em>
+          </div>
+        </ng-template>
+      </div>
+
+
+    </div>
+
+    <!-- 🟦 Indicador de selección -->
+    <div *ngIf="producto.tipoVariantes !== 'none'" class="seleccion-actual mt-3">
+
+      <!-- Modelo seleccionado -->
+      <div *ngIf="modeloSeleccionado" class="seleccion-item">
+        <strong>Modelo:</strong> {{ modeloSeleccionado }}
+      </div>
+
+      <!-- Color seleccionado -->
+      <div *ngIf="selectedVariante?.color" class="seleccion-item">
+        <strong>Color:</strong> {{ selectedVariante.color }}
+      </div>
+
+      <!-- Si todavía falta elegir algo -->
+      <div *ngIf="producto.tipoVariantes === 'modelo+color' && (!modeloSeleccionado || !selectedVariante)"
+        class="text-danger small mt-1">
+        Debes seleccionar modelo y color para continuar.
+      </div>
+
+      <div *ngIf="producto.tipoVariantes === 'color' && !selectedVariante" class="text-danger small mt-1">
+        Debes seleccionar un color para continuar.
+      </div>
+
+    </div>
+
+    <div *ngIf="sinStock" class="text-danger mt-2">
+      <strong>Sin stock disponible</strong>
+    </div>
+
+
 
     <!-- 🛒 Botón carrito -->
     <div class="carrito mt-4">
@@ -81,7 +118,7 @@
       <input type="text" [(ngModel)]="cantidad" readonly />
       <button (click)="aumentarCantidad()">+</button>
 
-      <button class="agregar-carrito" (click)="cargaCarrito(producto)">
+      <button class="agregar-carrito" (click)="cargaCarrito(producto)" [disabled]="!puedeAgregar()">
         AGREGAR AL CARRITO
       </button>
     </div>

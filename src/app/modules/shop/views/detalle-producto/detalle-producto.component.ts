@@ -21,6 +21,8 @@ export class DetalleProductoComponent {
   modeloSeleccionado: string | null = null;
   selectedVariante: VarianteProducto | null = null;
   esMayorista: boolean = false;
+  sinStock: boolean = false;
+
 
 
   constructor(
@@ -59,16 +61,25 @@ ngOnInit() {
     } else if (this.producto.tipoVariantes === 'color') {
       this.coloresFiltrados = variantes;
     }
+    (this.producto.variantes || []).forEach(v => {
+      v["stockTotal"] = v.stockSucursales?.reduce((acc, s) => acc + s.cantidad, 0) ?? 0;
+    });
   }
 
   seleccionarModelo(modelo: string) {
+    console.log('Modelo seleccionado:', modelo);
     this.modeloSeleccionado = modelo;
     this.coloresFiltrados = this.producto.variantes?.filter(v => v.modelo === modelo) || [];
     this.selectedVariante = null; // Reiniciamos selección de color
   }
 
   seleccionarVariante(variante: VarianteProducto) {
+    console.log('Variante seleccionada:', variante);
     this.selectedVariante = variante;
+
+    const totalStock = variante.stockSucursales?.reduce((acc, s) => acc + s.cantidad, 0) ?? 0;
+    this.sinStock = totalStock <= 0;
+    console.log("Stock total variante:", totalStock);
     // Actualizamos datos dinámicamente
     this.producto.imagen = variante.imagen || this.producto.imagen;
     this.producto.precioMinorista = variante.precioMinorista || this.producto.precioMinorista;
@@ -86,7 +97,7 @@ ngOnInit() {
   }
 
   cargaCarrito(producto: Producto) {
-    console.log('Agregando al carrito desde Detalle:', producto);
+    console.log('Varieante seleccionada al agregar al carrito:', this.selectedVariante);
     const cliente = this.generalService.getClienteActual();
     if (!cliente) {
       const dialogRef = this.dialog.open(LoginComponent, {
@@ -117,16 +128,9 @@ ngOnInit() {
   }
 
 private procesarProductoEnCarrito(cliente: Cliente, producto: Producto) {
-  // Si hay variante seleccionada, combinamos sus datos con el producto base
-  const productoFinal: Producto = this.selectedVariante
-    ? {
-        ...producto,
-        ...this.selectedVariante,
-        id: `${producto.id}-${this.selectedVariante.modelo || this.selectedVariante.color || 'base'}`,
-        stockTotal: producto.stockTotal || 0,
-        stockGlobal: producto.stockGlobal || 0
-      } as Producto
-    : producto;
+
+  // 👉 Si hay variante, ESA variante es el producto real.
+  const productoFinal: any = this.selectedVariante ?? producto;
 
   console.log('🛒 Agregando al carrito:', productoFinal);
 
@@ -142,6 +146,23 @@ private procesarProductoEnCarrito(cliente: Cliente, producto: Producto) {
 
 volverATienda() {
   this.router.navigate(['/inicio']);   // 👉 Ajustá la ruta si tu tienda tiene otro path
+}
+
+puedeAgregar(): boolean {
+
+  if (this.sinStock) return false;  // ⛔ Sin stock → no se puede agregar
+
+  if (this.producto.tipoVariantes === "none") return true;
+
+  if (this.producto.tipoVariantes === "color") {
+    return this.selectedVariante !== null;
+  }
+
+  if (this.producto.tipoVariantes === "modelo+color") {
+    return this.modeloSeleccionado !== null && this.selectedVariante !== null;
+  }
+
+  return true;
 }
 
 

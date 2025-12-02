@@ -14,6 +14,7 @@ export interface VarianteProducto {
   stockSucursales: StockSucursal[];
   stockMayorista: number;
   imagen?: string;
+  stockTotal?: number;
 }
 
 export class Producto {

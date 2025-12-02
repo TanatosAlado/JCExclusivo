@@ -11,7 +11,7 @@ import {
   FormControl
 } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { addDoc, collection } from 'firebase/firestore';
+import { addDoc, collection, updateDoc } from 'firebase/firestore';
 import { Sucursal } from 'src/app/modules/admin/models/sucursal.model';
 import { SucursalesService } from 'src/app/modules/admin/services/sucursales.service';
 import { Producto, VarianteProducto } from 'src/app/modules/shop/models/producto.model';
@@ -65,7 +65,7 @@ export class AltaProductoComponent implements OnInit {
     'none' // tipoVariantes
   );
 
-  constructor(private fb: FormBuilder, private sucursalService: SucursalesService, private firestore: Firestore) { }
+  constructor(private fb: FormBuilder, private sucursalService: SucursalesService, private firestore: Firestore, private dialogRef: MatDialogRef<AltaProductoComponent>) { }
 
   ngOnInit(): void {
     // 1) Primero creamos el form (siempre primero)
@@ -381,70 +381,115 @@ export class AltaProductoComponent implements OnInit {
   }
 
 
-  async guardarProducto() {
-    // imprimimos form por debug (te sirve para ver variantes)
-    const formValue = this.form ? this.form.value : {};
-    console.log('Guardando producto — form.value:', formValue);
-    console.log('Guardando producto — producto (modelo ngModel):', this.producto);
+async guardarProducto() {
+  const formValue = this.form ? this.form.value : {};
+  console.log('Guardando producto — form.value:', formValue);
+  console.log('Guardando producto — producto (modelo ngModel):', this.producto);
 
-    try {
-      // -------- PRODUCTO ÚNICO (usa this.producto porque la UI usa ngModel) --------
-      if (this.tipoSeleccionado === 'none') {
-        const payloadUnico = {
-          // si querés un "nombre" distinto, podés usar otro campo; acá uso descripcion como nombre
-          nombre: this.producto.descripcion || '',
-          descripcion: this.producto.descripcion || '',
-          subdescripcion: this.producto.subdescripcion || '',
-          codigoBarras: this.producto.codigoBarras || '',
-          precioCosto: Number(this.producto.precioCosto || 0),
-          precioSinImpuestos: Number(this.producto.precioSinImpuestos || 0),
-          precioMinorista: Number(this.producto.precioMinorista || 0),
-          precioMayorista: Number(this.producto.precioMayorista || 0),
-          oferta: Boolean(this.producto.oferta),
-          precioOferta: this.producto.oferta ? Number(this.producto.precioOferta || 0) : null,
-          destacado: Boolean(this.producto.destacado),
-          imagen: this.producto.imagen || '',
-          rubro: this.producto.rubro || '',
-          subrubro: this.producto.subrubro || '',
-          marca: this.producto.marca || '',
-          stockMayorista: Number(this.producto.stockMayorista || 0),
-          stockSucursales: this.mapStockSucursales(this.producto.stockSucursales),
-          stockMinimo: Number(this.producto.stockMinimo || 0),
-          tipoVariantes: 'none',
+  try {
+    // -------- PRODUCTO ÚNICO --------
+    if (this.tipoSeleccionado === 'none') {
+      const payloadUnico = {
+        nombre: this.producto.descripcion || '',
+        descripcion: this.producto.descripcion || '',
+        subdescripcion: this.producto.subdescripcion || '',
+        codigoBarras: this.producto.codigoBarras || '',
+        precioCosto: Number(this.producto.precioCosto || 0),
+        precioSinImpuestos: Number(this.producto.precioSinImpuestos || 0),
+        precioMinorista: Number(this.producto.precioMinorista || 0),
+        precioMayorista: Number(this.producto.precioMayorista || 0),
+        oferta: Boolean(this.producto.oferta),
+        precioOferta: this.producto.oferta ? Number(this.producto.precioOferta || 0) : null,
+        destacado: Boolean(this.producto.destacado),
+        imagen: this.producto.imagen || '',
+        rubro: this.producto.rubro || '',
+        subrubro: this.producto.subrubro || '',
+        marca: this.producto.marca || '',
+        stockMayorista: Number(this.producto.stockMayorista || 0),
+        stockSucursales: this.mapStockSucursales(this.producto.stockSucursales),
+        stockMinimo: Number(this.producto.stockMinimo || 0),
+        tipoVariantes: 'none',
+        fechaAlta: new Date()
+      };
+
+      const productosRef = collection(this.firestore, 'productos');
+      const docRef = await addDoc(productosRef, payloadUnico);
+
+      // 🔥 IMPORTANTE: asignar ID interno
+      await updateDoc(docRef, { id: docRef.id });
+
+      console.log('✅ Producto único guardado correctamente.');
+      this.dialogRef.close(true);
+      return;
+    }
+
+    // -------- PRODUCTO CON VARIANTES POR COLOR --------
+    if (this.tipoSeleccionado === 'color') {
+      const idPadre = uuidv4();
+      const base = formValue;
+      const productosRef = collection(this.firestore, 'productos');
+
+      const variantesArr = formValue.variantes || [];
+      for (const v of variantesArr) {
+        const colorHex = this.sanitizeColor(v.color);
+        const doc = {
+          productoPadre: idPadre,
+          nombre: `${base.descripcion} - ${colorHex}`.trim(),
+          descripcion: base.descripcion || '',
+          codigoBarras: v.codigoBarras || '',
+          precioCosto: Number(base.precioCosto || 0),
+          precioSinImpuestos: Number(base.precioSinImpuestos || 0),
+          precioMinorista: Number(v.precioMinorista ?? base.precioMinorista ?? 0),
+          precioMayorista: Number(v.precioMayorista ?? base.precioMayorista ?? 0),
+          oferta: Boolean(base.oferta),
+          precioOferta: base.oferta ? Number(base.precioOferta || 0) : null,
+          destacado: Boolean(base.destacado),
+          imagen: base.imagen || '',
+          rubro: base.rubro || '',
+          subrubro: base.subrubro || '',
+          marca: base.marca || '',
+          color: colorHex,
+          stockMayorista: Number(v.stockMayorista || 0),
+          stockSucursales: this.mapStockSucursales(v.stockSucursales),
+          tipoVariantes: 'color',
           fechaAlta: new Date()
         };
 
-        console.log('Producto único a guardar (payload):', payloadUnico);
+        const docRef = await addDoc(productosRef, doc);
 
-        // usa collection/addDoc como ya usabas
-        const productosRef = collection(this.firestore, 'productos');
-        await addDoc(productosRef, payloadUnico);
-
-        console.log('✅ Producto único guardado correctamente.');
-        // opcional: reset UI
-        // this.resetFormAndModel();
-        return;
+        // 🔥 guardar ID dentro del documento
+        await updateDoc(docRef, { id: docRef.id });
       }
 
-      // -------- PRODUCTO CON VARIANTES POR COLOR (usa this.form.value) --------
-      if (this.tipoSeleccionado === 'color') {
-        const idPadre = uuidv4();
-        const base = formValue; // ya tienes descripción, imagen, precios, etc en el form
-        const productosRef = collection(this.firestore, 'productos');
+      console.log('✅ Variantes por color guardadas.');
+      this.dialogRef.close(true);
+      return;
+    }
 
-        // si no hay variantes en form, salimos
-        const variantesArr = formValue.variantes || [];
-        for (const v of variantesArr) {
-          const colorHex = this.sanitizeColor(v.color);
+    // -------- PRODUCTO CON MODELO + COLOR --------
+    if (this.tipoSeleccionado === 'modelo+color') {
+      const idPadre = uuidv4();
+      const base = formValue;
+      const productosRef = collection(this.firestore, 'productos');
+
+      const modelos = (formValue.variantes || []);
+      for (const modelo of modelos) {
+        const modeloNombre = modelo.modelo || '';
+        const colores = (modelo.colores || []);
+
+        for (const color of colores) {
+          const colorHex = this.sanitizeColor(color.color);
           const doc = {
             productoPadre: idPadre,
-            nombre: `${base.descripcion} - ${colorHex}`.trim(),
+            nombre: `${base.descripcion} - ${modeloNombre} - ${colorHex}`.trim(),
             descripcion: base.descripcion || '',
-            codigoBarras: v.codigoBarras || '',
+            modelo: modeloNombre,
+            color: colorHex,
+            codigoBarras: color.codigoBarras || '',
             precioCosto: Number(base.precioCosto || 0),
             precioSinImpuestos: Number(base.precioSinImpuestos || 0),
-            precioMinorista: Number(v.precioMinorista ?? base.precioMinorista ?? 0),
-            precioMayorista: Number(v.precioMayorista ?? base.precioMayorista ?? 0),
+            precioMinorista: Number(color.precioMinorista ?? base.precioMinorista ?? 0),
+            precioMayorista: Number(color.precioMayorista ?? base.precioMayorista ?? 0),
             oferta: Boolean(base.oferta),
             precioOferta: base.oferta ? Number(base.precioOferta || 0) : null,
             destacado: Boolean(base.destacado),
@@ -452,68 +497,32 @@ export class AltaProductoComponent implements OnInit {
             rubro: base.rubro || '',
             subrubro: base.subrubro || '',
             marca: base.marca || '',
-            color: colorHex,
-            stockMayorista: Number(v.stockMayorista || 0),
-            stockSucursales: this.mapStockSucursales(v.stockSucursales),
-            tipoVariantes: 'color',
+            stockMayorista: Number(color.stockMayorista || 0),
+            stockSucursales: this.mapStockSucursales(color.stockSucursales),
+            tipoVariantes: 'modelo+color',
             fechaAlta: new Date()
           };
-          await addDoc(productosRef, doc);
-        }
 
-        console.log('✅ Variantes por color guardadas.');
-        return;
+          const docRef = await addDoc(productosRef, doc);
+
+          // 🔥 guardar ID interno
+          await updateDoc(docRef, { id: docRef.id });
+        }
       }
 
-      // -------- PRODUCTO CON MODELO + COLOR --------
-      if (this.tipoSeleccionado === 'modelo+color') {
-        const idPadre = uuidv4();
-        const base = formValue;
-        const productosRef = collection(this.firestore, 'productos');
-
-        const modelos = (formValue.variantes || []);
-        for (const modelo of modelos) {
-          const modeloNombre = modelo.modelo || '';
-          const colores = (modelo.colores || []);
-          for (const color of colores) {
-            const colorHex = this.sanitizeColor(color.color);
-            const doc = {
-              productoPadre: idPadre,
-              nombre: `${base.descripcion} - ${modeloNombre} - ${colorHex}`.trim(),
-              descripcion: base.descripcion || '',
-              modelo: modeloNombre,
-              color: colorHex,
-              codigoBarras: color.codigoBarras || '',
-              precioCosto: Number(base.precioCosto || 0),
-              precioSinImpuestos: Number(base.precioSinImpuestos || 0),
-              precioMinorista: Number(color.precioMinorista ?? base.precioMinorista ?? 0),
-              precioMayorista: Number(color.precioMayorista ?? base.precioMayorista ?? 0),
-              oferta: Boolean(base.oferta),
-              precioOferta: base.oferta ? Number(base.precioOferta || 0) : null,
-              destacado: Boolean(base.destacado),
-              imagen: base.imagen || '',
-              rubro: base.rubro || '',
-              subrubro: base.subrubro || '',
-              marca: base.marca || '',
-              stockMayorista: Number(color.stockMayorista || 0),
-              stockSucursales: this.mapStockSucursales(color.stockSucursales),
-              tipoVariantes: 'modelo+color',
-              fechaAlta: new Date()
-            };
-            await addDoc(productosRef, doc);
-          }
-        }
-
-        console.log('✅ Variantes por modelo+color guardadas.');
-        return;
-      }
-
-      console.warn('Tipo seleccionado desconocido:', this.tipoSeleccionado);
-    } catch (err) {
-      console.error('Error guardando producto:', err);
-      alert('Error al guardar el producto. Revisa la consola.');
+      console.log('✅ Variantes por modelo+color guardadas.');
+      this.dialogRef.close(true);
+      return;
     }
+
+    console.warn('Tipo seleccionado desconocido:', this.tipoSeleccionado);
+
+  } catch (err) {
+    console.error('Error guardando producto:', err);
+    alert('Error al guardar el producto. Revisa la consola.');
   }
+}
+
 
   /**
    * Normaliza/valida un color. Si la entrada ya es un #rrggbb válido lo devuelve en minúscula.

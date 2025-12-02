@@ -9,7 +9,7 @@ import { Router } from '@angular/router';
 import { CarritoService } from 'src/app/shared/services/carrito.service';
 import { Contador } from '../../models/contador.model';
 import { Pedido } from '../../models/pedido.model';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, runTransaction, updateDoc } from 'firebase/firestore';
 import { ContadorService } from 'src/app/shared/services/contador.service';
 import { VouchersPuntosService } from 'src/app/shared/services/vouchers-puntos.service';
 import { collection } from 'firebase/firestore/lite';
@@ -73,7 +73,7 @@ export class CheckoutComponent {
   async ngOnInit() {
     this.getCliente()
     this.getContadorPedidos()
-     this.getDatosEmpresa()
+    this.getDatosEmpresa()
     await this.inicializarValoresPuntos();
     this.cuponControl.valueChanges.subscribe(() => {
       if (this.cuponInvalido) {
@@ -85,11 +85,11 @@ export class CheckoutComponent {
   }
 
   obtenerSucursales(): void {
-  this.sucursalesService.obtenerSucursales().subscribe(sucs => {
-    this.sucursales = sucs;
-    // Aquí no necesitamos tocar forms de stock, solo lo dejamos para otros componentes
-  });
-}
+    this.sucursalesService.obtenerSucursales().subscribe(sucs => {
+      this.sucursales = sucs;
+      // Aquí no necesitamos tocar forms de stock, solo lo dejamos para otros componentes
+    });
+  }
 
   async inicializarValoresPuntos() {
     const valores = await this.puntosService.obtenerValoresPuntos();
@@ -97,13 +97,13 @@ export class CheckoutComponent {
       this.valorParaSumarPunto = valores.valorParaSumarPunto;
       this.valorMonetarioPorPunto = valores.valorMonetarioPorPunto;
     }
-    
+
     this.puntosAplicados = this.getPuntosAplicados(this.clienteEncontrado);
 
     const valoresMayoristas = await this.puntosService.obtenerMontosMayoristas();
     if (valoresMayoristas) {
       this.montoParaActivar = valoresMayoristas.minimoPrimeraCompra;
-    } 
+    }
 
   }
   //FUNCION PARA BUSCAR EL CLIENTE LOGUEADO Y  GUARDARLO EN UNA VARIABLE
@@ -228,133 +228,214 @@ export class CheckoutComponent {
   }
 
   //FUNCION PARA CREAR EL PEDIDO
-async createPedido(puntoRestar: number, puntosSumar: number) {
-  const carritoCliente = this.clienteEncontrado.carrito;
-  console.log('Carrito del cliente:', carritoCliente);
+  async createPedido(puntoRestar: number, puntosSumar: number) {
+    const carritoCliente = this.clienteEncontrado.carrito;
+    console.log('Carrito del cliente:', carritoCliente);
 
-  const total = this.generalService.getTotalPrecio(
-    this.clienteEncontrado,
-    this.usarPuntos,
-    this.valorMonetarioPorPunto,
-    this.cuponAplicado
-  );
+    const total = this.generalService.getTotalPrecio(
+      this.clienteEncontrado,
+      this.usarPuntos,
+      this.valorMonetarioPorPunto,
+      this.cuponAplicado
+    );
 
-  let direccion = 'S/E';
-  let pago = 'S/P';
-  const envio = this.radioButtonSeleccionado === 'domicilio' ? 'Envío' : 'Retiro en sucursal';
+    let direccion = 'S/E';
+    let pago = 'S/P';
+    const envio = this.radioButtonSeleccionado === 'domicilio' ? 'Envío' : 'Retiro en sucursal';
 
-  if (this.radioButtonSeleccionado === 'domicilio') {
-    direccion = this.formCheckout.get('domicilioEntrega')?.value;
-    pago = this.opcionPagoSeleccionada === 'efectivo' ? 'Efectivo' : 'Transferencia';
-  }
-
-  const unPedido: Pedido = {
-    id: '',
-    nroPedido: this.contador[0]?.contador != null ? this.contador[0].contador + 1 : 1,
-    fecha: this.generalService.formatearFechaDesdeDate(new Date()),
-    user: this.formCheckout.get('user')?.value,
-    mail: this.formCheckout.get('mail')?.value,
-    telefono: this.formCheckout.get('telefono')?.value,
-    domicilioEntrega: direccion,
-    carrito: carritoCliente,
-    entrega: envio,
-    pago: pago,
-    total: total,
-    estado: 'pendiente',
-    nombreCliente: this.formCheckout.get('user')?.value,
-    apellidoCliente: '',
-  };
-
-  console.log('Creando pedido:', unPedido);
-
-  try {
-    const docRef = await this.pedidoService.createPedido(unPedido);
-    this.updateIdPedido(docRef.id, unPedido);
-
-    // 🟢 CLIENTE LOGUEADO
-    if (this.clienteEncontrado.id !== 'invitado') {
-      const historico = {
-        fecha: unPedido.fecha,
-        nroPedido: unPedido.nroPedido,
-        carrito: carritoCliente,
-        entrega: unPedido.entrega,
-        pago: unPedido.pago,
-        total: unPedido.total,
-        id: docRef.id,
-      };
-      this.clienteEncontrado.historial.push(historico);
-      this.clienteEncontrado.carrito = [];
-
-      const puntosGanados = Math.floor(puntosSumar);
-      const puntosGastados = Math.floor(puntoRestar);
-      this.clienteEncontrado.puntos =
-        this.clienteEncontrado.puntos - puntosGastados + puntosGanados;
-
-      if (this.clienteEncontrado.esMayorista && !this.clienteEncontrado.mayoristaActivado) {
-        this.clienteEncontrado.mayoristaActivado = historico.total >= this.montoParaActivar;
-      }
-
-      await this.clienteService.actualizarCliente(this.clienteEncontrado.id, this.clienteEncontrado);
-    } else {
-      // 🟡 INVITADO
-      localStorage.removeItem('carritoInvitado');
+    if (this.radioButtonSeleccionado === 'domicilio') {
+      direccion = this.formCheckout.get('domicilioEntrega')?.value;
+      pago = this.opcionPagoSeleccionada === 'efectivo' ? 'Efectivo' : 'Transferencia';
     }
 
-    // 🔁 Actualización de stock
-    const sucursalCentralId = 'GtVWr5IHmosOOB8l6u6j';
-    const sucursalADescontar =
-      this.radioButtonSeleccionado === 'farmacia' && this.sucursalSeleccionada
-        ? this.sucursalSeleccionada
-        : sucursalCentralId;
+    const unPedido: Pedido = {
+      id: '',
+      nroPedido: this.contador[0]?.contador != null ? this.contador[0].contador + 1 : 1,
+      fecha: this.generalService.formatearFechaDesdeDate(new Date()),
+      user: this.formCheckout.get('user')?.value,
+      mail: this.formCheckout.get('mail')?.value,
+      telefono: this.formCheckout.get('telefono')?.value,
+      domicilioEntrega: direccion,
+      carrito: carritoCliente,
+      entrega: envio,
+      pago: pago,
+      total: total,
+      estado: 'pendiente',
+      nombreCliente: this.formCheckout.get('user')?.value,
+      apellidoCliente: '',
+    };
 
-    for (const item of carritoCliente) {
-      const productoRef = doc(this.firestore, 'productos', item.id);
-      const productoSnap = await getDoc(productoRef);
+    console.log('Creando pedido:', unPedido);
 
-      if (!productoSnap.exists()) continue;
-      const productoData: any = productoSnap.data();
+    try {
+      const docRef = await this.pedidoService.createPedido(unPedido);
+      this.updateIdPedido(docRef.id, unPedido);
 
-      // Verificamos si corresponde a una variante
-      const variante = productoData.variantes?.find(
-        (v: any) => v.codigoBarras === item.codigoBarras
-      );
+      // 🟢 CLIENTE LOGUEADO
+      if (this.clienteEncontrado.id !== 'invitado') {
+        const historico = {
+          fecha: unPedido.fecha,
+          nroPedido: unPedido.nroPedido,
+          carrito: carritoCliente,
+          entrega: unPedido.entrega,
+          pago: unPedido.pago,
+          total: unPedido.total,
+          id: docRef.id,
+        };
+        this.clienteEncontrado.historial.push(historico);
+        this.clienteEncontrado.carrito = [];
 
-      if (variante) {
-        // 🔹 Descontamos stock en la variante
-        const stockSucursal = variante.stockSucursales?.find(
-          (s: any) => s.sucursalId === sucursalADescontar
-        );
-        if (stockSucursal) {
-          stockSucursal.cantidad = Math.max(stockSucursal.cantidad - item.cantidad, 0);
+        const puntosGanados = Math.floor(puntosSumar);
+        const puntosGastados = Math.floor(puntoRestar);
+        this.clienteEncontrado.puntos =
+          this.clienteEncontrado.puntos - puntosGastados + puntosGanados;
+
+        if (this.clienteEncontrado.esMayorista && !this.clienteEncontrado.mayoristaActivado) {
+          this.clienteEncontrado.mayoristaActivado = historico.total >= this.montoParaActivar;
         }
 
-        // Actualizamos variante dentro del array
-        const nuevasVariantes = productoData.variantes.map((v: any) =>
-          v.codigoBarras === item.codigoBarras ? variante : v
-        );
-        await updateDoc(productoRef, { variantes: nuevasVariantes });
+        await this.clienteService.actualizarCliente(this.clienteEncontrado.id, this.clienteEncontrado);
       } else {
-        // 🔹 Descontamos stock en el producto principal
-        const stockSucursal = productoData.stockSucursales?.find(
-          (s: any) => s.sucursalId === sucursalADescontar
-        );
-        if (stockSucursal) {
-          stockSucursal.cantidad = Math.max(stockSucursal.cantidad - item.cantidad, 0);
-        }
-
-        const nuevoStockSucursales = productoData.stockSucursales.map((s: any) =>
-          s.sucursalId === sucursalADescontar ? stockSucursal : s
-        );
-
-        await updateDoc(productoRef, { stockSucursales: nuevoStockSucursales });
+        // 🟡 INVITADO
+        localStorage.removeItem('carritoInvitado');
       }
+
+      // 🔁 Actualización de stock
+      const sucursalCentralId = 'GtVWr5IHmosOOB8l6u6j';
+      const sucursalADescontar =
+        this.radioButtonSeleccionado === 'farmacia' && this.sucursalSeleccionada
+          ? this.sucursalSeleccionada
+          : sucursalCentralId;
+
+      for (const item of carritoCliente) {
+  try {
+    // 1) Determinar id real del documento del producto en Firestore
+    // Si en el carrito guardás id compuesto (productoId-...), intentamos recuperar el padre
+    let productDocId = item.id;
+    // si tenés productoPadre en el item, preferirlo
+    if (!productDocId && item.productoPadre) {
+      productDocId = item.productoPadre;
+    }
+    // si el id tiene guion y acaso es "productoId-variant", tomamos la primera parte
+    if (productDocId && productDocId.includes('-')) {
+      const first = productDocId.split('-')[0];
+      // comprobamos si existe ese doc; si existe lo usamos
+      const testRef = doc(this.firestore, 'productos', first);
+      const testSnap = await getDoc(testRef);
+      if (testSnap.exists()) productDocId = first;
+      // sino dejamos el id original (por si guardás el id real)
     }
 
-    console.log('✅ Pedido creado y stock actualizado correctamente.');
-  } catch (error) {
-    console.error('Error al crear pedido:', error);
+    const productoRef = doc(this.firestore, 'productos', productDocId);
+
+    // 2) Ejecutar transacción por cada producto para lectura/actualización segura
+    await runTransaction(this.firestore, async (tx) => {
+      const prodSnap = await tx.get(productoRef);
+      if (!prodSnap.exists()) {
+        console.warn('Producto no encontrado en transacción para item:', item);
+        return;
+      }
+
+      const productoData: any = prodSnap.data();
+
+      
+      // Helper: convertir mapa->array si corresponde
+      const mapToArray = (maybeMap: any) => {
+        if (!maybeMap) return [];
+        if (Array.isArray(maybeMap)) return maybeMap;
+        // es un mapa { id: cantidad, ... }
+        return Object.entries(maybeMap).map(([sucursalId, cantidad]) => ({
+          sucursalId,
+          cantidad: Number(cantidad) || 0
+        }));
+      };
+
+      // Convertir stock principal
+      productoData.stockSucursales = mapToArray(productoData.stockSucursales);
+
+      // Buscar variante por codigoBarras (si corresponde)
+      let varianteIndex = -1;
+      let varianteObj: any = null;
+      if (productoData.variantes && Array.isArray(productoData.variantes)) {
+        varianteIndex = productoData.variantes.findIndex(
+          (v: any) => v.codigoBarras === item.codigoBarras
+        );
+        if (varianteIndex >= 0) {
+          varianteObj = productoData.variantes[varianteIndex];
+          // convertir stock de la variante
+          varianteObj.stockSucursales = mapToArray(varianteObj.stockSucursales);
+        }
+      }
+
+      // Cantidad a descontar
+      let remaining = Number(item.cantidad) || 0;
+      if (remaining <= 0) {
+        console.warn('Cantidad inválida en carrito item:', item);
+        return;
+      }
+
+      // Función que distribuye remaining entre un array de sucursales (mutando el array)
+      const distribuirEntreSucursales = (sucursalesArr: any[], sucursalPrioridadId?: string) => {
+        if (!sucursalesArr || sucursalesArr.length === 0) return;
+
+        // Reordenar: priorizar la sucursal seleccionada primero, luego las demás
+        let ordered = [...sucursalesArr];
+        if (sucursalPrioridadId) {
+          ordered = [
+            ...ordered.filter(s => s.sucursalId === sucursalPrioridadId),
+            ...ordered.filter(s => s.sucursalId !== sucursalPrioridadId)
+          ];
+        }
+
+        for (const s of ordered) {
+          if (remaining <= 0) break;
+          const available = Number(s.cantidad) || 0;
+          if (available <= 0) continue;
+          const take = Math.min(available, remaining);
+          s.cantidad = available - take;
+          remaining -= take;
+        }
+
+        // Si quedaron sucursales sin ser actualizadas (order cambió), reflectar mutaciones en sucursalesArr
+        // ordered contiene referencias a objetos de sucursalesArr, así que los cambios ya están aplicados.
+      };
+
+      // Descontar: si hay variante, primero sobre la variante
+      if (varianteObj) {
+        distribuirEntreSucursales(varianteObj.stockSucursales, sucursalADescontar);
+        // si aún queda cantidad por descontar, intentar descontar del stock principal del producto (fallback)
+        if (remaining > 0) {
+          distribuirEntreSucursales(productoData.stockSucursales, sucursalADescontar);
+        }
+
+        // Reemplazar la variante actualizada en el array
+        productoData.variantes[varianteIndex] = varianteObj;
+
+        // Guardar cambios en la transacción
+        tx.update(productoRef, { variantes: productoData.variantes });
+      } else {
+        // No es variante: descontar del producto principal
+        distribuirEntreSucursales(productoData.stockSucursales, sucursalADescontar);
+
+        tx.update(productoRef, { stockSucursales: productoData.stockSucursales });
+      }
+
+      // LOG útil para debugging
+      console.log(
+        `Stock actualizado para producto ${productDocId} (item ${item.codigoBarras || ''}). Remaining NOT covered: ${remaining}`
+      );
+    }); // end transaction
+
+  } catch (err) {
+    console.error('Error en update stock para item:', item, err);
   }
 }
+
+      console.log('✅ Pedido creado y stock actualizado correctamente.');
+    } catch (error) {
+      console.error('Error al crear pedido:', error);
+    }
+  }
 
 
 
@@ -449,7 +530,7 @@ async createPedido(puntoRestar: number, puntosSumar: number) {
       alert('No se pudo copiar el CVU');
     });
   }
-  
+
   getTotal(): number {
     return this.generalService.getTotalPrecio(this.clienteEncontrado);
   }
@@ -457,11 +538,11 @@ async createPedido(puntoRestar: number, puntosSumar: number) {
     return `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(aliasOCvu)}&size=200x200`;
   }
 
-    //FUNCION PARA OBTENER LOS DATOS DE LA EMPRESA
+  //FUNCION PARA OBTENER LOS DATOS DE LA EMPRESA
   getDatosEmpresa() {
     this.infoEmpresaService.obtenerInfoGeneral().subscribe(data => {
       this.infoEmpresa = data;
     });
-  
+
   }
 }

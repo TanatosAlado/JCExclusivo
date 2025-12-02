@@ -151,7 +151,6 @@ normalizarStock(producto: any) {
     dialogRef.afterClosed().subscribe(resultado => {
       if (resultado) {
         console.log('Producto creado:', resultado);
-        //   this.obtenerProductos(); // Refrescar productos
       }
     });
   }

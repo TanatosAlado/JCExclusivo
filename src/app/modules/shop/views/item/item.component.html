@@ -86,50 +86,5 @@
             </div>
         </ng-template>
 
-
-        <!-- 🎨 Variantes -->
-        <!-- <div *ngIf="producto.variantes?.length > 0" class="mt-3">
-       
-            <div *ngIf="producto.tipoVariantes === 'modelo+color'" class="mb-3">
-           
-                <div class="modelos-container">
-                    <button *ngFor="let modelo of modelosUnicos" class="btn btn-outline-primary btn-sm"
-                        (click)="seleccionarModelo(modelo)" [class.active]="modeloSeleccionado === modelo">
-                        {{ modelo }}
-                    </button>
-                </div>
-            </div>
-
-         
-            <div *ngIf="producto.tipoVariantes === 'color' || producto.tipoVariantes === 'modelo+color'">
-         
-                <div *ngIf="coloresFiltrados?.length > 0; else sinColores" class="d-flex flex-wrap gap-2 mt-2 colores-container">
-                    <div *ngFor="let variante of coloresFiltrados" class="d-flex align-items-center gap-2 color-wrapper">
-                        <div class="color-option" [title]="variante.color || '(sin color)'"
-                            [ngStyle]="{ 'background-color': (variante.color || '#ddd') }"
-                            (click)="seleccionarVariante(variante)" [class.selected]="selectedVariante === variante"
-                            style="width:28px;height:28px;border-radius:50%;border:1px solid #999;cursor:pointer">
-                        </div>
-                   
-                    </div>
-                </div>
-
-
-                <ng-template #sinColores>
-                    <div class="text-muted small mt-2">
-                        <em>Seleccione un modelo para ver los colores</em>
-                    </div>
-                </ng-template>
-            </div>
-
-
-        </div> -->
-
-
-
-        <!-- 📦 Si no tiene variantes -->
-        <!-- <div *ngIf="!producto.variantes?.length" class="mt-3 small text-muted">
-            Stock total: {{ getStockTotal(producto) }}
-        </div> -->
     </div>
 </div>

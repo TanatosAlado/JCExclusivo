@@ -218,3 +218,83 @@
 .btn-volver:hover {
   background: #e9f2f6;
 }
+
+/* ------- CARD GENERAL PARA CONTENER MEJOR EL DETALLE ------- */
+.container {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 2.2rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  border: 1px solid #f1f1f1;
+}
+
+/* ------- AJUSTES TIPOGRÁFICOS ------- */
+.right h3 {
+  font-size: 1.9rem;
+  color: #034f70;
+}
+
+.right h5 {
+  color: #555;
+  font-weight: 400;
+  margin-top: -10px;
+}
+
+.text-muted {
+  font-size: 0.95rem;
+  color: #666;
+}
+
+/* ------- IMAGEN MÁS PROTAGÓNICA ------- */
+.image-container {
+  background: #fdfdfd;
+  border: 1px solid #e7e7e7;
+  box-shadow: inset 0 0 8px rgba(0,0,0,0.03);
+}
+
+/* ------- SEPARACIÓN MÁS LIMPIA ENTRE BLOQUES ------- */
+.precios {
+  margin-top: 10px;
+  margin-bottom: 20px;
+}
+
+.colores-container {
+  margin-top: 10px;
+}
+
+/* ------- BOTÓN AGREGAR AL CARRITO MÁS DESTACADO ------- */
+.agregar-carrito {
+  font-size: 1rem;
+  padding: 0.7rem 1rem;
+  border-radius: 10px;
+  font-weight: bold;
+}
+
+/* ------- AJUSTES RESPONSIVE ADICIONALES ------- */
+@media (max-width: 768px) {
+  .container {
+    padding: 1.4rem;
+    border-radius: 10px;
+  }
+
+  .right h3 {
+    font-size: 1.6rem;
+  }
+}
+
+.badge-sin-stock {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #c0392b;
+  color: white;
+  font-size: 9px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-weight: bold;
+}
+
+.sin-stock {
+  opacity: 0.4;
+  cursor: not-allowed !important;
+}
