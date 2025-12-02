@@ -110,7 +110,9 @@
       <strong>Sin stock disponible</strong>
     </div>
 
-
+<div *ngIf="selectedVariante" class="text-muted mb-1">
+  Stock disponible: <strong>{{ selectedVariante.stockTotal }}</strong>
+</div>
 
     <!-- 🛒 Botón carrito -->
     <div class="carrito mt-4">

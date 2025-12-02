@@ -73,29 +73,44 @@ ngOnInit() {
     this.selectedVariante = null; // Reiniciamos selección de color
   }
 
-  seleccionarVariante(variante: VarianteProducto) {
-    console.log('Variante seleccionada:', variante);
-    this.selectedVariante = variante;
+seleccionarVariante(variante: VarianteProducto) {
+  console.log('Variante seleccionada:', variante);
 
-    const totalStock = variante.stockSucursales?.reduce((acc, s) => acc + s.cantidad, 0) ?? 0;
-    this.sinStock = totalStock <= 0;
-    console.log("Stock total variante:", totalStock);
-    // Actualizamos datos dinámicamente
-    this.producto.imagen = variante.imagen || this.producto.imagen;
-    this.producto.precioMinorista = variante.precioMinorista || this.producto.precioMinorista;
-    this.producto.precioMayorista = variante.precioMayorista || this.producto.precioMayorista;
-    this.producto.precioOferta = this.producto.precioOferta;
-    this.producto.oferta = this.producto.oferta;
+  this.selectedVariante = variante;
+
+  const totalStock = variante.stockTotal ?? 0;
+  this.sinStock = totalStock <= 0;
+
+  console.log("Stock total variante:", totalStock);
+
+  // ⚡ Ajustamos cantidad si supera el stock
+  if (this.cantidad > totalStock) {
+    this.cantidad = totalStock;
   }
+
+  // ⚡ Si la variante NO tiene stock, forzamos cantidad a 1
+  if (totalStock === 0) {
+    this.cantidad = 1;
+  }
+
+  // Actualizamos datos dinámicamente
+  this.producto.imagen = variante.imagen || this.producto.imagen;
+  this.producto.precioMinorista = variante.precioMinorista || this.producto.precioMinorista;
+  this.producto.precioMayorista = variante.precioMayorista || this.producto.precioMayorista;
+}
+
 
   disminuirCantidad() {
     if (this.cantidad > 1) this.cantidad--;
   }
 
-  aumentarCantidad() {
+aumentarCantidad() {
+  const limite = this.selectedVariante?.stockTotal ?? this.producto.stockTotal;
+
+  if (this.cantidad < limite) {
     this.cantidad++;
   }
-
+}
   cargaCarrito(producto: Producto) {
     console.log('Varieante seleccionada al agregar al carrito:', this.selectedVariante);
     const cliente = this.generalService.getClienteActual();

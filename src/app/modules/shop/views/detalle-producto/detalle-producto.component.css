@@ -163,8 +163,15 @@
   background-color: #cb484e !important;
 }
 
-.agregar-carrito:hover {
+.agregar-carrito:hover:not(:disabled) {
   background-color: #a93c42 !important;
+}
+
+.agregar-carrito:disabled {
+  background-color: #c9c9c9 !important;
+  color: #777;
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 
 /* --- RESPONSIVE --- */
@@ -268,6 +275,11 @@
   padding: 0.7rem 1rem;
   border-radius: 10px;
   font-weight: bold;
+  flex: 1;
+  background-color: #cb484e !important;
+  color: white;
+  border: none;
+  transition: 0.2s ease;
 }
 
 /* ------- AJUSTES RESPONSIVE ADICIONALES ------- */
