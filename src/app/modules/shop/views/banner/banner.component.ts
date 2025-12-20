@@ -1,7 +1,12 @@
 import { Component } from '@angular/core';
 import { BannerService } from 'src/app/modules/admin/services/banner.service'; 
+import { AuthService } from 'src/app/modules/auth/services/auth.service';
 
-declare var bootstrap: any;
+interface MediaItem {
+  nombre: string;
+  url: string;
+  tipo: 'imagen' | 'video';
+}
 
 @Component({
   selector: 'app-banner',
@@ -10,46 +15,54 @@ declare var bootstrap: any;
 })
 export class BannerComponent {
 
-  mediaItems: { nombre: string, url: string, tipo: 'imagen' | 'video' }[] = [];
+    mediaItems: MediaItem[] = [];
+    esMayorista: boolean = false;
+
+  bannersMayorista: MediaItem[] = [
+    {
+      nombre: 'banner01',
+      url: 'assets/imagenes/mayorista/banner01.JPG',
+      tipo: 'imagen'
+    },
+    {
+      nombre: 'banner04',
+      url: 'assets/imagenes/mayorista/banner04.JPG',
+      tipo: 'imagen'
+    }
+  ];
+
+  bannersMinorista: MediaItem[] = [
+    {
+      nombre: 'banner02',
+      url: 'assets/imagenes/minorista/banner02.JPG',
+      tipo: 'imagen'
+    },
+    {
+      nombre: 'banner03',
+      url: 'assets/imagenes/minorista/banner03.JPG',
+      tipo: 'imagen'
+    },
+    {
+      nombre: 'banner05',
+      url: 'assets/imagenes/minorista/banner05.JPG',
+      tipo: 'imagen'
+    }
+  ];
 
 
-  constructor(private bannerService: BannerService) { }
+  constructor(private bannerService: BannerService, private authService: AuthService) { }
 
   ngOnInit(): void {
-    //this.cargarImagenes();
-    this.mediaItems = [{nombre: 'banner1.jpg', url: '../../../../../assets/imagenes/banner01.png', tipo: 'imagen'}]
-  }
 
-  private esVideo(ext: string): boolean {
-    return ['mp4', 'webm', 'ogg'].includes(ext);
-  }
+    this.mediaItems = this.bannersMinorista;
 
-  private esImagen(ext: string): boolean {
-    return ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
-  }
+    this.authService.getUsuarioActual().subscribe(cliente => {
+      this.esMayorista = cliente?.esMayorista ?? false;
 
-  async cargarImagenes() {
-    const archivos = await this.bannerService.listarArchivos('uploads');
-
-    this.mediaItems = archivos.map(item => {
-      const ext = item.nombre.split('.').pop()?.toLowerCase() || '';
-      let tipo: 'imagen' | 'video' = this.esVideo(ext) ? 'video' : 'imagen';
-      return { ...item, tipo };
-    });
-
-    setTimeout(() => {
-      const el = document.querySelector('#bannerCarousel');
-      if (el) {
-        const carousel = bootstrap.Carousel.getOrCreateInstance(el, {
-          interval: 3000,
-          ride: 'carousel',
-          pause: false
-        });
-        carousel.cycle();
+      if (this.esMayorista) {
+        this.mediaItems = this.bannersMayorista;
       }
     });
   }
-
-
 
 }

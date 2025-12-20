@@ -5,7 +5,7 @@
     <div class="carousel-item position-relative" *ngFor="let img of mediaItems; let i = index" [class.active]="i === 0">
 
       <ng-container *ngIf="img.tipo === 'imagen'; else videoTemplate">
-        <img [src]="img.url" class="d-block w-100" alt="Banner" />
+        <img [src]="img.url" class="d-block w-100" alt="{{img.url }}"/>
       </ng-container>
 
       <ng-template #videoTemplate>
