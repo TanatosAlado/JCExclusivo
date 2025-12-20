@@ -40,7 +40,7 @@ export class GrillaItemComponent {
   this.authService.getUsuarioActual().subscribe(cliente => {
     this.esMayorista = cliente?.esMayorista ?? false;
 
-    this.productosService.obtenerProductos().subscribe(productos => {
+    this.productosService.obtenerProductosAgrupados().subscribe(productos => {
       this.productosOriginal = productos;
       this.rubros = [...new Set(productos.map(p => p.rubro))];
       this.marcas = [...new Set(productos.map(p => p.marca))];

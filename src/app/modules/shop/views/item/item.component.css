@@ -203,3 +203,8 @@ a{
   opacity: 0.5;
   pointer-events: none; /* evita clicks */
 }
+
+.precio-secundario {
+  font-size: 0.6rem;  
+  line-height: 1.2;
+}
