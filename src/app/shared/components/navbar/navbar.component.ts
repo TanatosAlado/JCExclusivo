@@ -144,7 +144,7 @@ export class NavbarComponent {
   }
 
   abrirCarrito() {
-    console.log('Carrito abierto');
+    
   }
 
   cerrarMenu() {

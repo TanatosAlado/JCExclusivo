@@ -182,7 +182,6 @@ async getProductoById(id: string) {
   // 👇 Si el producto tiene un padre, usamos ese id
   if (producto.productoPadre) {
     idPadre = producto.productoPadre;
-    console.log('📎 Es una variante, padre:', idPadre);
 
     // Traemos los datos del padre
     const padreRef = doc(this.firestore, `productos/${idPadre}`);
@@ -202,7 +201,6 @@ async getProductoById(id: string) {
     ...docSnap.data()
   }));
 
-  console.log('📦 Variantes encontradas:', producto.variantes.length);
   return producto;
 }
 

@@ -43,9 +43,6 @@ export class ItemComponent implements OnInit {
     // seguridad: si no hay producto, salimos
     if (!this.producto) return;
 
-    // DEBUG: ver variantes crudas en consola (quitar cuando esté ok)
-    console.log('item ngOnInit - variantes:', this.producto.variantes);
-
     // Si el producto tiene variantes...
     if (Array.isArray(this.producto.variantes) && this.producto.variantes.length > 0) {
       // Creá una función de normalización para evitar problemas de mayúsculas/espacios
@@ -123,7 +120,6 @@ export class ItemComponent implements OnInit {
       // opcional: podés mostrar un toast informando al usuario
       return;
     }
-    console.log('Agregando al carrito desde Item:', producto);
     const cliente = this.generalService.getClienteActual();
     this.loadingCarrito[producto.id] = true;
     const finalizar = () => this.loadingCarrito[producto.id] = false;

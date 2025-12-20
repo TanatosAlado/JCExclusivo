@@ -41,13 +41,10 @@ ngOnInit() {
     if (!data) return;
 
     this.producto = data;
-    console.log('🟢 Producto cargado:', this.producto);
-    console.log('🔍 Variantes del producto:', this.producto.variantes);
 
     this.configurarVariantes();
   });
 }
-
 
   configurarVariantes() {
     const variantes = this.producto.variantes || [];
@@ -74,14 +71,11 @@ ngOnInit() {
   }
 
 seleccionarVariante(variante: VarianteProducto) {
-  console.log('Variante seleccionada:', variante);
 
   this.selectedVariante = variante;
 
   const totalStock = variante.stockTotal ?? 0;
   this.sinStock = totalStock <= 0;
-
-  console.log("Stock total variante:", totalStock);
 
   // ⚡ Ajustamos cantidad si supera el stock
   if (this.cantidad > totalStock) {
@@ -112,7 +106,6 @@ aumentarCantidad() {
   }
 }
   cargaCarrito(producto: Producto) {
-    console.log('Varieante seleccionada al agregar al carrito:', this.selectedVariante);
     const cliente = this.generalService.getClienteActual();
     if (!cliente) {
       const dialogRef = this.dialog.open(LoginComponent, {
@@ -146,8 +139,6 @@ private procesarProductoEnCarrito(cliente: Cliente, producto: Producto) {
 
   // 👉 Si hay variante, ESA variante es el producto real.
   const productoFinal: any = this.selectedVariante ?? producto;
-
-  console.log('🛒 Agregando al carrito:', productoFinal);
 
   this.generalService.cargarProductoCarrito(productoFinal, this.cantidad)
     .then(() => {
