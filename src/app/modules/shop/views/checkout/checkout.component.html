@@ -15,17 +15,20 @@
         <span class="info-opcion">A acordar</span>
       </label>
       <label>
-        <input type="radio" name="envio" [(ngModel)]="radioButtonSeleccionado" value="farmacia"
+        <input type="radio" name="envio" [(ngModel)]="radioButtonSeleccionado" value="local"
           (change)="showEnvio()" />
         <span class="texto-opcion">Retiro en sucursal</span>
         <span class="info-opcion">Gratis</span>
       </label>
-      <div *ngIf="radioButtonSeleccionado === 'farmacia'" class="form-field mt-3">
-        <label for="sucursal">Seleccione una sucursal:</label>
-        <select id="sucursal" [(ngModel)]="sucursalSeleccionada">
-          <option value="" disabled selected>-- Elija una sucursal --</option>
-          <option *ngFor="let s of sucursales" [value]="s.id">{{ s.nombre }}</option>
-        </select>
+      <div *ngIf="radioButtonSeleccionado === 'local'" class="retiro form-field mt-3">
+        <div class="select-sucursal">
+          <label for="sucursal">Seleccione una sucursal:</label>
+          <select id="sucursal" [(ngModel)]="sucursalSeleccionada">
+            <option value="" disabled selected>-- Elija una sucursal --</option>
+            <option *ngFor="let s of sucursales" [value]="s.id">{{ s.nombre }}</option>
+          </select>
+        </div>
+
         <div class="error-message" *ngIf="envioTocado && !sucursalSeleccionada">
           <span>Debe seleccionar una sucursal</span>
         </div>

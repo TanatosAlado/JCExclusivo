@@ -303,7 +303,7 @@ export class CheckoutComponent {
       // 🔁 Actualización de stock
       const sucursalCentralId = 'GtVWr5IHmosOOB8l6u6j';
       const sucursalADescontar =
-        this.radioButtonSeleccionado === 'farmacia' && this.sucursalSeleccionada
+        this.radioButtonSeleccionado === 'local' && this.sucursalSeleccionada
           ? this.sucursalSeleccionada
           : sucursalCentralId;
 
