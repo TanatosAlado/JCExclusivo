@@ -50,7 +50,7 @@ export class GestionesComponent {
       descripcion: 'Gestión de banner',
       icono: 'fas fa-image',
       ruta: '/gestiones/banner',
-      disabled: true, // 🚫
+      disabled: false, // 🚫
     },
     {
       titulo: 'Caja',

@@ -16,53 +16,41 @@ interface MediaItem {
 export class BannerComponent {
 
     mediaItems: MediaItem[] = [];
-    esMayorista: boolean = false;
+  esMayorista = false;
 
-  bannersMayorista: MediaItem[] = [
-    {
-      nombre: 'banner01',
-      url: 'assets/imagenes/mayorista/banner01.JPG',
-      tipo: 'imagen'
-    },
-    {
-      nombre: 'banner04',
-      url: 'assets/imagenes/mayorista/banner04.JPG',
-      tipo: 'imagen'
-    }
-  ];
-
-  bannersMinorista: MediaItem[] = [
-    {
-      nombre: 'banner02',
-      url: 'assets/imagenes/minorista/banner02.JPG',
-      tipo: 'imagen'
-    },
-    {
-      nombre: 'banner03',
-      url: 'assets/imagenes/minorista/banner03.JPG',
-      tipo: 'imagen'
-    },
-    {
-      nombre: 'banner05',
-      url: 'assets/imagenes/minorista/banner05.JPG',
-      tipo: 'imagen'
-    }
-  ];
-
-
-  constructor(private bannerService: BannerService, private authService: AuthService) { }
+  constructor(
+    private bannerService: BannerService,
+    private authService: AuthService
+  ) {}
 
   ngOnInit(): void {
-
-    this.mediaItems = this.bannersMinorista;
-
-    this.authService.getUsuarioActual().subscribe(cliente => {
+    this.authService.getUsuarioActual().subscribe(async cliente => {
       this.esMayorista = cliente?.esMayorista ?? false;
 
-      if (this.esMayorista) {
-        this.mediaItems = this.bannersMayorista;
-      }
+      const carpeta = this.esMayorista
+        ? 'uploads/mayorista'
+        : 'uploads/minorista';
+
+      await this.cargarBanners(carpeta);
     });
   }
 
+  async cargarBanners(carpeta: string) {
+    const archivos = await this.bannerService.listarArchivos(carpeta);
+
+    this.mediaItems = archivos.map(a => ({
+      nombre: a.nombre,
+      url: a.url,
+      tipo: this.obtenerTipo(a.nombre)
+    }));
+  }
+
+  obtenerTipo(nombre: string): 'imagen' | 'video' {
+    const ext = nombre.split('.').pop()?.toLowerCase();
+
+    if (ext === 'mp4' || ext === 'webm' || ext === 'ogg') {
+      return 'video';
+    }
+    return 'imagen';
+  }
 }

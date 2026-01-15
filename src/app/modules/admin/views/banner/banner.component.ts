@@ -15,7 +15,9 @@ export class BannerComponent {
   subiendo = false;
   urlArchivo: string | null = null;
   archivos: { nombre: string, url: string }[] = [];
-  carpeta = 'uploads';
+  
+  categoriaSeleccionada: 'mayorista' | 'minorista' = 'mayorista';
+
 
   constructor(private bannerService: BannerService, private dialog: MatDialog) {}
 
@@ -34,12 +36,15 @@ export class BannerComponent {
     if (!this.archivoSeleccionado) return;
 
     this.subiendo = true;
-    const filePath = `uploads/${Date.now()}_${this.archivoSeleccionado.name}`;
+
+    const carpeta = `uploads/${this.categoriaSeleccionada}`;
+    const filePath = `${carpeta}/${Date.now()}_${this.archivoSeleccionado.name}`;
 
     this.bannerService.uploadFile(this.archivoSeleccionado, filePath)
       .then(url => {
         this.urlArchivo = url;
         this.subiendo = false;
+        this.cargarArchivos(); // refresca listado
       })
       .catch(error => {
         console.error('Error al subir el archivo:', error);
@@ -47,21 +52,25 @@ export class BannerComponent {
       });
   }
 
-    async cargarArchivos() {
-    this.archivos = await this.bannerService.listarArchivos(this.carpeta);
+  async cargarArchivos() {
+    const carpeta = `uploads/${this.categoriaSeleccionada}`;
+    this.archivos = await this.bannerService.listarArchivos(carpeta);
   }
 
-  eliminar(nombre: string) {
-    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
-      data: {
-        message: `¿Deseás eliminar el archivo "${nombre}"?`,
-        confirmAction: async () => {
-          await this.bannerService.eliminarArchivo(`${this.carpeta}/${nombre}`);
-          this.cargarArchivos(); // refresca el listado
-        }
+eliminar(nombre: string) {
+  const carpeta = `uploads/${this.categoriaSeleccionada}`;
+
+  this.dialog.open(ConfirmDialogComponent, {
+    data: {
+      message: `¿Deseás eliminar el archivo "${nombre}"?`,
+      confirmAction: async () => {
+        await this.bannerService.eliminarArchivo(`${carpeta}/${nombre}`);
+        this.cargarArchivos();
       }
-    });
-  }
+    }
+  });
+}
+
 
 
 }
