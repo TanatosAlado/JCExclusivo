@@ -20,15 +20,24 @@ export class EdicionOrdenComponent {
       nombreCliente: [orden.nombreCliente],
       apellidoCliente: [orden.apellidoCliente],
       telefonoCliente: [orden.telefonoCliente],
+
       imei: [orden.imei],
+      codigoDesbloqueo: [orden.codigoDesbloqueo || ''], // 👈 NUEVO
+
       equipo: [orden.equipo],
       motivoIngreso: [orden.motivoIngreso],
       presupuesto: [orden.presupuesto],
+
+      // 🏛️ GREMIO
+      esGremio: [orden.esGremio || false],
+      gremioNombre: [{ value: orden.gremioNombre || '', disabled: !orden.esGremio }],
+
       garantia: [orden.garantia],
       diasGarantia: [{ value: orden.diasGarantia, disabled: !orden.garantia }],
       estado: [orden.estado],
+
       observaciones: [orden.observaciones?.join('\n') || ''],
-      newObservacion:[]
+      newObservacion: []
     });
 
     this.formOrdenes.get('garantia')!.valueChanges.subscribe((checked: boolean) => {
@@ -38,6 +47,17 @@ export class EdicionOrdenComponent {
       } else {
         diasGarantiaControl!.setValue(0);
         diasGarantiaControl!.disable();
+      }
+    });
+
+    this.formOrdenes.get('esGremio')!.valueChanges.subscribe((esGremio: boolean) => {
+      const gremioCtrl = this.formOrdenes.get('gremioNombre');
+
+      if (esGremio) {
+        gremioCtrl?.enable();
+      } else {
+        gremioCtrl?.reset();
+        gremioCtrl?.disable();
       }
     });
   }

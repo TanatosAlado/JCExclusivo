@@ -94,6 +94,19 @@
         </mat-form-field>
       </div>
 
+      <div class="form-grid fadeIn fourth">
+        <mat-checkbox formControlName="esGremio">
+          Cliente perteneciente a gremio
+        </mat-checkbox>
+
+        <mat-form-field appearance="outline" class="form-field"
+                        *ngIf="ordenForm.get('esGremio')?.value">
+          <mat-label>Gremio</mat-label>
+          <input matInput formControlName="gremioNombre">
+        </mat-form-field>
+      </div>
+
+
       <!-- Otros campos -->
       <div class="form-grid fadeIn fourth">
         <mat-form-field appearance="outline" class="form-field">

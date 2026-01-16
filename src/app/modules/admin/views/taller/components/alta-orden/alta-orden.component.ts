@@ -45,8 +45,25 @@ export class AltaOrdenComponent {
       codigoDesbloqueo: [''],
       colorEquipo: [''],
       presupuesto: [0],
+      esGremio: [false],
+      gremioNombre: [{ value: '', disabled: true }],
       garantia: [false],
       observaciones: ['']
+    });
+
+    this.ordenForm.get('esGremio')?.valueChanges.subscribe(esGremio => {
+      const gremioCtrl = this.ordenForm.get('gremioNombre');
+
+      if (esGremio) {
+        gremioCtrl?.enable();
+        gremioCtrl?.setValidators([Validators.required]);
+      } else {
+        gremioCtrl?.reset();
+        gremioCtrl?.clearValidators();
+        gremioCtrl?.disable();
+      }
+
+      gremioCtrl?.updateValueAndValidity();
     });
   }
 
@@ -94,6 +111,10 @@ export class AltaOrdenComponent {
         nombreCliente: this.ordenForm.value.nombreCliente,
         apellidoCliente: this.ordenForm.value.apellidoCliente,
         telefonoCliente: this.ordenForm.value.telefonoCliente,
+        esGremio: this.ordenForm.value.esGremio,
+        gremioNombre: this.ordenForm.value.esGremio
+          ? this.ordenForm.value.gremioNombre
+          : null,
         imei: this.ordenForm.value.imei,
         equipo: this.ordenForm.value.equipo,
         motivoIngreso: this.ordenForm.value.motivoIngreso,

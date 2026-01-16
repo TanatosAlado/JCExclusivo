@@ -8,6 +8,8 @@ export interface Orden {
   telefonoCliente: string;
   apellidoCliente: string;
   dniCliente: number;
+  esGremio: boolean;
+  gremioNombre?: string; // opcional
   motivoIngreso: string;
   codigoDesbloqueo: string;
   colorEquipo: string;

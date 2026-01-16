@@ -67,6 +67,9 @@ export class VerOrdenComponent {
           '<h2>👤 Datos del cliente</h2>' +
           '<p><strong>Nombre:</strong> ' + orden.apellidoCliente + ', ' + orden.nombreCliente + '</p>' +
           '<p><strong>Teléfono:</strong> ' + orden.telefonoCliente + '</p>' +
+          (orden.esGremio
+            ? '<p><strong>Gremio:</strong> ' + (orden.gremioNombre || 'Afiliado') + '</p>'
+            : '') +
         '</div>' +
 
         '<div class="bloque">' +
@@ -74,6 +77,9 @@ export class VerOrdenComponent {
           '<p><strong>Equipo:</strong> ' + orden.equipo + '</p>' +
           (orden.colorEquipo ? '<p><strong>Color:</strong> ' + orden.colorEquipo + '</p>' : '') +
           (orden.imei ? '<p><strong>IMEI:</strong> ' + orden.imei + '</p>' : '') +
+          (orden.codigoDesbloqueo
+            ? '<p><strong>Código de desbloqueo:</strong> ' + orden.codigoDesbloqueo + '</p>'
+            : '') +
         '</div>' +
 
         '<div class="bloque">' +

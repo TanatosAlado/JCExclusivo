@@ -104,3 +104,13 @@
     font-size: 14px;
   }
 }
+
+.badge-gremio {
+  display: inline-block;
+  padding: 3px 8px;
+  background-color: #6f42c1;
+  color: #fff;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
