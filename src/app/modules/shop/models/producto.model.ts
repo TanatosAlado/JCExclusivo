@@ -40,7 +40,7 @@ export class Producto {
     public stockSucursales: StockSucursal[],
     public stockMayorista: number,
     public variantes?: VarianteProducto[], // 🔹 nuevas variantes unificadas
-    public tipoVariantes?: 'none' | 'color' | 'modelo+color', // 🔹 control de tipo
+    public tipoVariantes?: 'none' | 'color' | 'modelo' | 'modelo+color'  // 🔹 control de tipo
   ) {}
 
   get stockTotal(): number {

@@ -17,6 +17,7 @@ import { SucursalesService } from 'src/app/modules/admin/services/sucursales.ser
 import { Producto, VarianteProducto } from 'src/app/modules/shop/models/producto.model';
 import { ProductosService } from 'src/app/modules/shop/services/productos.service';
 import { v4 as uuidv4 } from 'uuid';
+import { Storage, ref, uploadBytes, getDownloadURL } from '@angular/fire/storage';
 
 
 @Component({
@@ -30,7 +31,6 @@ export class AltaProductoComponent implements OnInit {
   form: FormGroup;
   guardando = false;
 
-  // modos: 'none' = producto único, 'color' = variante por color, 'modelo+color' = variante por modelo+color
   modos = [
     { value: 'none', label: 'Producto único' },
     { value: 'color', label: 'Con variantes por color' },
@@ -65,7 +65,11 @@ export class AltaProductoComponent implements OnInit {
     'none' // tipoVariantes
   );
 
-  constructor(private fb: FormBuilder, private sucursalService: SucursalesService, private firestore: Firestore, private dialogRef: MatDialogRef<AltaProductoComponent>) { }
+  imagenSeleccionada: File | null = null;
+  imagenPreview: string | null = null;
+  subiendoImagen = false;
+
+  constructor(private fb: FormBuilder, private sucursalService: SucursalesService, private firestore: Firestore, private dialogRef: MatDialogRef<AltaProductoComponent>, private storage: Storage) { }
 
   ngOnInit(): void {
     // 1) Primero creamos el form (siempre primero)
@@ -382,6 +386,14 @@ export class AltaProductoComponent implements OnInit {
 
 
 async guardarProducto() {
+
+  if (this.imagenSeleccionada) {
+    const urlImagen = await this.subirImagenProducto();
+    if (urlImagen) {
+      this.producto.imagen = urlImagen;
+    }
+  }
+
   const formValue = this.form ? this.form.value : {};
   console.log('Guardando producto — form.value:', formValue);
   console.log('Guardando producto — producto (modelo ngModel):', this.producto);
@@ -632,6 +644,49 @@ async guardarProducto() {
   eliminarColor(modeloIndex: number, colorIndex: number): void {
     this.getColores(modeloIndex).removeAt(colorIndex);
   }
+
+  onFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+
+    if (!input.files || input.files.length === 0) {
+      return;
+    }
+
+    const file = input.files[0];
+    this.imagenSeleccionada = file;
+
+    // Preview
+    const reader = new FileReader();
+    reader.onload = () => {
+      this.imagenPreview = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  }
+
+
+async subirImagenProducto(): Promise<string | null> {
+  if (!this.imagenSeleccionada) {
+    return null;
+  }
+
+  try {
+    this.subiendoImagen = true;
+
+    const nombreArchivo = `productos/${Date.now()}_${this.imagenSeleccionada.name}`;
+    const imagenRef = ref(this.storage, nombreArchivo);
+
+    await uploadBytes(imagenRef, this.imagenSeleccionada);
+    const url = await getDownloadURL(imagenRef);
+
+    return url;
+
+  } catch (error) {
+    console.error('Error subiendo imagen', error);
+    return null;
+  } finally {
+    this.subiendoImagen = false;
+  }
+}
 
 
 
