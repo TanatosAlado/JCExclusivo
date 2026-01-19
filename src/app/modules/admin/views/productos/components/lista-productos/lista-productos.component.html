@@ -53,6 +53,11 @@
               </span>
             </ng-container>
 
+            <!-- Si tiene modelo -->
+            <ng-container *ngIf="row.tipoVariantes === 'modelo'">
+              {{ row.modelo }}
+            </ng-container>
+
             <!-- Si solo tiene color -->
             <ng-container *ngIf="row.tipoVariantes === 'color'">
               <span 

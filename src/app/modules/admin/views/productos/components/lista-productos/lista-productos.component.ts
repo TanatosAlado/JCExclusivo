@@ -111,8 +111,6 @@ obtenerProductos(): void {
       stockGlobal: p.stockGlobal ?? 0
     }));
 
-    console.log('Productos normalizados:', this.productos);
-
     this.rubrosUnicos = [...new Set(this.productos.map(p => p.rubro.toUpperCase()))];
     this.subrubrosUnicos = [...new Set(this.productos.map(p => p.subrubro.toUpperCase()))];
     this.marcasUnicas = [...new Set(this.productos.map(p => p.marca.toUpperCase()))];

@@ -65,8 +65,20 @@ export class ProductosService {
 
           if (!agrupados[clave]) {
             agrupados[clave] = {
-              ...p,
-              variantes: [],
+              id: clave,
+              productoPadre: p.productoPadre || null,
+              nombre: p.nombre,
+              descripcion: p.descripcion,
+              rubro: p.rubro,
+              subrubro: p.subrubro,
+              marca: p.marca,
+              imagen: p.imagen,
+              destacado: p.destacado,
+              oferta: p.oferta,
+              precioOferta: p.precioOferta,
+              ventaMayorista: p.ventaMayorista ?? true,
+              ventaMinorista: p.ventaMinorista ?? true,
+              variantes: []
             };
           }
 
@@ -92,6 +104,14 @@ export class ProductosService {
       })
     );
   }
+
+  getProductoAgrupadoById(id: string): Observable<Producto | undefined> {
+  return this.obtenerProductosAgrupados().pipe(
+    map(productos =>
+      productos.find(p => p.id === id || p.variantes?.some(v => v.id === id))
+    )
+  );
+}
 
 
 }

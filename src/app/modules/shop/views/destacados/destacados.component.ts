@@ -24,10 +24,24 @@ ngOnInit(): void {
     this.esMayorista = cliente?.esMayorista ?? false;
 
     this.productosService.obtenerProductosAgrupados().subscribe((productos) => {
-      this.destacados = productos.filter(p =>
-        p.destacado &&
-        (this.esMayorista ? p.precioMayorista : p.precioMinorista)
-      );
+      this.destacados = productos.filter(p => {
+        if (!p.destacado) return false;
+
+        // Producto sin variantes (producto único)
+        if (!p.variantes || p.variantes.length === 0) {
+          return this.esMayorista
+            ? !!p.precioMayorista
+            : !!p.precioMinorista;
+        }
+
+        // Producto con variantes
+        return p.variantes.some(v =>
+          this.esMayorista
+            ? v.precioMayorista > 0
+            : v.precioMinorista > 0
+        );
+      });
+
     });
   });
 }

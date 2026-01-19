@@ -1,15 +1,6 @@
 import { Component, Inject, OnInit } from '@angular/core';
 import { Firestore } from '@angular/fire/firestore';
-import {
-  FormBuilder,
-  FormGroup,
-  Validators,
-  ValidatorFn,
-  AbstractControl,
-  ValidationErrors,
-  FormArray,
-  FormControl
-} from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, ValidatorFn, AbstractControl, ValidationErrors, FormArray, FormControl } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { addDoc, collection, updateDoc } from 'firebase/firestore';
 import { Sucursal } from 'src/app/modules/admin/models/sucursal.model';
@@ -37,7 +28,8 @@ export class AltaProductoComponent implements OnInit {
     { value: 'modelo+color', label: 'Con variantes por modelo y color' }
   ];
 
-  tipoSeleccionado: 'none' | 'color' | 'modelo+color' | null = null;
+  tipoSeleccionado: 'none' | 'color' | 'modelo' | 'modelo+color' | null = null;
+
   sucursales: Sucursal[] = [];
 
   producto: Producto = new Producto(
@@ -201,7 +193,7 @@ export class AltaProductoComponent implements OnInit {
     });
   }
 
-  seleccionarTipo(tipo: 'none' | 'color' | 'modelo+color') {
+  seleccionarTipo(tipo: 'none' | 'color' | 'modelo' | 'modelo+color') {
     this.tipoSeleccionado = tipo;
     this.producto.tipoVariantes = tipo;
   }
@@ -489,6 +481,45 @@ async guardarProducto() {
       return;
     }
 
+    // -------- PRODUCTO CON MODELO --------
+    if (this.tipoSeleccionado === 'modelo') {
+      const idPadre = uuidv4();
+      const base = formValue;
+      const productosRef = collection(this.firestore, 'productos');
+
+      for (const v of formValue.variantes) {
+        const doc = {
+          productoPadre: idPadre,
+          nombre: `${base.descripcion} - ${v.modelo}`.trim(),
+          descripcion: base.descripcion || '',
+          modelo: v.modelo,
+          codigoBarras: v.codigoBarras || '',
+          precioCosto: Number(base.precioCosto || 0),
+          precioSinImpuestos: Number(base.precioSinImpuestos || 0),
+          precioMinorista: Number(base.precioMinorista || 0),
+          precioMayorista: Number(base.precioMayorista || 0),
+          oferta: Boolean(base.oferta),
+          precioOferta: base.oferta ? Number(base.precioOferta || 0) : null,
+          destacado: Boolean(base.destacado),
+          imagen: base.imagen || '',
+          rubro: base.rubro || '',
+          subrubro: base.subrubro || '',
+          marca: base.marca || '',
+          stockMayorista: Number(v.stockMayorista || 0),
+          stockSucursales: this.mapStockSucursales(v.stockSucursales),
+          tipoVariantes: 'modelo',
+          fechaAlta: new Date()
+        };
+
+        const docRef = await addDoc(productosRef, doc);
+        await updateDoc(docRef, { id: docRef.id });
+      }
+
+      console.log('✅ Variantes por modelo guardadas.');
+      this.dialogRef.close(true);
+      return;
+    }
+
     // -------- PRODUCTO CON MODELO + COLOR --------
     if (this.tipoSeleccionado === 'modelo+color') {
       const idPadre = uuidv4();
@@ -695,6 +726,19 @@ async subirImagenProducto(): Promise<string | null> {
   }
 }
 
+  agregarModeloSimple(): void {
+    const modeloGroup = this.fb.group({
+      modelo: ['', Validators.required],
+      codigoBarras: [''],
+      stockMayorista: [0, [Validators.required, Validators.min(0)]],
+      stockSucursales: this.crearStockSucursalesArray()
+    });
 
+    this.getVariantes().push(modeloGroup);
+  }
+
+  getStockSucursalesModelo(modelo: AbstractControl): FormArray {
+    return modelo.get('stockSucursales') as FormArray;
+  }
 
 }

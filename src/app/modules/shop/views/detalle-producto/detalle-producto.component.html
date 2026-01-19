@@ -9,7 +9,8 @@
   <!-- 🖼 Imagen -->
   <div class="left">
     <div class="image-container">
-      <img [src]="selectedVariante?.imagen || producto.imagen" class="card-img-top" [alt]="producto.descripcion" />
+      <img [src]="imagenVisible" class="card-img-top" [alt]="producto.descripcion" />
+
     </div>
   </div>
 
@@ -40,7 +41,8 @@
     <!-- 🎨 Variantes -->
     <div *ngIf="producto.variantes?.length > 0" class="mt-3">
 
-      <div *ngIf="producto.tipoVariantes === 'modelo+color'" class="mb-3">
+      <div *ngIf="producto.tipoVariantes === 'modelo' || producto.tipoVariantes === 'modelo+color'" class="mb-3">
+
 
         <div class="modelos-container">
           <button *ngFor="let modelo of modelosUnicos" class="btn btn-outline-primary btn-sm"
@@ -82,7 +84,8 @@
     </div>
 
     <!-- 🟦 Indicador de selección -->
-    <div *ngIf="producto.tipoVariantes !== 'none'" class="seleccion-actual mt-3">
+    <div *ngIf="producto.tipoVariantes === 'modelo+color' || producto.tipoVariantes === 'color'"
+     class="seleccion-actual mt-3">
 
       <!-- Modelo seleccionado -->
       <div *ngIf="modeloSeleccionado" class="seleccion-item">

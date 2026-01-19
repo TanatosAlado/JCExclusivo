@@ -9,6 +9,13 @@
       Producto único
     </button>
 
+    <button
+      class="btn btn-outline-primary"
+      (click)="seleccionarTipo('modelo')"
+      [class.active]="tipoSeleccionado === 'modelo'">
+      Variante por modelo
+    </button>
+
     <button class="btn btn-outline-primary" (click)="seleccionarTipo('color')"
       [class.active]="tipoSeleccionado === 'color'">
       Variante por color
@@ -161,6 +168,168 @@
     </div>
 
   </div>
+
+
+
+  <!-- 🧩 Producto con variantes por modelo -->
+  <div *ngIf="tipoSeleccionado === 'modelo'" class="card shadow p-4" [formGroup]="form">
+
+    <h4 class="mb-3">Producto con variantes por modelo</h4>
+
+        <!-- 🧩 Datos generales -->
+    <div class="row g-3">
+
+      <div class="col-md-8">
+        <label class="form-label">Descripción</label>
+        <input type="text" class="form-control" formControlName="descripcion">
+      </div>
+
+      <div class="col-md-8">
+        <label class="form-label">Sub descripción</label>
+        <input type="text" class="form-control" formControlName="subdescripcion">
+      </div>
+
+      <div class="col-md-12">
+        <label class="form-label">Imagen (URL)</label>
+        <input type="text" class="form-control" placeholder="https://..." formControlName="imagen">
+      </div>
+
+      <div class="col-md-12">
+        <label class="form-label">Imagen del producto</label>
+        <input
+          type="file"
+          class="form-control"
+          accept="image/*"
+          (change)="onFileSelected($event)">
+      </div>
+
+      <!-- Preview -->
+      <div *ngIf="imagenPreview" class="mt-2">
+        <img
+          [src]="imagenPreview"
+          alt="Preview"
+          style="max-width: 200px; border-radius: 8px;">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Precio costo</label>
+        <input type="number" class="form-control" formControlName="precioCosto">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Precio sin impuestos</label>
+        <input type="number" class="form-control" formControlName="precioSinImpuestos">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Precio minorista</label>
+        <input type="number" class="form-control" formControlName="precioMinorista">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Precio mayorista</label>
+        <input type="number" class="form-control" formControlName="precioMayorista">
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">Rubro</label>
+        <input type="text" class="form-control" formControlName="rubro">
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">Subrubro</label>
+        <input type="text" class="form-control" formControlName="subrubro">
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">Marca</label>
+        <input type="text" class="form-control" formControlName="marca">
+      </div>
+
+      <div class="col-md-6 d-flex align-items-center">
+        <input type="checkbox" class="form-check-input me-2" formControlName="destacado">
+        <label class="form-check-label">Destacado</label>
+      </div>
+
+      <div class="col-md-6 d-flex align-items-center">
+        <input type="checkbox" class="form-check-input me-2" formControlName="oferta">
+        <label class="form-check-label">En oferta</label>
+      </div>
+
+      <div class="col-md-6" *ngIf="form.get('oferta')?.value">
+        <label class="form-label">Precio oferta</label>
+        <input type="number" class="form-control" formControlName="precioOferta">
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">Stock mínimo</label>
+        <input type="number" class="form-control" formControlName="stockMinimo">
+      </div>
+    </div>
+    <!-- reutilizás descripcion, imagen, precios, rubro, etc -->
+
+    <hr class="my-4">
+
+    <h5 class="fw-bold text-primary">Modelos disponibles</h5>
+    <button class="btn btn-success btn-sm mb-3" (click)="agregarModeloSimple()">
+      + Agregar modelo
+    </button>
+
+    <div formArrayName="variantes">
+      <div *ngFor="let modelo of getVariantes().controls; let i = index"
+          [formGroupName]="i"
+          class="card mb-3 shadow-sm">
+
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6>Modelo {{ i + 1 }}</h6>
+            <button class="btn btn-outline-danger btn-sm"
+                    (click)="eliminarModelo(i)">
+              Eliminar
+            </button>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">Modelo</label>
+              <input type="text" class="form-control" formControlName="modelo">
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">Código de barras</label>
+              <input type="text" class="form-control" formControlName="codigoBarras">
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">Stock mayorista</label>
+              <input type="number" class="form-control" formControlName="stockMayorista">
+            </div>
+          </div>
+
+          <!-- 🏪 Stock por sucursal -->
+          <div formArrayName="stockSucursales" class="mt-2">
+          <div *ngFor="let s of getStockSucursalesModelo(modelo).controls; let j = index"
+              [formGroupName]="j"
+              class="d-flex gap-2 align-items-center mb-1">
+              <label class="small w-25">
+                {{ getNombreSucursal(s.get('sucursalId')?.value) }}
+              </label>
+              <input type="number" formControlName="cantidad" class="form-control form-control-sm">
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-4 text-end">
+      <button class="btn btn-success" (click)="guardarProducto()">
+        Guardar producto con modelos
+      </button>
+    </div>
+
+  </div>
+
 
 
   <!-- 🔹 Formulario: Producto con variantes por color -->
