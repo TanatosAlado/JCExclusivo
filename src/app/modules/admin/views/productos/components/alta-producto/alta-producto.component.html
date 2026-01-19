@@ -190,6 +190,23 @@
         <input type="text" class="form-control" placeholder="https://..." formControlName="imagen">
       </div>
 
+      <div class="col-md-12">
+        <label class="form-label">Imagen del producto</label>
+        <input
+          type="file"
+          class="form-control"
+          accept="image/*"
+          (change)="onFileSelected($event)">
+      </div>
+
+      <!-- Preview -->
+      <div *ngIf="imagenPreview" class="mt-2">
+        <img
+          [src]="imagenPreview"
+          alt="Preview"
+          style="max-width: 200px; border-radius: 8px;">
+      </div>
+
       <div class="col-md-3">
         <label class="form-label">Precio costo</label>
         <input type="number" class="form-control" formControlName="precioCosto">
@@ -342,6 +359,23 @@
       <div class="col-md-12">
         <label class="form-label">Imagen (URL)</label>
         <input type="text" class="form-control" placeholder="https://..." formControlName="imagen">
+      </div>
+
+      <div class="col-md-12">
+        <label class="form-label">Imagen del producto</label>
+        <input
+          type="file"
+          class="form-control"
+          accept="image/*"
+          (change)="onFileSelected($event)">
+      </div>
+
+      <!-- Preview -->
+      <div *ngIf="imagenPreview" class="mt-2">
+        <img
+          [src]="imagenPreview"
+          alt="Preview"
+          style="max-width: 200px; border-radius: 8px;">
       </div>
 
       <div class="col-md-3">

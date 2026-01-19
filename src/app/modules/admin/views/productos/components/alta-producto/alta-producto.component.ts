@@ -387,10 +387,21 @@ export class AltaProductoComponent implements OnInit {
 
 async guardarProducto() {
 
+  let urlImagen: string | null = null;
+
   if (this.imagenSeleccionada) {
-    const urlImagen = await this.subirImagenProducto();
+    urlImagen = await this.subirImagenProducto();
+
     if (urlImagen) {
-      this.producto.imagen = urlImagen;
+      // producto único
+      if (this.tipoSeleccionado === 'none') {
+        this.producto.imagen = urlImagen;
+      }
+
+      // variantes
+      if (this.form && (this.tipoSeleccionado === 'color' || this.tipoSeleccionado === 'modelo+color')) {
+        this.form.get('imagen')?.setValue(urlImagen);
+      }
     }
   }
 
@@ -665,9 +676,7 @@ async guardarProducto() {
 
 
 async subirImagenProducto(): Promise<string | null> {
-  if (!this.imagenSeleccionada) {
-    return null;
-  }
+  if (!this.imagenSeleccionada) return null;
 
   try {
     this.subiendoImagen = true;
@@ -676,9 +685,7 @@ async subirImagenProducto(): Promise<string | null> {
     const imagenRef = ref(this.storage, nombreArchivo);
 
     await uploadBytes(imagenRef, this.imagenSeleccionada);
-    const url = await getDownloadURL(imagenRef);
-
-    return url;
+    return await getDownloadURL(imagenRef);
 
   } catch (error) {
     console.error('Error subiendo imagen', error);
