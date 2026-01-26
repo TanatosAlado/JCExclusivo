@@ -42,12 +42,17 @@ export class GrillaItemComponent {
 
     this.productosService.obtenerProductosAgrupados().subscribe(productos => {
       this.productosOriginal = productos;
+       console.log('productosOriginal:', this.productosOriginal);
       this.rubros = [...new Set(productos.map(p => p.rubro))];
       this.marcas = [...new Set(productos.map(p => p.marca))];
       this.filtrarProductos();
     });
   });
+
+  
   }
+
+ 
 
   filtrarProductos() {
 
@@ -64,17 +69,34 @@ export class GrillaItemComponent {
       this.filtroSubrubro = '';
     }
 
-    this.productosFiltrados = this.productosOriginal.filter(p => {
-      const tipoVentaOk = this.esMayorista ? p.ventaMayorista : p.ventaMinorista;
-      const rubroOk = this.filtroRubro ? p.rubro === this.filtroRubro : true;
-      const subrubroOk = this.filtroSubrubro ? p.subrubro === this.filtroSubrubro : true;
-      const destacadoOk = this.soloDestacados ? p.destacado === true : true;
-      const precioMinOk = this.precioMin !== null ? p.precioMinorista >= this.precioMin : true;
-      const precioMaxOk = this.precioMax !== null ? p.precioMinorista <= this.precioMax : true;
-      const marcaOk = this.filtroMarca ? p.marca === this.filtroMarca : true;
+this.productosFiltrados = this.productosOriginal.filter(p => {
 
-      return tipoVentaOk && rubroOk && subrubroOk && destacadoOk && precioMinOk && precioMaxOk && marcaOk;
-    });
+  const tipoVentaOk = this.esMayorista ? p.ventaMayorista : p.ventaMinorista;
+
+  const rubroOk = this.filtroRubro ? p.rubro === this.filtroRubro : true;
+  const subrubroOk = this.filtroSubrubro ? p.subrubro === this.filtroSubrubro : true;
+  const destacadoOk = this.soloDestacados ? p.destacado === true : true;
+  const marcaOk = this.filtroMarca ? p.marca === this.filtroMarca : true;
+
+  // 👇 precio correcto según tipo de cliente
+  const precios = p.variantes?.length
+    ? p.variantes.map(v =>
+        this.esMayorista ? v.precioMayorista : v.precioMinorista
+      )
+    : [this.esMayorista ? p.precioMayorista : p.precioMinorista];
+
+  const preciosValidos = precios.filter(pr => typeof pr === 'number' && pr > 0);
+
+  const precioMinOk = this.precioMin !== null
+    ? preciosValidos.some(pr => pr >= this.precioMin!)
+    : true;
+
+  const precioMaxOk = this.precioMax !== null
+    ? preciosValidos.some(pr => pr <= this.precioMax!)
+    : true;
+
+  return tipoVentaOk && rubroOk && subrubroOk && destacadoOk && precioMinOk && precioMaxOk && marcaOk;
+});
 
     this.paginaActual = 1; // resetea a la primera página al aplicar filtros
     this.actualizarPaginados();

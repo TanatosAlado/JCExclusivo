@@ -22,7 +22,7 @@ export class DetalleProductoComponent {
   modeloSeleccionado: string | null = null;
   selectedVariante: VarianteProducto | null = null;
   esMayorista: boolean = false;
-  sinStock: boolean = false;
+  // sinStock: boolean = false;
 
 
 
@@ -36,17 +36,19 @@ export class DetalleProductoComponent {
   ) {}
 
   ngOnInit() {
+
+    const cliente = this.generalService.getClienteActual();
+    this.esMayorista = cliente?.esMayorista ?? false; 
+
     this.route.params.subscribe(params => {
       const idProducto = params['id'];
 
       this.productosService.getProductoAgrupadoById(idProducto).subscribe(data => {
+        if (!data) return;
 
-      if (!data) return;
-
-      this.producto = data;
-      this.configurarVariantes();
+        this.producto = data;
+        this.configurarVariantes();
       });
-
     });
   }
 
@@ -69,6 +71,11 @@ configurarVariantes() {
         (acc: number, s: any) => acc + (s.cantidad || 0),
         0
       ) ?? 0;
+
+        // ✅ NUEVO: heredar stock mayorista
+      if (v.stockMayorista == null) {
+        v.stockMayorista = this.producto.stockMayorista ?? 0;
+      }
   });
 
   // 🔍 2. Inferir tipo de variantes si no existe
@@ -109,7 +116,7 @@ configurarVariantes() {
 
       // Seleccionamos automáticamente la primera variante
       this.selectedVariante = variantes[0] || null;
-      this.sinStock = this.selectedVariante?.stockTotal === 0;
+    //  this.sinStock = this.selectedVariante?.stockTotal === 0;
       break;
 
     // 🟢 SOLO COLOR
@@ -144,7 +151,7 @@ seleccionarModelo(modelo: string) {
   // 🔵 SOLO MODELO
   if (this.producto.tipoVariantes === 'modelo') {
     this.selectedVariante = variantesModelo[0] || null;
-    this.sinStock = this.selectedVariante?.stockTotal === 0;
+  //  this.sinStock = this.selectedVariante?.stockTotal === 0;
   }
 }
 
@@ -153,8 +160,10 @@ seleccionarVariante(variante: VarianteProducto) {
 
   this.selectedVariante = variante;
 
-  const totalStock = variante.stockTotal ?? 0;
-  this.sinStock = totalStock <= 0;
+  const totalStock = this.stockVisible;
+
+
+//  this.sinStock = totalStock <= 0;
 
   // ⚡ Ajustamos cantidad si supera el stock
   if (this.cantidad > totalStock) {
@@ -177,13 +186,16 @@ seleccionarVariante(variante: VarianteProducto) {
     if (this.cantidad > 1) this.cantidad--;
   }
 
-aumentarCantidad() {
-  const limite = this.selectedVariante?.stockTotal ?? this.producto.stockTotal;
+  aumentarCantidad() {
+    const limite = this.stockVisible;
 
-  if (this.cantidad < limite) {
-    this.cantidad++;
+    if (this.cantidad < limite) {
+      this.cantidad++;
+    }
   }
-}
+
+
+
   cargaCarrito(producto: Producto) {
     const cliente = this.generalService.getClienteActual();
     if (!cliente) {
@@ -271,5 +283,26 @@ get imagenVisible(): string {
   return this.selectedVariante?.imagen || this.producto.imagen;
 }
 
+
+
+get stockVisible(): number {
+
+  // 👉 Si hay variante seleccionada
+  if (this.selectedVariante) {
+    return this.esMayorista
+      ? (this.selectedVariante.stockMayorista ?? 0)
+      : (this.selectedVariante.stockTotal ?? 0);
+  }
+
+  // 👉 Producto sin variantes
+  return this.esMayorista
+    ? (this.producto.stockMayorista ?? 0)
+    : (this.producto.stockTotal ?? 0);
+}
+
+
+get sinStock(): boolean {
+  return this.stockVisible <= 0;
+}
 
 }

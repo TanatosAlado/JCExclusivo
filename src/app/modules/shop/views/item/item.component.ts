@@ -166,6 +166,7 @@ export class ItemComponent implements OnInit {
   }
 
   verDetalle(producto: Producto) {
+    console.log('Navegando a detalle de producto:', producto);
     this.router.navigate(['/producto', producto.id]);
   }
 }

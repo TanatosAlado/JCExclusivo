@@ -11,6 +11,9 @@ import { DetalleProductoComponent } from '../detalle-producto/detalle-producto.c
 import { ToastService } from 'src/app/shared/services/toast.service';
 import * as XLSX from 'xlsx';
 
+import { InfoEmpresaService } from 'src/app/shared/services/info-empresa.service';
+
+
 @Component({
   selector: 'app-lista-productos',
   templateUrl: './lista-productos.component.html',
@@ -21,14 +24,14 @@ export class ListaProductosComponent {
   rubrosUnicos: string[] = [];
   subrubrosUnicos: string[] = [];
   marcasUnicas: string[] = [];
-  displayedColumns: string[] = ['descripcion', 'rubro', 'tipo', 'stock', 'precioMinorista', 'precioMayorista', 'acciones'];
+  displayedColumns: string[] = ['descripcion', 'rubro', 'tipo', 'stock', 'stockMayorista', 'precioMinorista', 'precioMayorista', 'acciones'];
 
   productos: Producto[] = [];
   datasourceProductos: MatTableDataSource<Producto>
   paginator!: MatPaginator;
   public productoAEliminar: string = '';
 
-  constructor(public dialog: MatDialog, private productosService: ProductosService, private toastService: ToastService) {
+  constructor(public dialog: MatDialog, private productosService: ProductosService, private toastService: ToastService, private infoEmpresaService: InfoEmpresaService) {
 
   }
 
@@ -277,6 +280,59 @@ normalizarStock(producto: any) {
     return element.stockSucursales.reduce((total, s) => total + (s.cantidad || 0), 0);
   }
 
+
+convertirPreciosMayoristasADolar() {
+
+  this.infoEmpresaService.obtenerInfoGeneral().subscribe(info => {
+
+    if (!info?.dolar || info.dolar <= 0) {
+      this.toastService.toastMessage(
+        'No hay un valor de dólar válido configurado',
+        'red',
+        3000
+      );
+      return;
+    }
+
+    const valorDolar = info.dolar;
+
+    const confirmar = confirm(
+      `⚠️ ATENCIÓN\n\n` +
+      `Esta acción convertirá TODOS los precios mayoristas a USD.\n` +
+      `Valor dólar actual: $${valorDolar}\n\n` +
+      `¿Desea continuar?`
+    );
+
+    if (!confirmar) return;
+
+    let cantidadActualizados = 0;
+
+    this.productos.forEach(producto => {
+
+      if (producto.precioMayorista && producto.precioMayorista > 0) {
+
+        const precioEnUsd = +(producto.precioMayorista / valorDolar).toFixed(2);
+
+        const productoActualizado: Producto = {
+          ...producto,
+          precioMayorista: precioEnUsd,
+          stockTotal: producto.stockTotal ?? 0,
+          stockGlobal: producto.stockGlobal ?? 0
+        };
+
+        this.productosService.actualizarProducto(productoActualizado)
+          .then(() => cantidadActualizados++);
+      }
+    });
+
+    this.toastService.toastMessage(
+      `Conversión finalizada. Productos actualizados: ${cantidadActualizados}`,
+      'green',
+      4000
+    );
+
+  });
+}
 
 
 }

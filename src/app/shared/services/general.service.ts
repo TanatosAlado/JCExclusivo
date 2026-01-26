@@ -222,6 +222,8 @@ async getProductoById(id: string) {
 
   //SERVICIO PARA CARGAR EN EL CARRITO EL PRODUCTO
 cargarProductoCarrito(producto: Producto, cantidad: number = 1): Promise<boolean> {
+  
+        console.log('Producto a agregar (invitado):', producto);
   const calcularStockTotal = (p: any) => {
     if (!p.stockSucursales) return 0;
     // Si viene como objeto → sumamos los valores
@@ -244,6 +246,7 @@ cargarProductoCarrito(producto: Producto, cantidad: number = 1): Promise<boolean
       if (clienteEncontrado.id === 'invitado') {
         const carritoRaw = localStorage.getItem('carritoInvitado');
         let carrito = carritoRaw ? JSON.parse(carritoRaw) : [];
+
 
         const index = carrito.findIndex(item => item.codigoBarras === producto.codigoBarras);
         if (index > -1) {

@@ -24,7 +24,7 @@
     <!-- 🔹 Precio -->
     <div class="precios">
       <ng-container *ngIf="esMayorista; else vistaMinorista">
-        <h3>{{ selectedVariante?.precioMayorista || producto.precioMayorista | currency }}</h3>
+        <h3>{{ precioVisible | currency }}</h3>
       </ng-container>
 
       <ng-template #vistaMinorista>
@@ -113,9 +113,15 @@
       <strong>Sin stock disponible</strong>
     </div>
 
-<div *ngIf="selectedVariante" class="text-muted mb-1">
-  Stock disponible: <strong>{{ selectedVariante.stockTotal }}</strong>
-</div>
+    <div *ngIf="!sinStock" class="text-muted mb-1">
+      Stock disponible:
+      <strong>
+        {{ stockVisible }}
+        <span *ngIf="esMayorista">(mayorista)</span>
+        <span *ngIf="!esMayorista">(minorista)</span>
+      </strong>
+    </div>
+
 
     <!-- 🛒 Botón carrito -->
     <div class="carrito mt-4">

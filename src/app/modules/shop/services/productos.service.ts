@@ -52,17 +52,38 @@ export class ProductosService {
   }
 
 
-
-
   obtenerProductosAgrupados(): Observable<Producto[]> {
     const ref = collection(this.firestore, 'productos');
+
     return collectionData(ref, { idField: 'id' }).pipe(
       map((productos: any[]) => {
+
         const agrupados: { [key: string]: any } = {};
 
         productos.forEach(p => {
-          const clave = p.productoPadre || p.id; // 👈 agrupamos por el padre (si no tiene, usa su propio id)
 
+          const clave = p.productoPadre || p.id;
+
+          // 🔧 NORMALIZAMOS stockSucursales
+          let stockSucursalesArray: any[] = [];
+
+          if (p.stockSucursales) {
+            if (Array.isArray(p.stockSucursales)) {
+              stockSucursalesArray = p.stockSucursales;
+            } else {
+              stockSucursalesArray = Object.values(p.stockSucursales).map((cantidad: any) => ({
+                cantidad
+              }));
+            }
+          }
+
+          // 🔢 stock minorista
+          const stockTotal = stockSucursalesArray.reduce(
+            (acc: number, s: any) => acc + (s.cantidad || 0),
+            0
+          );
+
+          // 🧱 PRODUCTO PADRE
           if (!agrupados[clave]) {
             agrupados[clave] = {
               id: clave,
@@ -73,24 +94,31 @@ export class ProductosService {
               subrubro: p.subrubro,
               marca: p.marca,
               imagen: p.imagen,
+              codigoBarras: p.codigoBarras ?? null, // ✅ FIX
               destacado: p.destacado,
               oferta: p.oferta,
               precioOferta: p.precioOferta,
+              precioMayorista: p.precioMayorista ?? null,
+              precioMinorista: p.precioMinorista ?? null,
               ventaMayorista: p.ventaMayorista ?? true,
               ventaMinorista: p.ventaMinorista ?? true,
+              stockMayorista: p.stockMayorista ?? 0,
+              stockTotal,
               variantes: []
             };
           }
 
-          // Si es una variante (color o modelo+color), la añadimos
+          // 🧬 VARIANTES
           if (p.productoPadre) {
             agrupados[clave].variantes.push({
               id: p.id,
               modelo: p.modelo || null,
               color: p.color || null,
               imagen: p.imagen || agrupados[clave].imagen,
-              stockSucursales: p.stockSucursales || [],
-              stockMayorista: p.stockMayorista || 0,
+              codigoBarras: p.codigoBarras ?? null, // ✅ FIX
+              stockSucursales: stockSucursalesArray,
+              stockTotal,
+              stockMayorista: p.stockMayorista ?? 0,
               precioMinorista: p.precioMinorista,
               precioMayorista: p.precioMayorista,
               precioOferta: p.precioOferta,
@@ -99,11 +127,13 @@ export class ProductosService {
           }
         });
 
-        // Convertimos el objeto a array
         return Object.values(agrupados);
       })
     );
   }
+
+
+
 
   getProductoAgrupadoById(id: string): Observable<Producto | undefined> {
   return this.obtenerProductosAgrupados().pipe(

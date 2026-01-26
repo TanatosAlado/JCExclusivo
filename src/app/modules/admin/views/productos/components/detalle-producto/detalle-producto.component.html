@@ -25,14 +25,14 @@
 
   <!-- PRECIOS -->
   <div class="bloque precios">
-    <p><strong>Precio Minorista:</strong> ${{ producto.precioMinorista }}</p>
+    <p><strong>Precio Minorista:</strong> $ {{ producto.precioMinorista }}</p>
 
     <p *ngIf="producto.precioMayorista > 0">
-      <strong>Precio Mayorista:</strong> ${{ producto.precioMayorista }}
+      <strong>Precio Mayorista:</strong> U$S {{ producto.precioMayorista }}
     </p>
 
     <p *ngIf="producto.oferta">
-      <strong>Precio Oferta:</strong> ${{ producto.precioOferta }}
+      <strong>Precio Oferta:</strong> $ {{ producto.precioOferta }}
     </p>
   </div>
 

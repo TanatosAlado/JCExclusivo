@@ -25,7 +25,8 @@ export class EmpresaComponent {
       whatsapp: ['', [Validators.required]],
       cvu: ['', [Validators.required]],
       alias: ['', [Validators.required]],
-      email: ['', [Validators.required, Validators.email]]
+      email: ['', [Validators.required, Validators.email]],
+      dolar: [0, [Validators.required, Validators.min(1)]]
     });
   }
 
@@ -41,7 +42,11 @@ export class EmpresaComponent {
   async guardar() {
     if (this.infoForm.invalid) return;
 
-    const data: InfoEmpresa = this.infoForm.value;
+    const data: InfoEmpresa = {
+      ...this.infoForm.value,
+      dolarActualizado: new Date()
+    };
+
     const docRef = doc(this.firestore, 'InfoEmpresa/general');
 
     try {
@@ -52,4 +57,5 @@ export class EmpresaComponent {
       this.snackBar.open('Error al guardar la información', 'Cerrar', { duration: 3000 });
     }
   }
+
 }
