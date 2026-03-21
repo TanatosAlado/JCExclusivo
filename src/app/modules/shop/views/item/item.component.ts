@@ -7,6 +7,7 @@ import { Cliente } from 'src/app/modules/auth/models/cliente.model';
 import { GeneralService } from 'src/app/shared/services/general.service';
 import { ToastService } from 'src/app/shared/services/toast.service';
 import { MatDialog } from '@angular/material/dialog';
+import { InfoEmpresaService } from 'src/app/shared/services/info-empresa.service';
 
 @Component({
   selector: 'app-item',
@@ -25,6 +26,7 @@ export class ItemComponent implements OnInit {
   modelosUnicos: string[] = [];
   modeloSeleccionado: string | null = null;
   coloresFiltrados: any[] = [];
+  dolar = 1; // fallback por si no carga
 
   constructor(
     private authService: AuthService,
@@ -32,9 +34,21 @@ export class ItemComponent implements OnInit {
     private generalService: GeneralService,
     private toastService: ToastService,
     private dialog: MatDialog,
+    private infoEmpresaService: InfoEmpresaService
   ) {}
 
   ngOnInit(): void {
+
+    console.log('ITEM producto recibido:', this.producto);
+console.log('tipoVariantes:', this.producto?.tipoVariantes, typeof this.producto?.tipoVariantes);
+
+
+
+      this.infoEmpresaService.obtenerInfoGeneral().subscribe(info => {
+        if (info?.dolar) {
+          this.dolar = info.dolar;
+        }
+      });
     // detectar si el cliente es mayorista
     this.authService.getUsuarioActual().subscribe(cliente => {
       this.esMayorista = cliente?.esMayorista ?? false;
@@ -168,5 +182,14 @@ export class ItemComponent implements OnInit {
   verDetalle(producto: Producto) {
     console.log('Navegando a detalle de producto:', producto);
     this.router.navigate(['/producto', producto.id]);
+  }
+
+  getPrecioMayoristaPesos(): number {
+    const precioUsd =
+      this.selectedVariante?.precioMayorista ??
+      this.producto.precioMayorista ??
+      0;
+
+    return precioUsd * this.dolar;
   }
 }

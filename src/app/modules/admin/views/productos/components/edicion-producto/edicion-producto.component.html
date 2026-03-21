@@ -37,6 +37,15 @@
     <input matInput formControlName="imagen" placeholder="https://...">
   </mat-form-field>
 
+  <!-- 📷 Subir imagen local -->
+  <div class="full-width mt-2">
+    <input
+      type="file"
+      accept="image/*"
+      (change)="onImagenSeleccionada($event)"
+    />
+  </div>
+
   <!-- 🎨 Color principal -->
   <div class="color-principal">
     <div class="color-preview" [style.background]="formProducto.get('color')?.value"></div>

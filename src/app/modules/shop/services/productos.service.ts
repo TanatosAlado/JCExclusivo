@@ -103,6 +103,7 @@ export class ProductosService {
               ventaMayorista: p.ventaMayorista ?? true,
               ventaMinorista: p.ventaMinorista ?? true,
               stockMayorista: p.stockMayorista ?? 0,
+              tipoVariantes: p.tipoVariantes || 'none',
               stockTotal,
               variantes: []
             };

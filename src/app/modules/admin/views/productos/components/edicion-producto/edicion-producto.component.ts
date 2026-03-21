@@ -3,6 +3,8 @@ import { FormBuilder, FormGroup, Validators, FormArray } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { Producto } from 'src/app/modules/shop/models/producto.model';
 import { SucursalesService } from 'src/app/modules/admin/services/sucursales.service';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+
 
 @Component({
   selector: 'app-edicion-producto',
@@ -162,4 +164,28 @@ agregarVariante(): void {
   getStockSucursales(index: number): FormArray {
     return this.variantesArray.at(index).get('stockSucursales') as FormArray;
   }
+
+  async onImagenSeleccionada(event: any) {
+    const file: File = event.target.files[0];
+    if (!file) return;
+
+    try {
+      const storage = getStorage();
+
+      // nombre único
+      const nombreArchivo = `productos/${Date.now()}_${file.name}`;
+      const storageRef = ref(storage, nombreArchivo);
+
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+
+      // 👉 setea la URL en el form
+      this.formProducto.get('imagen')?.setValue(url);
+
+    } catch (error) {
+      console.error('Error subiendo imagen', error);
+    }
+  }
+
+
 }

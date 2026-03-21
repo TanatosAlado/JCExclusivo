@@ -41,14 +41,11 @@
 
         <!-- 🔹 Precios -->
         <ng-container *ngIf="esMayorista; else vistaMinorista">
-            <div class="d-flex align-items-center justify-content-center mt-2">
-                <h5>
-                    {{
-                    selectedVariante?.precioMayorista ||
-                    producto.precioMayorista | currency
-                    }}
-                </h5>
-            </div>
+        <div class="d-flex align-items-center justify-content-center mt-2">
+            <h5>
+            {{ getPrecioMayoristaPesos() | currency:'ARS':'symbol':'1.2-2' }}
+            </h5>
+        </div>
         </ng-container>
 
         <ng-template #vistaMinorista>
