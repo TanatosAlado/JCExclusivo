@@ -89,6 +89,10 @@ export class LayoutDespachoComponent implements OnInit, OnDestroy {
   valorParaSumarPunto: number = 200;
   montoParaActivar: number = 50000; // Monto mínimo para activar el modo mayorista
 
+  descuentoEfectivo: number = 0;
+  descuentoTransferencia: number = 0;
+  descuentoAplicado: number = 0;
+
   constructor(
     private firestore: Firestore,
     private productosCache: ProductosCacheService,
@@ -96,7 +100,8 @@ export class LayoutDespachoComponent implements OnInit, OnDestroy {
     private dialog: MatDialog,
     private sucursalesService: SucursalesService,
     private puntosService: VouchersPuntosService,
-    public generalService: GeneralService
+    public generalService: GeneralService,
+    public infoEmpresaService: InfoEmpresaService
   ) { }
 
 
@@ -124,6 +129,15 @@ async ngOnInit() {
         this.mensajeCupon = '';
       }
     });
+
+    this.infoEmpresaService.obtenerInfoGeneral().subscribe((info: InfoEmpresa | null) => {
+      if (info) {
+        this.descuentoEfectivo = info.descuentoEnEfectivo || 0;
+        this.descuentoTransferencia = info.descuentoEnTransferencia || 0;
+        console.log('descuentos cargados desde InfoEmpresa:', this.descuentoEfectivo, this.descuentoTransferencia);
+      }
+    });  
+    
 }
 
   async inicializarValoresPuntos() {
@@ -418,12 +432,24 @@ abrirCaja(sucursalIdExistente?: string) {
       return;
     }
 
+    const totalBase = this.clienteActual && this.clienteActual.tipo === 'minorista'
+      ? this.generalService.getTotalPrecioDespacho(
+          this.total,
+          this.clienteActual.puntos,
+          this.usarPuntos,
+          this.valorMonetarioPorPunto,
+          this.cuponAplicado
+        )
+      : this.total;
+
+    const totalFinal = this.calcularTotalConMetodoPago(totalBase);
+
     const venta = {
       fecha: new Date().toISOString(),
       tipoPrecio: this.tipoPrecio,
       cliente: this.clienteActual ? { dni: this.clienteActual.dni, nombre: this.clienteActual.nombre } : null,
       items: this.carrito,
-      total: this.total,
+      total: totalBase,
       metodoPago: this.metodoPago,
       sucursalId: cajaActiva.sucursalId,
       cajaId: cajaActiva.id
@@ -525,5 +551,22 @@ abrirCaja(sucursalIdExistente?: string) {
       this.productosFiltrados = [];
     }
   }
+
+
+  calcularTotalConMetodoPago(total: number): number {
+    if (!this.metodoPago) return total;
+
+    if (this.metodoPago === 'efectivo') {
+      return total - (total * this.descuentoEfectivo / 100);
+    }
+
+    if (this.metodoPago === 'transferencia') {
+      return total - (total * this.descuentoTransferencia / 100);
+    }
+
+    return total; // tarjeta
+  }
+
+
 
 }

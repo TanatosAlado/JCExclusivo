@@ -4,5 +4,7 @@ export interface InfoEmpresa {
   alias?: string;
   email?: string;
   dolar?: number;
+  descuentoEnEfectivo?: number;
+  descuentoEnTransferencia?: number;
   // Se pueden agregar mas campos.
 }

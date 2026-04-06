@@ -26,7 +26,9 @@ export class EmpresaComponent {
       cvu: ['', [Validators.required]],
       alias: ['', [Validators.required]],
       email: ['', [Validators.required, Validators.email]],
-      dolar: [0, [Validators.required, Validators.min(1)]]
+      dolar: [0, [Validators.required, Validators.min(1)]],
+      descuentoEnEfectivo: [0, [Validators.min(0)]],
+      descuentoEnTransferencia: [0, [Validators.min(0)]]
     });
   }
 
