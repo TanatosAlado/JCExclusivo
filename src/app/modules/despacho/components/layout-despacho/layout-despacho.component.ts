@@ -93,6 +93,8 @@ export class LayoutDespachoComponent implements OnInit, OnDestroy {
   descuentoTransferencia: number = 0;
   descuentoAplicado: number = 0;
 
+  
+
   constructor(
     private firestore: Firestore,
     private productosCache: ProductosCacheService,
