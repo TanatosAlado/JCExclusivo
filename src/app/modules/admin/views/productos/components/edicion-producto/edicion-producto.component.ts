@@ -3,7 +3,8 @@ import { FormBuilder, FormGroup, Validators, FormArray } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { Producto } from 'src/app/modules/shop/models/producto.model';
 import { SucursalesService } from 'src/app/modules/admin/services/sucursales.service';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { Storage, ref, uploadBytes, getDownloadURL } from '@angular/fire/storage';
+import { Auth } from '@angular/fire/auth';
 
 
 @Component({
@@ -16,10 +17,13 @@ export class EdicionProductoComponent {
   sucursales: { id: string; nombre: string }[] = [];
 
   constructor(
+    private storage: Storage ,
     private fb: FormBuilder,
     private dialogRef: MatDialogRef<EdicionProductoComponent>,
     @Inject(MAT_DIALOG_DATA) public producto: Producto,
-    private sucursalesService: SucursalesService
+    private sucursalesService: SucursalesService,
+      private auth: Auth   // 👈 AGREGAR
+
   ) {}
 
   ngOnInit(): void {
@@ -169,17 +173,19 @@ agregarVariante(): void {
     const file: File = event.target.files[0];
     if (!file) return;
 
-    try {
-      const storage = getStorage();
+    console.log('Archivo seleccionado:', file)
 
-      // nombre único
+    console.log('USER ACTUAL:', this.auth.currentUser);
+
+    try {
       const nombreArchivo = `productos/${Date.now()}_${file.name}`;
-      const storageRef = ref(storage, nombreArchivo);
+      const storageRef = ref(this.storage, nombreArchivo);
+
+      console.log('Subiendo imagen:', nombreArchivo);
 
       await uploadBytes(storageRef, file);
       const url = await getDownloadURL(storageRef);
 
-      // 👉 setea la URL en el form
       this.formProducto.get('imagen')?.setValue(url);
 
     } catch (error) {
