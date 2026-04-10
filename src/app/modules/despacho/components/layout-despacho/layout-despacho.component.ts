@@ -444,7 +444,7 @@ abrirCaja(sucursalIdExistente?: string) {
         )
       : this.total;
 
-    const totalFinal = this.calcularTotalConMetodoPago(totalBase);
+    const totalFinal = this.calcularTotalConMetodoPago(totalBase, this.metodoPago);
 
     const venta = {
       fecha: new Date().toISOString(),
@@ -456,6 +456,8 @@ abrirCaja(sucursalIdExistente?: string) {
       sucursalId: cajaActiva.sucursalId,
       cajaId: cajaActiva.id
     };
+
+    console.log('VENTA A REGISTRAR:', venta);
 
     await addDoc(collection(this.firestore, 'Ventas'), venta);
 
@@ -497,9 +499,105 @@ abrirCaja(sucursalIdExistente?: string) {
     const win = window.open('', '_blank', 'width=800,height=600');
     if (!win) return;
 
+    const wspTexto = !venta.cliente || venta.cliente.tipo === 'mayorista'
+      ? '3426985223'
+      : '3425209886';
+
+    // 🧠 TOTAL BASE
+    const totalBase = venta.total;
+
+    // 🧠 TOTAL CON CUPÓN / PUNTOS (solo minorista)
+    let totalConPromos = totalBase;
+
+    if (venta.cliente && venta.cliente.tipo === 'minorista') {
+      totalConPromos = this.generalService.getTotalPrecioDespacho(
+        totalBase,
+        venta.cliente.puntos || 0,
+        venta.usarPuntos || false,
+        venta.valorMonetarioPorPunto || 0,
+        venta.cuponAplicado || null
+      );
+    }
+
+    // 🧠 TOTAL FINAL (método de pago)
+    this.metodoPago = venta.metodoPago;
+  //  const totalFinal = this.calcularTotalConMetodoPago(totalConPromos);
+    const totalFinal = this.calcularTotalConMetodoPago(
+      totalConPromos,
+      venta.metodoPago
+    );
+
+    // 🧠 DESCUENTO TOTAL
+    const descuentoTotal = totalBase - totalFinal;
+
+    // 🧠 DETALLE CUPÓN
+    let detalleCupon = '';
+    if (venta.cuponAplicado) {
+      if (venta.cuponAplicado.tipo === 'porcentaje') {
+        detalleCupon = `${venta.cuponAplicado.valor}% OFF`;
+      } else {
+        detalleCupon = `$${venta.cuponAplicado.valor} OFF`;
+      }
+    }
+
+    // 🧠 DETALLE MÉTODO DE PAGO
+    let detallePago = '';
+    if (venta.metodoPago === 'efectivo') {
+      detallePago = `Descuento por efectivo: ${this.descuentoEfectivo}%`;
+    }
+    if (venta.metodoPago === 'transferencia') {
+      detallePago = `Descuento por transferencia: ${this.descuentoTransferencia}%`;
+    }
+
     win.document.write(`
       <html>
         <head>
+          <style>
+            @page {
+              size: 80mm auto;
+              margin: 0;
+            }
+
+            body {
+              width: 80mm;
+              margin: 0;
+              padding: 5px;
+              font-family: monospace;
+              font-size: 12px;
+            }
+
+            h2, h3 {
+              text-align: center;
+              margin: 5px 0;
+            }
+
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              font-size: 12px;
+            }
+
+            th, td {
+              padding: 4px;
+              border-bottom: 1px dashed #000;
+            }
+
+            .total {
+              font-weight: bold;
+              font-size: 14px;
+              text-align: right;
+              margin-top: 10px;
+            }
+
+            .tachado {
+              text-decoration: line-through;
+              font-size: 12px;
+            }
+
+            .descuento {
+              font-size: 12px;
+            }
+          </style>
           <title>Comprobante de compra</title>
           <style>
             body { font-family: Arial, sans-serif; padding: 20px; }
@@ -508,12 +606,31 @@ abrirCaja(sucursalIdExistente?: string) {
             th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
             th { background: #f4f4f4; }
             .total { font-weight: bold; font-size: 18px; margin-top: 15px; }
+            .descuento { color: green; font-size: 14px; }
+            .tachado { text-decoration: line-through; color: gray; }
+            .center {
+              display: flex;
+              justify-content: center;
+              align-items: center;
+            }
           </style>
         </head>
         <body>
+
+          <div class="center">
+            <img src= "../../../../../assets/logo.png" width="120"/>
+          </div>
+          <h2>JC EXCLUSIVO</h2>
+          <h3>WhatsApp: ${wspTexto}</h3>
+
+
+          
+
           <h2>🧾 Comprobante de compra</h2>
+
           <p><strong>Fecha:</strong> ${new Date(venta.fecha).toLocaleString()}</p>
           <p><strong>Método de pago:</strong> ${venta.metodoPago}</p>
+
           ${venta.cliente ? `<p><strong>Cliente:</strong> ${venta.cliente.nombre} (DNI: ${venta.cliente.dni})</p>` : ''}
 
           <table>
@@ -537,14 +654,184 @@ abrirCaja(sucursalIdExistente?: string) {
             </tbody>
           </table>
 
-          <p class="total">TOTAL: $${venta.total.toFixed(2)}</p>
+          <!-- 💰 Totales -->
+          <p class="tachado">Subtotal: $${totalBase.toFixed(2)}</p>
+
+          ${detalleCupon ? `<p class="descuento">Cupón aplicado: ${detalleCupon}</p>` : ''}
+          ${venta.usarPuntos ? `<p class="descuento">Se aplicaron puntos del cliente</p>` : ''}
+          ${detallePago ? `<p class="descuento">${detallePago}</p>` : ''}
+
+          <p class="descuento">
+            Descuento total: $${descuentoTotal.toFixed(2)}
+          </p>
+
+          <p class="total">TOTAL FINAL: $${totalFinal.toFixed(2)}</p>
+
+          <h2>¡Gracias por su compra! 🙌</h2>
+          <h3>https://storejcexclusivo.web.app/</h3>
 
           <script>window.print();</script>
         </body>
       </html>
     `);
+
     win.document.close();
   }
+
+
+// abrirComprobante(venta: any) {
+//   const win = window.open('', '_blank', 'width=400,height=600');
+//   if (!win) return;
+
+//   const wspTexto = !venta.cliente || venta.cliente.tipo === 'mayorista'
+//     ? '3426985223'
+//     : '3425209886';
+
+//   // 🧠 TOTALES
+//   const totalBase = venta.total;
+
+//   let totalConPromos = totalBase;
+
+//   if (venta.cliente && venta.cliente.tipo === 'minorista') {
+//     totalConPromos = this.generalService.getTotalPrecioDespacho(
+//       totalBase,
+//       venta.cliente.puntos || 0,
+//       venta.usarPuntos || false,
+//       venta.valorMonetarioPorPunto || 0,
+//       venta.cuponAplicado || null
+//     );
+//   }
+
+//   const totalFinal = this.calcularTotalConMetodoPago(
+//     totalConPromos,
+//     venta.metodoPago
+//   );
+
+//   const descuentoTotal = totalBase - totalFinal;
+
+//   // 🧾 FORMATO LINEA
+//   const formatearLinea = (nombre: string, cant: number, subtotal: number) => {
+//     const maxNombre = 16;
+
+//     const nombreCorto = nombre.length > maxNombre
+//       ? nombre.substring(0, maxNombre)
+//       : nombre;
+
+//     const nombrePad = nombreCorto.padEnd(16, ' ');
+//     const cantPad = (`x${cant}`).padEnd(4, ' ');
+//     const precioPad = `$${subtotal.toFixed(0)}`.padStart(8, ' ');
+
+//     return `${nombrePad}${cantPad}${precioPad}`;
+//   };
+
+//   const itemsHtml = venta.items.map((item: any) => {
+//     return `<div>${formatearLinea(item.nombre, item.cantidad, item.subtotal)}</div>`;
+//   }).join('');
+
+//   win.document.write(`
+//     <html>
+//       <head>
+//         <title>Ticket</title>
+//         <style>
+//           @page {
+//             size: 80mm auto;
+//             margin: 0;
+//           }
+
+//           body {
+//             margin: 0;
+//             width: 80mm;
+//             max-width: 80mm;
+//             font-family: monospace;
+//             font-size: 12px;
+//             padding: 5px;
+//             background: green;
+//             box-sizing: border-box;
+//           }
+
+//           div {
+//             margin: 2px 0;
+//           }
+
+//           .center {
+//             text-align: center;
+//           }
+
+//           .total {
+//             font-size: 14px;
+//             font-weight: bold;
+//           }
+//         </style>
+//       </head>
+
+
+
+
+// <body>
+
+//   <div class="ticket">
+
+//     <!-- 🖼 LOGO -->
+//     <div class="center">
+// <img src= "../../../../../assets/logo.png" width="120"/>
+//     </div>
+
+//     <div class="center bold">
+//       JC EXCLUSIVO
+//     </div>
+
+//     <div class="center">
+//       WhatsApp: ${wspTexto}
+//     </div>
+
+//     <div class="line">--------------------------------</div>
+
+//     <div class="left">Fecha: ${new Date(venta.fecha).toLocaleString()}</div>
+//     <div class="left">Pago: ${venta.metodoPago}</div>
+//     ${venta.cliente ? `<div class="left">Cliente: ${venta.cliente.nombre}</div>` : ''}
+
+//     <div class="line">--------------------------------</div>
+
+//     ${itemsHtml}
+
+//     <div class="line">--------------------------------</div>
+
+//     <div class="left">Subtotal: $${totalBase.toFixed(0)}</div>
+
+//     ${venta.metodoPago === 'efectivo' ? `<div class="left">Desc. efectivo: ${this.descuentoEfectivo}%</div>` : ''}
+//     ${venta.metodoPago === 'transferencia' ? `<div class="left">Desc. transferencia: ${this.descuentoTransferencia}%</div>` : ''}
+
+//     <div class="left">Ahorro: $${descuentoTotal.toFixed(0)}</div>
+
+//     <div class="line">--------------------------------</div>
+
+//     <div class="total right">
+//       TOTAL: $${totalFinal.toFixed(0)}
+//     </div>
+
+//     <div class="line">--------------------------------</div>
+
+//     <div class="center">
+//       ¡Gracias por tu compra! 🙌
+//     </div>
+
+//     <div class="center small">
+//       storejcexclusivo.web.app
+//     </div>
+
+//   </div>
+
+//   <script>window.print();</script>
+
+// </body>
+//     </html>
+//   `);
+
+//   win.document.close();
+// }
+
+
+
 
   async filtrarProductos() {
     if (this.busquedaManual.length > 2) {
@@ -555,20 +842,29 @@ abrirCaja(sucursalIdExistente?: string) {
   }
 
 
-  calcularTotalConMetodoPago(total: number): number {
-    if (!this.metodoPago) return total;
+  // calcularTotalConMetodoPago(total: number): number {
+  //   if (!this.metodoPago) return total;
 
-    if (this.metodoPago === 'efectivo') {
-      return total - (total * this.descuentoEfectivo / 100);
+  //   if (this.metodoPago === 'efectivo') {
+  //     return total - (total * this.descuentoEfectivo / 100);
+  //   }
+
+  //   if (this.metodoPago === 'transferencia') {
+  //     return total - (total * this.descuentoTransferencia / 100);
+  //   }
+
+  //   return total; // tarjeta
+  // }
+
+  calcularTotalConMetodoPago(total: number, metodoPago: string): number {
+    if (metodoPago === 'efectivo') {
+      return total * (1 - this.descuentoEfectivo / 100);
     }
-
-    if (this.metodoPago === 'transferencia') {
-      return total - (total * this.descuentoTransferencia / 100);
+    if (metodoPago === 'transferencia') {
+      return total * (1 - this.descuentoTransferencia / 100);
     }
-
-    return total; // tarjeta
+    return total;
   }
-
 
 
 }

@@ -289,7 +289,7 @@
               <div class="text-success fw-bold fs-4">
 
                 <ng-container *ngIf="!clienteActual || clienteActual.tipo === 'mayorista'">
-                  {{ calcularTotalConMetodoPago(total) | currency }}
+                  {{ calcularTotalConMetodoPago(total, metodoPago) | currency }}
                 </ng-container>
 
                 <ng-container *ngIf="clienteActual && clienteActual.tipo === 'minorista'">
@@ -301,7 +301,7 @@
                         usarPuntos,
                         valorMonetarioPorPunto,
                         cuponAplicado
-                      )
+                      ), metodoPago
                     ) | currency
                   }}
                 </ng-container>
@@ -349,27 +349,15 @@
                           valorMonetarioPorPunto,
                           cuponAplicado
                         )
-                    )
+                    ), metodoPago
                   )
                 ) | currency
               }}
             </strong>
 
           </div>
-
-
-
-
         </div>
-
-
-
-
-
       </div>
-
-
-
 
       <div class="card mb-3" style="max-width: 500px; margin: auto;">
         <div class="card-body d-flex justify-content-between align-items-center">
@@ -379,9 +367,6 @@
           </button>
         </div>
       </div>
-
-
-
 
       <div *ngIf="clienteActual && clienteActual.tipo === 'minorista'" class="card mb-3" style="max-width: 500px; margin: auto;">
         <div class="card-body d-flex justify-content-between align-items-center">
@@ -399,3 +384,4 @@
 
   </div>
 </div>
+
