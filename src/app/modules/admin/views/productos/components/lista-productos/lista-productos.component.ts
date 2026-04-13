@@ -151,7 +151,7 @@ normalizarStock(producto: any) {
 
     dialogRef.afterClosed().subscribe(resultado => {
       if (resultado) {
-        console.log('Producto creado:', resultado);
+        //console.log('Producto creado:', resultado);
       }
     });
   }
@@ -223,8 +223,6 @@ normalizarStock(producto: any) {
 
       // la primera fila son los headers → usamos sheet_to_json sin header:1
       const productosExcel: any[] = XLSX.utils.sheet_to_json(ws);
-
-      console.log('Productos importados desde Excel:', productosExcel);
 
       // mapear cada fila a Producto
       productosExcel.forEach((v: any) => {

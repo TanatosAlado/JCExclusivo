@@ -173,15 +173,9 @@ agregarVariante(): void {
     const file: File = event.target.files[0];
     if (!file) return;
 
-    console.log('Archivo seleccionado:', file)
-
-    console.log('USER ACTUAL:', this.auth.currentUser);
-
     try {
       const nombreArchivo = `productos/${Date.now()}_${file.name}`;
       const storageRef = ref(this.storage, nombreArchivo);
-
-      console.log('Subiendo imagen:', nombreArchivo);
 
       await uploadBytes(storageRef, file);
       const url = await getDownloadURL(storageRef);

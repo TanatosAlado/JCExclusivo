@@ -265,7 +265,7 @@
             <h5 class="m-0 text-end">
 
               <!-- 🧠 TOTAL BASE -->
-              <div class="text-muted text-decoration-line-through small">
+              <div *ngIf="hayDescuento()" class="text-muted text-decoration-line-through small">
 
                 <ng-container *ngIf="!clienteActual || clienteActual.tipo === 'mayorista'">
                   {{ total | currency }}
@@ -312,16 +312,16 @@
         </div>
 
         <div class="centrar">
-          <div *ngIf="metodoPago === 'efectivo'" class="text-success small">
+          <div *ngIf="metodoPago === 'efectivo' && (!clienteActual || clienteActual.tipo !== 'mayorista')" class="text-success small">
             Descuento por efectivo: {{ descuentoEfectivo }}% 
           </div>
 
-          <div *ngIf="metodoPago === 'transferencia'" class="text-success small">
+          <div *ngIf="metodoPago === 'transferencia' && (!clienteActual || clienteActual.tipo !== 'mayorista')" class="text-success small">
             Descuento por transferencia: {{ descuentoTransferencia }}% 
           </div>
 
 
-          <div *ngIf="metodoPago && metodoPago !== 'tarjeta'" class="text-success small text-end">
+          <div *ngIf="metodoPago && metodoPago !== 'tarjeta' && (!clienteActual || clienteActual.tipo !== 'mayorista')" class="text-success small text-end">
 
             - Ahorrás:
             

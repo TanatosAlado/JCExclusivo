@@ -200,7 +200,7 @@ export class AltaProductoComponent implements OnInit {
 
   guardarProductoUnico() {
     this.producto.id = uuidv4(); // genera un id único
-    console.log('✅ Producto a guardar:', this.producto);
+    
     // luego acá harás el save a Firestore
   }
 
@@ -235,7 +235,6 @@ export class AltaProductoComponent implements OnInit {
 
   guardarProductoColor() {
     if (this.form.invalid) {
-      console.log('Formulario inválido:', this.form.value);
       this.form.markAllAsTouched();
       return;
     }
@@ -275,8 +274,6 @@ export class AltaProductoComponent implements OnInit {
         })),
         'color' // tipoVariantes
       );
-
-      console.log('✅ Producto con variantes por color listo para guardar:', producto);
 
       // TODO: enviar a Firestore
     } finally {
@@ -335,8 +332,6 @@ export class AltaProductoComponent implements OnInit {
       });
 
       producto.variantes = variantes;
-
-      console.log('✅ Producto con variantes por modelo+color listo para guardar:', producto);
 
       // 🔸 TODO: guardar en Firestore cuando quieras integrarlo
     } catch (err) {
@@ -398,9 +393,6 @@ async guardarProducto() {
   }
 
   const formValue = this.form ? this.form.value : {};
-  console.log('Guardando producto — form.value:', formValue);
-  console.log('Guardando producto — producto (modelo ngModel):', this.producto);
-
   try {
     // -------- PRODUCTO ÚNICO --------
     if (this.tipoSeleccionado === 'none') {
@@ -433,7 +425,6 @@ async guardarProducto() {
       // 🔥 IMPORTANTE: asignar ID interno
       await updateDoc(docRef, { id: docRef.id });
 
-      console.log('✅ Producto único guardado correctamente.');
       this.dialogRef.close(true);
       return;
     }
@@ -476,7 +467,6 @@ async guardarProducto() {
         await updateDoc(docRef, { id: docRef.id });
       }
 
-      console.log('✅ Variantes por color guardadas.');
       this.dialogRef.close(true);
       return;
     }
@@ -515,7 +505,6 @@ async guardarProducto() {
         await updateDoc(docRef, { id: docRef.id });
       }
 
-      console.log('✅ Variantes por modelo guardadas.');
       this.dialogRef.close(true);
       return;
     }
@@ -564,7 +553,6 @@ async guardarProducto() {
         }
       }
 
-      console.log('✅ Variantes por modelo+color guardadas.');
       this.dialogRef.close(true);
       return;
     }
@@ -615,7 +603,6 @@ async guardarProducto() {
     });
 
     this.variantes.push(varianteGroup);
-    console.log('✅ Variante agregada. Total:', this.variantes.length);
   }
 
   getNombreSucursal(id: string): string {
@@ -626,7 +613,6 @@ async guardarProducto() {
 
   eliminarVarianteColor(index: number) {
     this.producto.variantes.splice(index, 1);
-    console.log('❌ Variante eliminada. Total:', this.producto.variantes.length);
   }
 
 

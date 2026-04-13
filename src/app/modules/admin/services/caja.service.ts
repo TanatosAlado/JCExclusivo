@@ -86,7 +86,6 @@ export class CajaService {
 //   }
 
 getIngresos(fechaInicio: Date, fechaFin: Date) {
-  console.log('getIngresos called with:', fechaInicio, fechaFin);
 
   const pedidosRef = collection(this.firestore, 'Pedidos Finalizados');
 

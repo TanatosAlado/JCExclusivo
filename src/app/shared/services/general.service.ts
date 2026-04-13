@@ -206,7 +206,6 @@ async getProductoById(id: string) {
 
 
   async getProductoByNombre(nombre: string) {
-    console.log('nombre', nombre)
     const productosRef = collection(this.firestore, 'productos');
     const q = query(productosRef, where('id', '==', nombre));
     const querySnapshot = await getDocs(q);
@@ -223,7 +222,6 @@ async getProductoById(id: string) {
   //SERVICIO PARA CARGAR EN EL CARRITO EL PRODUCTO
 cargarProductoCarrito(producto: Producto, cantidad: number = 1): Promise<boolean> {
   
-        console.log('Producto a agregar (invitado):', producto);
   const calcularStockTotal = (p: any) => {
     if (!p.stockSucursales) return 0;
     // Si viene como objeto → sumamos los valores

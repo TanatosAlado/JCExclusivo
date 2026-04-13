@@ -42,7 +42,6 @@ export class GrillaItemComponent {
 
     this.productosService.obtenerProductosAgrupados().subscribe(productos => {
       this.productosOriginal = productos;
-       console.log('productosOriginal:', this.productosOriginal);
       this.rubros = [...new Set(productos.map(p => p.rubro))];
       this.marcas = [...new Set(productos.map(p => p.marca))];
       this.filtrarProductos();

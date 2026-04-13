@@ -39,11 +39,6 @@ export class ItemComponent implements OnInit {
 
   ngOnInit(): void {
 
-    console.log('ITEM producto recibido:', this.producto);
-console.log('tipoVariantes:', this.producto?.tipoVariantes, typeof this.producto?.tipoVariantes);
-
-
-
       this.infoEmpresaService.obtenerInfoGeneral().subscribe(info => {
         if (info?.dolar) {
           this.dolar = info.dolar;
@@ -95,7 +90,6 @@ console.log('tipoVariantes:', this.producto?.tipoVariantes, typeof this.producto
     // Filtramos variantes cuyo modelo normalizado coincida
     this.coloresFiltrados = (this.producto.variantes || []).filter(v => normalize(v?.modelo) === key);
 
-    console.log('Seleccionado modelo:', modeloLabel, '-> coloresFiltrados:', this.coloresFiltrados);
 
     // limpiar selección previa de variante
     this.selectedVariante = null;
@@ -113,7 +107,6 @@ console.log('tipoVariantes:', this.producto?.tipoVariantes, typeof this.producto
       this.selectedVariante = arg;
       this.varianteSeleccionada = this.producto.variantes?.indexOf(arg) ?? null;
     }
-    console.log('Variante seleccionada:', this.selectedVariante);
   }
 
   // Suma stock (busca propiedad 'cantidad' o 'stock' por compatibilidad)
@@ -180,7 +173,6 @@ console.log('tipoVariantes:', this.producto?.tipoVariantes, typeof this.producto
   }
 
   verDetalle(producto: Producto) {
-    console.log('Navegando a detalle de producto:', producto);
     this.router.navigate(['/producto', producto.id]);
   }
 

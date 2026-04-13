@@ -35,11 +35,9 @@ async ngOnInit() {
 
     if (snap.exists()) {
       this.orden = snap.data();
-      console.log('Orden encontrada:', this.orden);
 
       if (this.orden.fechaIngreso?.toDate) {
         this.orden.fechaIngreso = this.orden.fechaIngreso.toDate();
-        console.log('Fecha de ingreso convertida:', this.orden.fechaIngreso);
       }
     } else {
       this.error = 'No se encontró la orden solicitada.';

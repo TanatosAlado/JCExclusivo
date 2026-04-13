@@ -24,8 +24,6 @@ export class CajaComponent implements OnInit {
 
   onFechaSeleccionada(event: any) {
     this.fechaSeleccionada = event.value;
-    console.log('Fecha seleccionada:', this.fechaSeleccionada);
-    console.log('Event', event);
     this.cargarMovimientos(this.fechaSeleccionada);
   }
 

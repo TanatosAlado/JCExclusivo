@@ -44,7 +44,7 @@ export class ListaSucursalesComponent {
     
       dialogRef.afterClosed().subscribe(resultado => {
         if (resultado) {
-          console.log('Sucursal creada:', resultado);
+         // console.log('Sucursal creada:', resultado);
         }
       });
   }

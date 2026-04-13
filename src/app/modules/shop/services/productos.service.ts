@@ -16,7 +16,6 @@ export class ProductosService {
   }
 
   agregarProducto(producto: Producto): Promise<any> {
-    console.log('Producto a agregar:', producto);
 
     const ref = collection(this.firestore, 'productos');
 
@@ -46,7 +45,6 @@ export class ProductosService {
   }
 
   actualizarProducto(producto: Producto): Promise<void> {
-    console.log('Producto a actualizar:', producto);
     const docRef = doc(this.firestore, 'productos', producto.id);
     return updateDoc(docRef, { ...producto });
   }

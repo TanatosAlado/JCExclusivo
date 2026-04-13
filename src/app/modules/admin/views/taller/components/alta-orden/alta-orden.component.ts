@@ -193,7 +193,6 @@ export class AltaOrdenComponent {
     }
 
     this.imeiResultados = resultados;
-    console.log('Resultados IMEI:', resultados);
 
   } catch (err) {
     console.error('Error al consultar IMEI:', err);

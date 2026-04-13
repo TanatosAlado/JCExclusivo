@@ -117,7 +117,6 @@ async ngOnInit() {
     const lista = await firstValueFrom(this.sucursalesService.obtenerSucursales());
     this.sucursales = lista || [];
 
-    console.log('Productos sincronizados y sucursales cargadas:', this.sucursales);
   } catch (err) {
     console.error('Error inicializando POS:', err);
     Swal.fire('Error', 'No se pudieron cargar los datos iniciales. ' + (err as any)?.message, 'error');
@@ -136,7 +135,6 @@ async ngOnInit() {
       if (info) {
         this.descuentoEfectivo = info.descuentoEnEfectivo || 0;
         this.descuentoTransferencia = info.descuentoEnTransferencia || 0;
-        console.log('descuentos cargados desde InfoEmpresa:', this.descuentoEfectivo, this.descuentoTransferencia);
       }
     });  
     
@@ -208,7 +206,6 @@ async ngOnInit() {
    * Selección de sucursal
    * --------------------- */
 async seleccionarSucursal(sucursal: Sucursal) {
-  console.log('sucursal:', sucursal)
   // Mostrar un estado de carga si querés (opcional)
   // this.loadingSeleccion = true;
 
@@ -329,10 +326,13 @@ abrirCaja(sucursalIdExistente?: string) {
       const docu = snap.docs[0];
       const data = docu.data() as any;
 
+      let catCliente: 'mayorista' | 'minorista' = data.esMayorista ? 'mayorista' : 'minorista';
+
       this.clienteActual = {
         dni: data.dni,
         nombre: data.nombre,
-        tipo: data.tipoCliente || 'minorista',
+        // tipo: data.tipoCliente || 'minorista',
+        tipo: catCliente,
         puntos: data.puntos || 0
       };
 
@@ -423,17 +423,14 @@ abrirCaja(sucursalIdExistente?: string) {
 
     this.mostrarErrorPago = false;
 
-    // preferimos cajaActiva en memoria, si no existe usamos lo de service (localStorage)
+    // Caja activa
     const cajaActiva = this.cajaActiva || this.cajaService.getCajaActiva();
     if (!cajaActiva) {
-      Swal.fire('❌ No hay caja abierta', 'Debes abrir caja antes de vender.', 'error');
+      await Swal.fire('❌ No hay caja abierta', 'Debes abrir caja antes de vender.', 'error');
       return;
     }
 
-    if (!confirm("¿Desea confirmar la venta por $" + this.total.toFixed(2) + "?")) {
-      return;
-    }
-
+    // 🧠 TOTAL BASE (con puntos/cupón si es minorista)
     const totalBase = this.clienteActual && this.clienteActual.tipo === 'minorista'
       ? this.generalService.getTotalPrecioDespacho(
           this.total,
@@ -444,12 +441,33 @@ abrirCaja(sucursalIdExistente?: string) {
         )
       : this.total;
 
+    // 🧠 TOTAL FINAL (con método de pago)
     const totalFinal = this.calcularTotalConMetodoPago(totalBase, this.metodoPago);
 
+    // ✅ CONFIRMACIÓN PRO
+    const result = await Swal.fire({
+      title: 'Confirmar venta',
+      html: `
+        <div style="font-size: 16px;">
+          Total a pagar:<br>
+          <strong style="font-size: 22px;">$${totalFinal.toFixed(2)}</strong>
+        </div>
+      `,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Confirmar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (!result.isConfirmed) return;
+
+    // 🧾 OBJETO VENTA
     const venta = {
       fecha: new Date().toISOString(),
       tipoPrecio: this.tipoPrecio,
-      cliente: this.clienteActual ? { dni: this.clienteActual.dni, nombre: this.clienteActual.nombre } : null,
+      cliente: this.clienteActual
+        ? { dni: this.clienteActual.dni, nombre: this.clienteActual.nombre }
+        : null,
       items: this.carrito,
       total: totalBase,
       metodoPago: this.metodoPago,
@@ -457,36 +475,40 @@ abrirCaja(sucursalIdExistente?: string) {
       cajaId: cajaActiva.id
     };
 
-    console.log('VENTA A REGISTRAR:', venta);
-
+    // 💾 GUARDAR VENTA
     await addDoc(collection(this.firestore, 'Ventas'), venta);
 
+    // 📦 ACTUALIZAR STOCK
     for (const item of venta.items) {
       const productoRef = doc(this.firestore, 'Productos', item.productoId);
       const productoSnap = await getDoc(productoRef);
 
       if (productoSnap.exists()) {
         const productoData = productoSnap.data();
-        const stockActual = productoData['stock'] ?? 0; // por si no existe el campo
+        const stockActual = productoData['stock'] ?? 0;
         const nuevoStock = stockActual - item.cantidad;
-        await updateDoc(productoRef, { stock: nuevoStock >= 0 ? nuevoStock : 0 });
+
+        await updateDoc(productoRef, {
+          stock: nuevoStock >= 0 ? nuevoStock : 0
+        });
       }
     }
 
-    Swal.fire({
+    // ✅ MENSAJE FINAL
+    const resultFinal = await Swal.fire({
       title: '✅ Venta realizada',
       text: 'La venta fue registrada correctamente.',
       icon: 'success',
       showCancelButton: true,
       confirmButtonText: 'Ver comprobante',
       cancelButtonText: 'Cerrar'
-    }).then((result) => {
-      if (result.isConfirmed) {
-        this.abrirComprobante(venta);
-      }
     });
 
-    // Reset
+    if (resultFinal.isConfirmed) {
+      this.abrirComprobante(venta);
+    }
+
+    // 🔄 RESET
     this.carrito = [];
     this.total = 0;
     this.clienteActual = null;
@@ -494,6 +516,86 @@ abrirCaja(sucursalIdExistente?: string) {
     this.productoCache = {};
     this.metodoPago = null;
   }
+
+  // async finalizarVenta() {
+  //   if (this.carrito.length === 0) return;
+
+  //   if (!this.metodoPago) {
+  //     this.mostrarErrorPago = true;
+  //     return;
+  //   }
+
+  //   this.mostrarErrorPago = false;
+
+  //   // preferimos cajaActiva en memoria, si no existe usamos lo de service (localStorage)
+  //   const cajaActiva = this.cajaActiva || this.cajaService.getCajaActiva();
+  //   if (!cajaActiva) {
+  //     Swal.fire('❌ No hay caja abierta', 'Debes abrir caja antes de vender.', 'error');
+  //     return;
+  //   }
+
+  //   if (!confirm("¿Desea confirmar la venta por $" + this.total.toFixed(2) + "?")) {
+  //     return;
+  //   }
+
+  //   const totalBase = this.clienteActual && this.clienteActual.tipo === 'minorista'
+  //     ? this.generalService.getTotalPrecioDespacho(
+  //         this.total,
+  //         this.clienteActual.puntos,
+  //         this.usarPuntos,
+  //         this.valorMonetarioPorPunto,
+  //         this.cuponAplicado
+  //       )
+  //     : this.total;
+
+  //   const totalFinal = this.calcularTotalConMetodoPago(totalBase, this.metodoPago);
+
+  //   const venta = {
+  //     fecha: new Date().toISOString(),
+  //     tipoPrecio: this.tipoPrecio,
+  //     cliente: this.clienteActual ? { dni: this.clienteActual.dni, nombre: this.clienteActual.nombre } : null,
+  //     items: this.carrito,
+  //     total: totalBase,
+  //     metodoPago: this.metodoPago,
+  //     sucursalId: cajaActiva.sucursalId,
+  //     cajaId: cajaActiva.id
+  //   };
+
+  //   await addDoc(collection(this.firestore, 'Ventas'), venta);
+
+  //   for (const item of venta.items) {
+  //     const productoRef = doc(this.firestore, 'Productos', item.productoId);
+  //     const productoSnap = await getDoc(productoRef);
+
+  //     if (productoSnap.exists()) {
+  //       const productoData = productoSnap.data();
+  //       const stockActual = productoData['stock'] ?? 0; // por si no existe el campo
+  //       const nuevoStock = stockActual - item.cantidad;
+  //       await updateDoc(productoRef, { stock: nuevoStock >= 0 ? nuevoStock : 0 });
+  //     }
+  //   }
+
+  //   Swal.fire({
+  //     title: '✅ Venta realizada',
+  //     text: 'La venta fue registrada correctamente.',
+  //     icon: 'success',
+  //     showCancelButton: true,
+  //     confirmButtonText: 'Ver comprobante',
+  //     cancelButtonText: 'Cerrar'
+  //   }).then((result) => {
+  //     if (result.isConfirmed) {
+  //       this.abrirComprobante(venta);
+  //     }
+  //   });
+
+  //   // Reset
+  //   this.carrito = [];
+  //   this.total = 0;
+  //   this.clienteActual = null;
+  //   this.tipoPrecio = 'minorista';
+  //   this.productoCache = {};
+  //   this.metodoPago = null;
+  // }
 
   abrirComprobante(venta: any) {
     const win = window.open('', '_blank', 'width=800,height=600');
@@ -679,160 +781,6 @@ abrirCaja(sucursalIdExistente?: string) {
   }
 
 
-// abrirComprobante(venta: any) {
-//   const win = window.open('', '_blank', 'width=400,height=600');
-//   if (!win) return;
-
-//   const wspTexto = !venta.cliente || venta.cliente.tipo === 'mayorista'
-//     ? '3426985223'
-//     : '3425209886';
-
-//   // 🧠 TOTALES
-//   const totalBase = venta.total;
-
-//   let totalConPromos = totalBase;
-
-//   if (venta.cliente && venta.cliente.tipo === 'minorista') {
-//     totalConPromos = this.generalService.getTotalPrecioDespacho(
-//       totalBase,
-//       venta.cliente.puntos || 0,
-//       venta.usarPuntos || false,
-//       venta.valorMonetarioPorPunto || 0,
-//       venta.cuponAplicado || null
-//     );
-//   }
-
-//   const totalFinal = this.calcularTotalConMetodoPago(
-//     totalConPromos,
-//     venta.metodoPago
-//   );
-
-//   const descuentoTotal = totalBase - totalFinal;
-
-//   // 🧾 FORMATO LINEA
-//   const formatearLinea = (nombre: string, cant: number, subtotal: number) => {
-//     const maxNombre = 16;
-
-//     const nombreCorto = nombre.length > maxNombre
-//       ? nombre.substring(0, maxNombre)
-//       : nombre;
-
-//     const nombrePad = nombreCorto.padEnd(16, ' ');
-//     const cantPad = (`x${cant}`).padEnd(4, ' ');
-//     const precioPad = `$${subtotal.toFixed(0)}`.padStart(8, ' ');
-
-//     return `${nombrePad}${cantPad}${precioPad}`;
-//   };
-
-//   const itemsHtml = venta.items.map((item: any) => {
-//     return `<div>${formatearLinea(item.nombre, item.cantidad, item.subtotal)}</div>`;
-//   }).join('');
-
-//   win.document.write(`
-//     <html>
-//       <head>
-//         <title>Ticket</title>
-//         <style>
-//           @page {
-//             size: 80mm auto;
-//             margin: 0;
-//           }
-
-//           body {
-//             margin: 0;
-//             width: 80mm;
-//             max-width: 80mm;
-//             font-family: monospace;
-//             font-size: 12px;
-//             padding: 5px;
-//             background: green;
-//             box-sizing: border-box;
-//           }
-
-//           div {
-//             margin: 2px 0;
-//           }
-
-//           .center {
-//             text-align: center;
-//           }
-
-//           .total {
-//             font-size: 14px;
-//             font-weight: bold;
-//           }
-//         </style>
-//       </head>
-
-
-
-
-// <body>
-
-//   <div class="ticket">
-
-//     <!-- 🖼 LOGO -->
-//     <div class="center">
-// <img src= "../../../../../assets/logo.png" width="120"/>
-//     </div>
-
-//     <div class="center bold">
-//       JC EXCLUSIVO
-//     </div>
-
-//     <div class="center">
-//       WhatsApp: ${wspTexto}
-//     </div>
-
-//     <div class="line">--------------------------------</div>
-
-//     <div class="left">Fecha: ${new Date(venta.fecha).toLocaleString()}</div>
-//     <div class="left">Pago: ${venta.metodoPago}</div>
-//     ${venta.cliente ? `<div class="left">Cliente: ${venta.cliente.nombre}</div>` : ''}
-
-//     <div class="line">--------------------------------</div>
-
-//     ${itemsHtml}
-
-//     <div class="line">--------------------------------</div>
-
-//     <div class="left">Subtotal: $${totalBase.toFixed(0)}</div>
-
-//     ${venta.metodoPago === 'efectivo' ? `<div class="left">Desc. efectivo: ${this.descuentoEfectivo}%</div>` : ''}
-//     ${venta.metodoPago === 'transferencia' ? `<div class="left">Desc. transferencia: ${this.descuentoTransferencia}%</div>` : ''}
-
-//     <div class="left">Ahorro: $${descuentoTotal.toFixed(0)}</div>
-
-//     <div class="line">--------------------------------</div>
-
-//     <div class="total right">
-//       TOTAL: $${totalFinal.toFixed(0)}
-//     </div>
-
-//     <div class="line">--------------------------------</div>
-
-//     <div class="center">
-//       ¡Gracias por tu compra! 🙌
-//     </div>
-
-//     <div class="center small">
-//       storejcexclusivo.web.app
-//     </div>
-
-//   </div>
-
-//   <script>window.print();</script>
-
-// </body>
-//     </html>
-//   `);
-
-//   win.document.close();
-// }
-
-
-
-
   async filtrarProductos() {
     if (this.busquedaManual.length > 2) {
       this.productosFiltrados = await this.productosCache.buscarProductos(this.busquedaManual);
@@ -841,29 +789,41 @@ abrirCaja(sucursalIdExistente?: string) {
     }
   }
 
-
-  // calcularTotalConMetodoPago(total: number): number {
-  //   if (!this.metodoPago) return total;
-
-  //   if (this.metodoPago === 'efectivo') {
-  //     return total - (total * this.descuentoEfectivo / 100);
-  //   }
-
-  //   if (this.metodoPago === 'transferencia') {
-  //     return total - (total * this.descuentoTransferencia / 100);
-  //   }
-
-  //   return total; // tarjeta
-  // }
-
   calcularTotalConMetodoPago(total: number, metodoPago: string): number {
+
+    // 🚫 Si es mayorista → NO hay descuento
+    if (this.clienteActual && this.clienteActual.tipo === 'mayorista') {
+      return total;
+    }
+
+    // ✅ Si es minorista → aplicar descuento
     if (metodoPago === 'efectivo') {
       return total * (1 - this.descuentoEfectivo / 100);
     }
+
     if (metodoPago === 'transferencia') {
       return total * (1 - this.descuentoTransferencia / 100);
     }
+
     return total;
+  }
+
+  hayDescuento(): boolean {
+    if (!this.metodoPago) return false;
+
+    const totalBase = (!this.clienteActual || this.clienteActual.tipo === 'mayorista')
+      ? this.total
+      : this.generalService.getTotalPrecioDespacho(
+          this.total,
+          this.clienteActual.puntos,
+          this.usarPuntos,
+          this.valorMonetarioPorPunto,
+          this.cuponAplicado
+        );
+
+    const totalFinal = this.calcularTotalConMetodoPago(totalBase, this.metodoPago);
+
+    return totalFinal < totalBase;
   }
 
 

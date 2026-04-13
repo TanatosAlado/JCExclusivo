@@ -230,7 +230,6 @@ export class CheckoutComponent {
   //FUNCION PARA CREAR EL PEDIDO
   async createPedido(puntoRestar: number, puntosSumar: number) {
     const carritoCliente = this.clienteEncontrado.carrito;
-    console.log('Carrito del cliente:', carritoCliente);
 
     const total = this.generalService.getTotalPrecio(
       this.clienteEncontrado,
@@ -264,8 +263,6 @@ export class CheckoutComponent {
       nombreCliente: this.formCheckout.get('user')?.value,
       apellidoCliente: '',
     };
-
-    console.log('Creando pedido:', unPedido);
 
     try {
       const docRef = await this.pedidoService.createPedido(unPedido);
@@ -421,9 +418,9 @@ export class CheckoutComponent {
       }
 
       // LOG útil para debugging
-      console.log(
-        `Stock actualizado para producto ${productDocId} (item ${item.codigoBarras || ''}). Remaining NOT covered: ${remaining}`
-      );
+      // console.log(
+      //   `Stock actualizado para producto ${productDocId} (item ${item.codigoBarras || ''}). Remaining NOT covered: ${remaining}`
+      // );
     }); // end transaction
 
   } catch (err) {
@@ -431,7 +428,7 @@ export class CheckoutComponent {
   }
 }
 
-      console.log('✅ Pedido creado y stock actualizado correctamente.');
+     // console.log('✅ Pedido creado y stock actualizado correctamente.');
     } catch (error) {
       console.error('Error al crear pedido:', error);
     }

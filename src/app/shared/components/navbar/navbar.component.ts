@@ -86,7 +86,7 @@ export class NavbarComponent {
         this.usrAdmin = cliente.administrador;
         this.carritoService.actualizarCantidadProductos(cliente);
       } else {
-        console.log('Modal cerrado sin login');
+        //console.log('Modal cerrado sin login');
       }
     });
   }

@@ -68,7 +68,6 @@ public clienteAEliminar: string = '';
 
  loadClientes() {
   this.clienteService.getClientes().subscribe((clientes: Cliente[]) => {
-    console.log('Clientes recibidos:', clientes);
     this.clientes = clientes;
     this.aplicarFiltro(); 
   });
