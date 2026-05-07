@@ -23,6 +23,9 @@ export class DetalleProductoComponent {
   selectedVariante: VarianteProducto | null = null;
   esMayorista: boolean = false;
   // sinStock: boolean = false;
+  origen: string = '/inicio';
+  
+  estadoAnterior: any = null;
 
 
 
@@ -36,6 +39,16 @@ export class DetalleProductoComponent {
   ) {}
 
   ngOnInit() {
+
+    console.log('History State:', history.state);
+
+    if (history.state) {
+
+      this.origen = history.state.origen || '/inicio';
+
+      this.estadoAnterior = history.state.filtros || null;
+    }
+
 
     const cliente = this.generalService.getClienteActual();
     this.esMayorista = cliente?.esMayorista ?? false; 
@@ -242,7 +255,18 @@ private procesarProductoEnCarrito(cliente: Cliente, producto: Producto) {
 }
 
 volverATienda() {
-  this.router.navigate(['/inicio']);   // 👉 Ajustá la ruta si tu tienda tiene otro path
+  //this.router.navigate([this.origen]);
+
+  this.router.navigate(
+    [this.origen],
+    {
+      state: {
+        filtrosRestaurar: this.estadoAnterior
+      }
+    }
+  );
+  
+  //this.router.navigate(['/inicio']);   // 👉 Ajustá la ruta si tu tienda tiene otro path
 }
 
 puedeAgregar(): boolean {

@@ -220,16 +220,38 @@ async getProductoById(id: string) {
 
 
   //SERVICIO PARA CARGAR EN EL CARRITO EL PRODUCTO
-cargarProductoCarrito(producto: Producto, cantidad: number = 1): Promise<boolean> {
-  
-  const calcularStockTotal = (p: any) => {
-    if (!p.stockSucursales) return 0;
-    // Si viene como objeto → sumamos los valores
-    if (typeof p.stockSucursales === 'object' && !Array.isArray(p.stockSucursales)) {
-      return Object.values(p.stockSucursales).reduce((acc: number, cant: any) => acc + (Number(cant) || 0), 0);
+cargarProductoCarrito(producto: Producto, cantidad: number = 1): Promise<boolean> {    // ACA ESTA EL QUILOMBO CON EL STOCK EN EL CARRITO, HAY QUE VER BIEN COMO CALCULARLO PARA QUE NO DE PROBLEMAS CON LAS VARIANTES
+
+  // const calcularStockTotal = (p: any) => {
+  //   if (!p.stockSucursales) return 0;
+  //   // Si viene como objeto → sumamos los valores
+  //   if (typeof p.stockSucursales === 'object' && !Array.isArray(p.stockSucursales)) {
+  //     return Object.values(p.stockSucursales).reduce((acc: number, cant: any) => acc + (Number(cant) || 0), 0);
+  //   }
+  //   // Si viene como array
+  //   return (p.stockSucursales || []).reduce((acc: number, s: any) => acc + (s?.cantidad || 0), 0);
+  // };
+
+  const calcularStockSegunCliente = (p: any, cliente: Cliente) => {
+
+  const calcularMinorista = () => {
+      if (!p.stockSucursales) return 0;
+
+      if (typeof p.stockSucursales === 'object' && !Array.isArray(p.stockSucursales)) {
+        return Object.values(p.stockSucursales)
+          .reduce((acc: number, cant: any) => acc + (Number(cant) || 0), 0);
+      }
+
+      return (p.stockSucursales || [])
+        .reduce((acc: number, s: any) => acc + (s?.cantidad || 0), 0);
+    };
+
+    // 🔥 CLAVE
+    if (cliente.esMayorista) {
+      return p.stockMayorista ?? 0;
+    } else {
+      return calcularMinorista();
     }
-    // Si viene como array
-    return (p.stockSucursales || []).reduce((acc: number, s: any) => acc + (s?.cantidad || 0), 0);
   };
 
   return new Promise(async (resolve, reject) => {
@@ -245,6 +267,13 @@ cargarProductoCarrito(producto: Producto, cantidad: number = 1): Promise<boolean
         const carritoRaw = localStorage.getItem('carritoInvitado');
         let carrito = carritoRaw ? JSON.parse(carritoRaw) : [];
 
+        const obtenerPrecio = (p: Producto, cliente: Cliente) => {
+          if (p.oferta && p.precioOferta) return p.precioOferta;
+
+          return cliente.esMayorista
+            ? p.precioMayorista
+            : p.precioMinorista;
+        };
 
         const index = carrito.findIndex(item => item.codigoBarras === producto.codigoBarras);
         if (index > -1) {
@@ -261,10 +290,12 @@ cargarProductoCarrito(producto: Producto, cantidad: number = 1): Promise<boolean
             cantidad,
             oferta: producto.oferta,
             precioOferta: producto.precioOferta ?? null,
-            precioFinal: producto.oferta && producto.precioOferta
-              ? producto.precioOferta
-              : producto.precioMinorista,
-            stock: calcularStockTotal(producto),
+            precioFinal: obtenerPrecio(producto, clienteEncontrado),
+            // precioFinal: producto.oferta && producto.precioOferta
+            //   ? producto.precioOferta
+            //   : producto.precioMinorista,
+              stock: calcularStockSegunCliente(producto, clienteEncontrado),
+            // stock: calcularStockTotal(producto),
             color: (producto as any).color || null,
             modelo: (producto as any).modelo || null
           });
@@ -289,6 +320,14 @@ cargarProductoCarrito(producto: Producto, cantidad: number = 1): Promise<boolean
         item => item.codigoBarras === producto.codigoBarras
       );
 
+      const obtenerPrecio = (p: Producto, cliente: Cliente) => {
+        if (p.oferta && p.precioOferta) return p.precioOferta;
+
+        return cliente.esMayorista
+          ? p.precioMayorista
+          : p.precioMinorista;
+      };
+
       if (index > -1) {
         clienteEncontrado.carrito[index].cantidad += cantidad;
       } else {
@@ -302,10 +341,12 @@ cargarProductoCarrito(producto: Producto, cantidad: number = 1): Promise<boolean
             cantidad,
             oferta: producto.oferta,
             precioOferta: producto.precioOferta ?? null,
-            precioFinal: producto.oferta && producto.precioOferta
-              ? producto.precioOferta
-              : producto.precioMinorista,
-            stock: calcularStockTotal(producto),
+            precioFinal: obtenerPrecio(producto, clienteEncontrado),
+            // precioFinal: producto.oferta && producto.precioOferta
+            //   ? producto.precioOferta
+            //   : producto.precioMinorista,
+              stock: calcularStockSegunCliente(producto, clienteEncontrado),
+            // stock: calcularStockTotal(producto),
             color: (producto as any).color || null,
             modelo: (producto as any).modelo || null
           });

@@ -8,6 +8,7 @@ import { GeneralService } from 'src/app/shared/services/general.service';
 import { ToastService } from 'src/app/shared/services/toast.service';
 import { MatDialog } from '@angular/material/dialog';
 import { InfoEmpresaService } from 'src/app/shared/services/info-empresa.service';
+import { EcommerceStateService } from '../../services/ecommerce-state.service';
 
 @Component({
   selector: 'app-item',
@@ -18,6 +19,7 @@ export class ItemComponent implements OnInit {
 
   @Input() producto!: Producto;
   @Input() esMayorista: boolean = false;
+  @Input() estadoGrilla: any;
 
   selectedVariante: any = null;
   varianteSeleccionada: number | null = null;
@@ -34,7 +36,8 @@ export class ItemComponent implements OnInit {
     private generalService: GeneralService,
     private toastService: ToastService,
     private dialog: MatDialog,
-    private infoEmpresaService: InfoEmpresaService
+    private infoEmpresaService: InfoEmpresaService,
+    private ecommerceState: EcommerceStateService
   ) {}
 
   ngOnInit(): void {
@@ -173,7 +176,16 @@ export class ItemComponent implements OnInit {
   }
 
   verDetalle(producto: Producto) {
-    this.router.navigate(['/producto', producto.id]);
+
+    this.router.navigate(
+      ['/producto', producto.id],
+      {
+        state: {
+          origen: this.router.url,
+          filtros: this.estadoGrilla
+        }
+      }
+    );
   }
 
   getPrecioMayoristaPesos(): number {

@@ -1,3 +1,5 @@
+export type Moneda = 'ARS' | 'USD';
+
 export interface StockSucursal {
   sucursalId: string;
   cantidad: number;
@@ -11,6 +13,7 @@ export interface VarianteProducto {
   precioCosto?: number;
   precioMinorista?: number;
   precioMayorista?: number;
+  moneda?: Moneda;
   stockSucursales: StockSucursal[];
   stockMayorista: number;
   imagen?: string;
@@ -28,6 +31,7 @@ export class Producto {
     public precioMinorista: number,
     public ventaMayorista: boolean,
     public precioMayorista: number,
+    public moneda: Moneda,
     public imagen: string,
     public rubro: string,
     public subrubro: string,
@@ -50,4 +54,6 @@ export class Producto {
   get stockGlobal(): number {
     return this.stockTotal + (this.stockMayorista || 0);
   }
+
+  
 }

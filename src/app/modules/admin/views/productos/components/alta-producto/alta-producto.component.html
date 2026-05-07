@@ -95,6 +95,14 @@
         <input type="number" class="form-control" [(ngModel)]="producto.precioMayorista">
       </div>
 
+      <div class="col-md-3">
+        <label class="form-label">Moneda</label>
+        <select class="form-select" [(ngModel)]="producto.moneda">
+          <option value="ARS">Pesos (ARS)</option>
+          <option value="USD">Dólares (USD)</option>
+        </select>
+      </div>
+
       <div class="col-md-4">
         <label class="form-label">Rubro</label>
         <input type="text" class="form-control" [(ngModel)]="producto.rubro">
@@ -229,6 +237,14 @@
       <div class="col-md-3">
         <label class="form-label">Precio mayorista</label>
         <input type="number" class="form-control" formControlName="precioMayorista">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Moneda</label>
+        <select class="form-select" formControlName="moneda">
+          <option value="ARS">Pesos (ARS)</option>
+          <option value="USD">Dólares (USD)</option>
+        </select>
       </div>
 
       <div class="col-md-4">
@@ -394,6 +410,14 @@
       <div class="col-md-3">
         <label class="form-label">Precio mayorista</label>
         <input type="number" class="form-control" formControlName="precioMayorista">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Moneda</label>
+        <select class="form-select" formControlName="moneda">
+          <option value="ARS">Pesos (ARS)</option>
+          <option value="USD">Dólares (USD)</option>
+        </select>
       </div>
 
       <div class="col-md-4">
@@ -565,6 +589,14 @@
       <div class="col-md-3">
         <label class="form-label">Precio mayorista</label>
         <input type="number" class="form-control" formControlName="precioMayorista">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Moneda</label>
+        <select class="form-select" formControlName="moneda">
+          <option value="ARS">Pesos (ARS)</option>
+          <option value="USD">Dólares (USD)</option>
+        </select>
       </div>
 
       <div class="col-md-4">

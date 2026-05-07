@@ -11,6 +11,9 @@ import { AuthService } from 'src/app/modules/auth/services/auth.service';
 export class GrillaItemComponent {
 
   Math = Math;
+  window = window;
+
+  
 
   productosOriginal: Producto[] = [];
   productosFiltrados: Producto[] = [];
@@ -31,29 +34,58 @@ export class GrillaItemComponent {
   productosPaginados: Producto[] = [];
   public esMayorista: boolean = false;
 
+  scrollActual: number = 0;
   //public productos: Producto[] = [];
 
   constructor(private productosService: ProductosService, private authService: AuthService) { }
 
   ngOnInit(): void {
 
-  this.authService.getUsuarioActual().subscribe(cliente => {
-    this.esMayorista = cliente?.esMayorista ?? false;
+    const estado = history.state.filtrosRestaurar;
 
-    this.productosService.obtenerProductosAgrupados().subscribe(productos => {
-      this.productosOriginal = productos;
-      this.rubros = [...new Set(productos.map(p => p.rubro))];
-      this.marcas = [...new Set(productos.map(p => p.marca))];
-      this.filtrarProductos();
+    this.authService.getUsuarioActual().subscribe(cliente => {
+
+      this.esMayorista = cliente?.esMayorista ?? false;
+
+      this.productosService.obtenerProductosAgrupados().subscribe(productos => {
+
+        this.productosOriginal = productos;
+
+        this.rubros = [...new Set(productos.map(p => p.rubro))];
+        this.marcas = [...new Set(productos.map(p => p.marca))];
+
+        // 🔥 restaurar filtros
+        if (estado) {
+
+          this.filtroNombre = estado.filtroNombre;
+          this.filtroRubro = estado.filtroRubro;
+          this.filtroSubrubro = estado.filtroSubrubro;
+          this.filtroMarca = estado.filtroMarca;
+          this.precioMin = estado.precioMin;
+          this.precioMax = estado.precioMax;
+          this.soloDestacados = estado.soloDestacados;
+          this.paginaActual = estado.paginaActual;
+        }
+
+        this.filtrarProductos(false);
+
+        // 🔥 restaurar scroll
+        setTimeout(() => {
+
+          if (estado?.scrollY) {
+            window.scrollTo(0, estado.scrollY);
+          }
+
+        }, 100);
+
+      });
+
     });
-  });
 
-  
   }
+  
 
- 
-
-  filtrarProductos() {
+  filtrarProductos(resetPagina: boolean = true) {
 
     if (this.filtroRubro) {
       this.subrubros = [
@@ -98,7 +130,10 @@ export class GrillaItemComponent {
       return tipoVentaOk && rubroOk && subrubroOk && destacadoOk && precioMinOk && precioMaxOk && marcaOk && nombreOk;
     });
 
-    this.paginaActual = 1; // resetea a la primera página al aplicar filtros
+    if (resetPagina) {
+      this.paginaActual = 1;
+    }
+   // this.paginaActual = 1; // resetea a la primera página al aplicar filtros
     this.actualizarPaginados();
   }
 
@@ -112,6 +147,8 @@ export class GrillaItemComponent {
     this.paginaActual = pagina;
     this.actualizarPaginados();
   }
+
+
 
 
 
