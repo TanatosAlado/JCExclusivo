@@ -5,6 +5,7 @@ import { CarritoService } from '../../services/carrito.service';
 import { ClientesService } from '../../services/clientes.service';
 import { Router } from '@angular/router';
 import { VouchersPuntosService } from '../../services/vouchers-puntos.service';
+import { InfoEmpresaService } from '../../services/info-empresa.service';
 declare var bootstrap: any;
 
 @Component({
@@ -19,17 +20,24 @@ export class CarritoComponent {
   userLogueado = localStorage.getItem('mail');
   valorParaSumarPunto: number = 200;
   montoMinimoMayorista: number = 50000;
+  dolar: number = 1;
 
   constructor(
     public generalService: GeneralService,
     private carritoService: CarritoService,
     private clienteService: ClientesService,
     private router: Router,
-    private puntosService: VouchersPuntosService
+    private puntosService: VouchersPuntosService,
+    private infoEmpresaService: InfoEmpresaService
   ) { }
 
   async ngOnInit() {
     this.getCliente();
+    this.infoEmpresaService.obtenerInfoGeneral().subscribe(info => {
+      if (info?.dolar) {
+        this.dolar = info.dolar;
+      }
+    });
     await this.cargarConfiguracionYCalculos();
   }
 
@@ -178,7 +186,30 @@ export class CarritoComponent {
   }
 
   getTotalPrecio(): number {
-    return this.carrito.reduce((acc, prod) => acc + (prod.precioFinal * prod.cantidad), 0);
+
+    return this.carrito.reduce((acc, prod) => {
+
+      let precio = prod.precioFinal || 0;
+
+      if (prod.moneda === 'USD') {
+        precio = precio * this.dolar;
+      }
+
+      return acc + (precio * prod.cantidad);
+
+    }, 0);
   }
+
+  getPrecioProducto(producto: any): number {
+
+    let precio = producto.precioFinal || 0;
+
+    if (producto.moneda === 'USD') {
+      precio = precio * this.dolar;
+    }
+
+    return precio;
+  }
+
 
 }

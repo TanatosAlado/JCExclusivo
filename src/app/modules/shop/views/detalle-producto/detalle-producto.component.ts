@@ -7,6 +7,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { LoginComponent } from 'src/app/modules/auth/views/login/login.component';
 import { Cliente } from 'src/app/modules/auth/models/cliente.model';
 import { ProductosService } from '../../services/productos.service';
+import { InfoEmpresaService } from 'src/app/shared/services/info-empresa.service';
 
 @Component({
   selector: 'app-detalle-producto',
@@ -23,6 +24,10 @@ export class DetalleProductoComponent {
   selectedVariante: VarianteProducto | null = null;
   esMayorista: boolean = false;
   // sinStock: boolean = false;
+  origen: string = '/inicio';
+  
+  estadoAnterior: any = null;
+  dolar = 1; // fallback por si no carga
 
 
 
@@ -32,10 +37,25 @@ export class DetalleProductoComponent {
     private toastService: ToastService,
     private dialog: MatDialog,
     private router: Router,
-    private productosService: ProductosService
+    private productosService: ProductosService,
+    private infoEmpresaService: InfoEmpresaService,
   ) {}
 
   ngOnInit() {
+
+      this.infoEmpresaService.obtenerInfoGeneral().subscribe(info => {
+        if (info?.dolar) {
+          this.dolar = info.dolar;
+        }
+      });
+
+    if (history.state) {
+
+      this.origen = history.state.origen || '/inicio';
+
+      this.estadoAnterior = history.state.filtros || null;
+    }
+
 
     const cliente = this.generalService.getClienteActual();
     this.esMayorista = cliente?.esMayorista ?? false; 
@@ -242,7 +262,18 @@ private procesarProductoEnCarrito(cliente: Cliente, producto: Producto) {
 }
 
 volverATienda() {
-  this.router.navigate(['/inicio']);   // 👉 Ajustá la ruta si tu tienda tiene otro path
+  //this.router.navigate([this.origen]);
+
+  this.router.navigate(
+    [this.origen],
+    {
+      state: {
+        filtrosRestaurar: this.estadoAnterior
+      }
+    }
+  );
+  
+  //this.router.navigate(['/inicio']);   // 👉 Ajustá la ruta si tu tienda tiene otro path
 }
 
 puedeAgregar(): boolean {
@@ -267,17 +298,50 @@ puedeAgregar(): boolean {
 }
 
 
-get precioVisible(): number {
-  if (this.selectedVariante) {
-    return this.esMayorista
-      ? this.selectedVariante.precioMayorista
-      : this.selectedVariante.precioMinorista;
-  }
+// get precioVisible(): number {
+//   if (this.selectedVariante) {
+//     return this.esMayorista
+//       ? this.selectedVariante.precioMayorista
+//       : this.selectedVariante.precioMinorista;
+//   }
 
-  return this.esMayorista
-    ? this.producto.precioMayorista
-    : this.producto.precioMinorista;
-}
+//   return this.esMayorista
+//     ? this.producto.precioMayorista
+//     : this.producto.precioMinorista;
+// }
+
+  get precioVisible(): number {
+
+    let precio = 0;
+    let moneda: 'ARS' | 'USD' = 'ARS';
+
+    // 🔹 Si hay variante seleccionada
+    if (this.selectedVariante) {
+
+      precio = this.esMayorista
+        ? this.selectedVariante.precioMayorista || 0
+        : this.selectedVariante.precioMinorista || 0;
+
+      moneda = this.selectedVariante.moneda || this.producto.moneda;
+    }
+
+    // 🔹 Producto normal
+    else {
+
+      precio = this.esMayorista
+        ? this.producto.precioMayorista || 0
+        : this.producto.precioMinorista || 0;
+
+      moneda = this.producto.moneda;
+    }
+
+    // 🔥 Conversión USD → ARS
+    if (moneda === 'USD') {
+      return precio * this.dolar;
+    }
+
+    return precio;
+  }
 
 get imagenVisible(): string {
   return this.selectedVariante?.imagen || this.producto.imagen;

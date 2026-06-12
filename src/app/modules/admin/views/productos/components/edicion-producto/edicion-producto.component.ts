@@ -51,6 +51,7 @@ private crearFormulario(): void {
     precioMinorista: [this.producto.precioMinorista],
     ventaMayorista: [this.producto.ventaMayorista ?? false],
     precioMayorista: [this.producto.precioMayorista],
+    moneda: [this.producto.moneda || 'ARS'],
 
     oferta: [this.producto.oferta ?? false],
     precioOferta: [this.producto.precioOferta],
@@ -136,6 +137,7 @@ agregarVariante(): void {
     const productoActualizado: Producto = {
       ...this.producto,
       ...valores,
+      moneda: valores.moneda || 'ARS',
       stockSucursales: valores.stockSucursales.map((s: any) => ({
         sucursalId: s.sucursalId,
         cantidad: Number(s.cantidad) || 0

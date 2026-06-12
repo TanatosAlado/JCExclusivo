@@ -92,7 +92,8 @@ export class ProductosService {
               subrubro: p.subrubro,
               marca: p.marca,
               imagen: p.imagen,
-              codigoBarras: p.codigoBarras ?? null, // ✅ FIX
+              codigoBarras: p.codigoBarras ?? null, 
+              moneda: p.moneda || 'ARS',
               destacado: p.destacado,
               oferta: p.oferta,
               precioOferta: p.precioOferta,
@@ -114,7 +115,8 @@ export class ProductosService {
               modelo: p.modelo || null,
               color: p.color || null,
               imagen: p.imagen || agrupados[clave].imagen,
-              codigoBarras: p.codigoBarras ?? null, // ✅ FIX
+              codigoBarras: p.codigoBarras ?? null,
+              moneda: p.moneda || 'ARS',
               stockSucursales: stockSucursalesArray,
               stockTotal,
               stockMayorista: p.stockMayorista ?? 0,

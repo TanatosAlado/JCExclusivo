@@ -414,6 +414,7 @@ abrirCaja(sucursalIdExistente?: string) {
   }
 
   async finalizarVenta() {
+    console.log('Iniciando proceso de finalización de venta...');
     if (this.carrito.length === 0) return;
 
     if (!this.metodoPago) {
@@ -474,6 +475,8 @@ abrirCaja(sucursalIdExistente?: string) {
       sucursalId: cajaActiva.sucursalId,
       cajaId: cajaActiva.id
     };
+
+    console.log('Venta a registrar:', venta);
 
     // 💾 GUARDAR VENTA
     await addDoc(collection(this.firestore, 'Ventas'), venta);
@@ -660,12 +663,18 @@ abrirCaja(sucursalIdExistente?: string) {
               margin: 0;
             }
 
+            * {
+              color: #000 !important;
+            }
+
             body {
               width: 80mm;
               margin: 0;
               padding: 5px;
               font-family: monospace;
               font-size: 12px;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
             }
 
             h2, h3 {
@@ -693,23 +702,12 @@ abrirCaja(sucursalIdExistente?: string) {
 
             .tachado {
               text-decoration: line-through;
-              font-size: 12px;
             }
 
             .descuento {
               font-size: 12px;
             }
-          </style>
-          <title>Comprobante de compra</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 20px; }
-            h2 { color: #2c3e50; }
-            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-            th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-            th { background: #f4f4f4; }
-            .total { font-weight: bold; font-size: 18px; margin-top: 15px; }
-            .descuento { color: green; font-size: 14px; }
-            .tachado { text-decoration: line-through; color: gray; }
+
             .center {
               display: flex;
               justify-content: center;

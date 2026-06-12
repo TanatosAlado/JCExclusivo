@@ -8,6 +8,7 @@ import { GeneralService } from 'src/app/shared/services/general.service';
 import { ToastService } from 'src/app/shared/services/toast.service';
 import { MatDialog } from '@angular/material/dialog';
 import { InfoEmpresaService } from 'src/app/shared/services/info-empresa.service';
+import { EcommerceStateService } from '../../services/ecommerce-state.service';
 
 @Component({
   selector: 'app-item',
@@ -18,6 +19,7 @@ export class ItemComponent implements OnInit {
 
   @Input() producto!: Producto;
   @Input() esMayorista: boolean = false;
+  @Input() estadoGrilla: any;
 
   selectedVariante: any = null;
   varianteSeleccionada: number | null = null;
@@ -173,15 +175,41 @@ export class ItemComponent implements OnInit {
   }
 
   verDetalle(producto: Producto) {
-    this.router.navigate(['/producto', producto.id]);
+
+    this.router.navigate(
+      ['/producto', producto.id],
+      {
+        state: {
+          origen: this.router.url,
+          filtros: this.estadoGrilla
+        }
+      }
+    );
   }
+
+  // getPrecioMayoristaPesos(): number {
+  //   const precioUsd =
+  //     this.selectedVariante?.precioMayorista ??
+  //     this.producto.precioMayorista ??
+  //     0;
+
+  //   return precioUsd * this.dolar;
+  // }
 
   getPrecioMayoristaPesos(): number {
-    const precioUsd =
-      this.selectedVariante?.precioMayorista ??
-      this.producto.precioMayorista ??
-      0;
 
-    return precioUsd * this.dolar;
+    const precio =
+      this.producto.precioMayorista ?? 0;
+
+    const moneda =
+      this.producto.moneda ?? 'ARS';
+
+    if (moneda === 'USD') {
+      return precio * this.dolar;
+    }
+
+    return precio;
   }
+
+
 }

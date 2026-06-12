@@ -18,38 +18,43 @@ export class DetalleProductoComponent implements OnInit {
     private firestore: Firestore
   ) {}
 
-ngOnInit() {
-  this.normalizarStock(this.producto);
-  this.stockTotal = this.getStockTotal(this.producto);
-  this.cargarSucursales();
-}
+  ngOnInit() {
 
+    this.producto.moneda = this.producto.moneda || 'ARS';
 
-normalizarStock(producto: any) {
+    this.normalizarStock(this.producto);
 
-  // 👉 Normalizar stockSucursales del producto
-  if (producto.stockSucursales && !Array.isArray(producto.stockSucursales)) {
-    producto.stockSucursales = Object.keys(producto.stockSucursales).map(key => ({
-      sucursalId: key,
-      cantidad: producto.stockSucursales[key] || 0
-    }));
+    this.stockTotal = this.getStockTotal(this.producto);
+
+    this.cargarSucursales();
   }
 
-  // 👉 Si tiene variantes, normalizarlas también
-  if (producto.variantes) {
-    producto.variantes = producto.variantes.map((v: any) => {
 
-      if (v.stockSucursales && !Array.isArray(v.stockSucursales)) {
-        v.stockSucursales = Object.keys(v.stockSucursales).map(key => ({
-          sucursalId: key,
-          cantidad: v.stockSucursales[key] || 0
-        }));
-      }
+  normalizarStock(producto: any) {
 
-      return v;
-    });
+    // 👉 Normalizar stockSucursales del producto
+    if (producto.stockSucursales && !Array.isArray(producto.stockSucursales)) {
+      producto.stockSucursales = Object.keys(producto.stockSucursales).map(key => ({
+        sucursalId: key,
+        cantidad: producto.stockSucursales[key] || 0
+      }));
+    }
+
+    // 👉 Si tiene variantes, normalizarlas también
+    if (producto.variantes) {
+      producto.variantes = producto.variantes.map((v: any) => {
+
+        if (v.stockSucursales && !Array.isArray(v.stockSucursales)) {
+          v.stockSucursales = Object.keys(v.stockSucursales).map(key => ({
+            sucursalId: key,
+            cantidad: v.stockSucursales[key] || 0
+          }));
+        }
+
+        return v;
+      });
+    }
   }
-}
 
   cargarSucursales() {
     const colRef = collection(this.firestore, 'Sucursales');
@@ -62,10 +67,13 @@ normalizarStock(producto: any) {
     return this.sucursales.find(s => s.id === id)?.nombre || id;
   }
 
-getStockTotal(producto: any): number {
-  return (producto.stockSucursales || [])
-    .reduce((a: number, s: any) => a + (s.cantidad || 0), 0);
-}
+  getStockTotal(producto: any): number {
+    return (producto.stockSucursales || [])
+      .reduce((a: number, s: any) => a + (s.cantidad || 0), 0);
+  }
 
+  getSimboloMoneda(moneda: string): string {
+    return moneda === 'USD' ? 'U$S' : '$';
+  }
 
 }
