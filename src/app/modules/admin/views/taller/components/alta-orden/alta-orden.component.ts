@@ -45,19 +45,52 @@ export class AltaOrdenComponent {
       codigoDesbloqueo: [''],
       colorEquipo: [''],
       presupuesto: [0],
+      esGremio: [false],
+      gremioNombre: [{ value: '', disabled: true }],
       garantia: [false],
       observaciones: ['']
+    });
+
+    this.ordenForm.get('dniCliente')?.valueChanges.subscribe(() => {
+      this.errorCliente = null;
+    });
+
+    this.ordenForm.get('esGremio')?.valueChanges.subscribe(esGremio => {
+      const gremioCtrl = this.ordenForm.get('gremioNombre');
+
+      if (esGremio) {
+        gremioCtrl?.enable();
+        gremioCtrl?.setValidators([Validators.required]);
+      } else {
+        gremioCtrl?.reset();
+        gremioCtrl?.clearValidators();
+        gremioCtrl?.disable();
+      }
+
+      gremioCtrl?.updateValueAndValidity();
     });
   }
 
   buscarCliente(): void {
-    const dni = this.ordenForm.get('dniCliente')?.value;
-    if (!dni) return;
+    let valor = this.ordenForm.get('dniCliente')?.value;
+
+    if (!valor) return;
+
+    // 🔥 FORZAMOS NUMBER
+    const numero = Number(valor);
+
+    if (isNaN(numero)) {
+      this.errorCliente = 'DNI/CUIT inválido';
+      return;
+    }
+
+    // 👉 reescribimos el form (clave para consistencia)
+    this.ordenForm.patchValue({ dniCliente: numero });
 
     this.cargandoCliente = true;
     this.errorCliente = null;
 
-    this.clientesService.buscarPorDni(dni).then(cliente => {
+    this.clientesService.buscarPorDocumento(numero).then(cliente => {
       if (cliente) {
         this.ordenForm.patchValue({
           nombreCliente: cliente.nombre,
@@ -65,7 +98,6 @@ export class AltaOrdenComponent {
           telefonoCliente: cliente.telefono
         });
       } else {
-        console.error('Cliente no encontrado');
         this.errorCliente = 'Cliente no encontrado';
       }
     }).catch(err => {
@@ -90,10 +122,14 @@ export class AltaOrdenComponent {
 
       const nuevaOrden: Omit<Orden, 'id'> = {
         numeroOrden: numero,
-        dniCliente: this.ordenForm.value.dniCliente,
+        dniCliente: Number(this.ordenForm.value.dniCliente),
         nombreCliente: this.ordenForm.value.nombreCliente,
         apellidoCliente: this.ordenForm.value.apellidoCliente,
         telefonoCliente: this.ordenForm.value.telefonoCliente,
+        esGremio: this.ordenForm.value.esGremio,
+        gremioNombre: this.ordenForm.value.esGremio
+          ? this.ordenForm.value.gremioNombre
+          : null,
         imei: this.ordenForm.value.imei,
         equipo: this.ordenForm.value.equipo,
         motivoIngreso: this.ordenForm.value.motivoIngreso,
@@ -157,7 +193,6 @@ export class AltaOrdenComponent {
     }
 
     this.imeiResultados = resultados;
-    console.log('Resultados IMEI:', resultados);
 
   } catch (err) {
     console.error('Error al consultar IMEI:', err);

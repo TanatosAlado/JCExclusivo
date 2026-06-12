@@ -1,7 +1,12 @@
 import { Component } from '@angular/core';
 import { BannerService } from 'src/app/modules/admin/services/banner.service'; 
+import { AuthService } from 'src/app/modules/auth/services/auth.service';
 
-declare var bootstrap: any;
+interface MediaItem {
+  nombre: string;
+  url: string;
+  tipo: 'imagen' | 'video';
+}
 
 @Component({
   selector: 'app-banner',
@@ -10,46 +15,42 @@ declare var bootstrap: any;
 })
 export class BannerComponent {
 
-  mediaItems: { nombre: string, url: string, tipo: 'imagen' | 'video' }[] = [];
+    mediaItems: MediaItem[] = [];
+  esMayorista = false;
 
-
-  constructor(private bannerService: BannerService) { }
+  constructor(
+    private bannerService: BannerService,
+    private authService: AuthService
+  ) {}
 
   ngOnInit(): void {
-    //this.cargarImagenes();
-    this.mediaItems = [{nombre: 'banner1.jpg', url: '../../../../../assets/imagenes/banner01.png', tipo: 'imagen'}]
-  }
+    this.authService.getUsuarioActual().subscribe(async cliente => {
+      this.esMayorista = cliente?.esMayorista ?? false;
 
-  private esVideo(ext: string): boolean {
-    return ['mp4', 'webm', 'ogg'].includes(ext);
-  }
+      const carpeta = this.esMayorista
+        ? 'uploads/mayorista'
+        : 'uploads/minorista';
 
-  private esImagen(ext: string): boolean {
-    return ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
-  }
-
-  async cargarImagenes() {
-    const archivos = await this.bannerService.listarArchivos('uploads');
-
-    this.mediaItems = archivos.map(item => {
-      const ext = item.nombre.split('.').pop()?.toLowerCase() || '';
-      let tipo: 'imagen' | 'video' = this.esVideo(ext) ? 'video' : 'imagen';
-      return { ...item, tipo };
-    });
-
-    setTimeout(() => {
-      const el = document.querySelector('#bannerCarousel');
-      if (el) {
-        const carousel = bootstrap.Carousel.getOrCreateInstance(el, {
-          interval: 3000,
-          ride: 'carousel',
-          pause: false
-        });
-        carousel.cycle();
-      }
+      await this.cargarBanners(carpeta);
     });
   }
 
+  async cargarBanners(carpeta: string) {
+    const archivos = await this.bannerService.listarArchivos(carpeta);
 
+    this.mediaItems = archivos.map(a => ({
+      nombre: a.nombre,
+      url: a.url,
+      tipo: this.obtenerTipo(a.nombre)
+    }));
+  }
 
+  obtenerTipo(nombre: string): 'imagen' | 'video' {
+    const ext = nombre.split('.').pop()?.toLowerCase();
+
+    if (ext === 'mp4' || ext === 'webm' || ext === 'ogg') {
+      return 'video';
+    }
+    return 'imagen';
+  }
 }

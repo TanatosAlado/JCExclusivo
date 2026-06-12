@@ -108,7 +108,7 @@ abrirModalAltaOrden(): void {
 
   dialogRef.afterClosed().subscribe(resultado => {
     if (resultado) {
-      console.log('Orden creada:', resultado);
+      //console.log('Orden creada:', resultado);
       // Podrías refrescar la lista de órdenes acá si querés
     }
   });
@@ -126,7 +126,6 @@ abrirModalAltaOrden(): void {
   }
 
   verOrden(orden: Orden) {
-    console.log(orden)
       this.dialog.open(VerOrdenComponent, {
       width: '500px',
       data: orden

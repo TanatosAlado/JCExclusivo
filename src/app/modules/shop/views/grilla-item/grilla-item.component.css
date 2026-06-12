@@ -14,7 +14,8 @@ app-item {
 }
 
 .pagination{
-  z-index: 5;
+  z-index: 0;
+  position: relative;
 }
 
 @media (max-width: 1200px) {

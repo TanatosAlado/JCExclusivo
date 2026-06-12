@@ -141,3 +141,12 @@ color:var(--color-primario)
   color: white;
   font-weight: bold;
 }
+
+.color-dot {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid #444;
+  vertical-align: middle;
+}

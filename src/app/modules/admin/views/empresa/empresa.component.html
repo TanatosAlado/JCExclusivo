@@ -24,6 +24,39 @@
       <input matInput type="email" formControlName="email" placeholder="Ej: contacto@empresa.com">
     </mat-form-field>
 
+    <mat-form-field appearance="outline" class="full-width">
+
+    <mat-label>Cotización dólar</mat-label>
+    <input
+      matInput
+      type="number"
+      formControlName="dolar"
+      placeholder="Ej: 1050"
+    >
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="full-width">
+
+    <mat-label>Descuento en efectivo ( % ) </mat-label>
+    <input
+      matInput
+      type="number"
+      formControlName="descuentoEnEfectivo"
+      placeholder="Ej: 10"
+    >
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="full-width">
+
+  <mat-label>Descuento en transferencia ( % ) </mat-label>
+    <input
+      matInput
+      type="number"
+      formControlName="descuentoEnTransferencia"
+      placeholder="Ej: 5"
+    >
+  </mat-form-field>
+
     <button mat-raised-button color="primary" type="submit" [disabled]="infoForm.invalid">Guardar cambios</button>
   </form>
 </div>

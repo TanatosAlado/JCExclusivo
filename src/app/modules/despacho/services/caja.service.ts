@@ -59,12 +59,12 @@ export class CajaService {
       .find(caja => (caja as any).fechaApertura?.startsWith(fechaHoy));
 
     if (cajaHoy) {
-      console.log("✅ Caja abierta:", cajaHoy);
+     // console.log("✅ Caja abierta:", cajaHoy);
       return cajaHoy;
     }
   }
 
-  console.log("❌ Caja cerrada");
+  //console.log("❌ Caja cerrada");
   return null;
 }
 

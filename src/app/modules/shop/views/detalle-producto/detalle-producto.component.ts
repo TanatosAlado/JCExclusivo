@@ -1,65 +1,203 @@
-import { Component, Input } from '@angular/core';
+import { Component } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { GeneralService } from 'src/app/shared/services/general.service';
-import { Producto } from '../../models/producto.model';
-import { LoginComponent } from 'src/app/modules/auth/views/login/login.component';
-import { Cliente } from 'src/app/modules/auth/models/cliente.model';
+import { Producto, VarianteProducto } from '../../models/producto.model';
 import { ToastService } from 'src/app/shared/services/toast.service';
 import { MatDialog } from '@angular/material/dialog';
+import { LoginComponent } from 'src/app/modules/auth/views/login/login.component';
+import { Cliente } from 'src/app/modules/auth/models/cliente.model';
+import { ProductosService } from '../../services/productos.service';
 
 @Component({
   selector: 'app-detalle-producto',
-  templateUrl: './detalle-producto.component.html',
+  templateUrl: './detalle-producto.component.html', 
   styleUrls: ['./detalle-producto.component.css']
 })
 export class DetalleProductoComponent {
 
-  detalleProducto: any[] = [];
-  cantidad = 1
-  idProducto!: string;
-  loadingCarrito: { [id: string]: boolean } = {};
-  @Input() esMayorista: boolean = false;
+  producto!: Producto;
+  cantidad = 1;
+  modelosUnicos: string[] = [];
+  coloresFiltrados: VarianteProducto[] = [];
+  modeloSeleccionado: string | null = null;
+  selectedVariante: VarianteProducto | null = null;
+  esMayorista: boolean = false;
+  // sinStock: boolean = false;
 
-  constructor(private generalService:GeneralService, private route:ActivatedRoute, private toastService: ToastService, private dialog: MatDialog,){}
 
-  ngOnInit(){
-    // this.getProductoSeleccionado()
-   this.route.params.subscribe(params => {
+
+  constructor(
+    private route: ActivatedRoute,
+    private generalService: GeneralService,
+    private toastService: ToastService,
+    private dialog: MatDialog,
+    private router: Router,
+    private productosService: ProductosService
+  ) {}
+
+  ngOnInit() {
+
+    const cliente = this.generalService.getClienteActual();
+    this.esMayorista = cliente?.esMayorista ?? false; 
+
+    this.route.params.subscribe(params => {
       const idProducto = params['id'];
-      this.generalService.getProductoByNombre(idProducto).then(data => {
-        this.detalleProducto = data;
-        console.log("el detalle producto es",this.detalleProducto)
+
+      this.productosService.getProductoAgrupadoById(idProducto).subscribe(data => {
+        if (!data) return;
+
+        this.producto = data;
+        this.configurarVariantes();
       });
     });
   }
 
-  //FUNCION PARA GUARDAR EL PRODUCTO SELECCIONADO
 
-  getProductoSeleccionado(){
-     this.generalService.getProductoById(this.idProducto).then(data => {
-        this.detalleProducto = data;
-        console.log("producto seleccionado"+this.detalleProducto)
-  })
-  
-}
-  
-  //FUNCION PARA RESTAR CANTIDAD PRODUCTOS DEL CARRO
-  disminuirCantidad() {
-    if (this.cantidad > 1) {
-      this.cantidad--;
+configurarVariantes() {
+
+  const variantes = this.producto.variantes || [];
+
+  // 🔧 1. Normalizar stock + calcular stockTotal
+  variantes.forEach((v: any) => {
+
+    if (v.stockSucursales && !Array.isArray(v.stockSucursales)) {
+      v.stockSucursales = Object.values(v.stockSucursales).map((cantidad: any) => ({
+        cantidad
+      }));
+    }
+
+    v.stockTotal =
+      v.stockSucursales?.reduce(
+        (acc: number, s: any) => acc + (s.cantidad || 0),
+        0
+      ) ?? 0;
+
+        // ✅ NUEVO: heredar stock mayorista
+      if (v.stockMayorista == null) {
+        v.stockMayorista = this.producto.stockMayorista ?? 0;
+      }
+  });
+
+  // 🔍 2. Inferir tipo de variantes si no existe
+  if (!this.producto.tipoVariantes) {
+    const tieneModelo = variantes.some(v => !!v.modelo);
+    const tieneColor  = variantes.some(v => v.color !== null && v.color !== undefined);
+
+    if (tieneModelo && tieneColor) {
+      this.producto.tipoVariantes = 'modelo+color';
+    } else if (tieneModelo) {
+      this.producto.tipoVariantes = 'modelo';
+    } else if (tieneColor) {
+      this.producto.tipoVariantes = 'color';
+    } else {
+      this.producto.tipoVariantes = 'none';
     }
   }
-  aumentarCantidad() {
-    this.cantidad++;
+
+  // 🧠 3. Configurar según tipo
+  switch (this.producto.tipoVariantes) {
+
+    // 🟣 MODELO + COLOR
+    case 'modelo+color':
+      this.modelosUnicos = Array.from(
+        new Set(variantes.map(v => v.modelo).filter(Boolean))
+      );
+
+      this.modeloSeleccionado = this.modelosUnicos[0] || null;
+
+      this.coloresFiltrados = variantes.filter(
+        v => v.modelo === this.modeloSeleccionado
+      );
+      break;
+
+    // 🔵 SOLO MODELO
+    case 'modelo':
+      this.modelosUnicos = variantes.map(v => v.modelo).filter(Boolean);
+
+      // Seleccionamos automáticamente la primera variante
+      this.selectedVariante = variantes[0] || null;
+    //  this.sinStock = this.selectedVariante?.stockTotal === 0;
+      break;
+
+    // 🟢 SOLO COLOR
+    case 'color':
+      this.coloresFiltrados = variantes;
+      break;
+
+    // ⚪ SIN VARIANTES
+    default:
+      this.modelosUnicos = [];
+      this.coloresFiltrados = [];
+      this.selectedVariante = variantes[0] || null;
+      break;
+  }
+}
+
+
+
+seleccionarModelo(modelo: string) {
+  this.modeloSeleccionado = modelo;
+
+  const variantesModelo =
+    this.producto.variantes?.filter(v => v.modelo === modelo) || [];
+
+  // 🟣 MODELO + COLOR
+  if (this.producto.tipoVariantes === 'modelo+color') {
+    this.coloresFiltrados = variantesModelo;
+    this.selectedVariante = null; // acá sí corresponde
+    return;
   }
 
-    //FUNCION PARA CARGAR EL PRODCUTO EN EL CARRO DEL CLIENTE
+  // 🔵 SOLO MODELO
+  if (this.producto.tipoVariantes === 'modelo') {
+    this.selectedVariante = variantesModelo[0] || null;
+  //  this.sinStock = this.selectedVariante?.stockTotal === 0;
+  }
+}
+
+
+seleccionarVariante(variante: VarianteProducto) {
+
+  this.selectedVariante = variante;
+
+  const totalStock = this.stockVisible;
+
+
+//  this.sinStock = totalStock <= 0;
+
+  // ⚡ Ajustamos cantidad si supera el stock
+  if (this.cantidad > totalStock) {
+    this.cantidad = totalStock;
+  }
+
+  // ⚡ Si la variante NO tiene stock, forzamos cantidad a 1
+  if (totalStock === 0) {
+    this.cantidad = 1;
+  }
+
+  // Actualizamos datos dinámicamente
+  // this.producto.imagen = variante.imagen || this.producto.imagen;
+  // this.producto.precioMinorista = variante.precioMinorista || this.producto.precioMinorista;
+  // this.producto.precioMayorista = variante.precioMayorista || this.producto.precioMayorista;
+}
+
+
+  disminuirCantidad() {
+    if (this.cantidad > 1) this.cantidad--;
+  }
+
+  aumentarCantidad() {
+    const limite = this.stockVisible;
+
+    if (this.cantidad < limite) {
+      this.cantidad++;
+    }
+  }
+
+
+
   cargaCarrito(producto: Producto) {
     const cliente = this.generalService.getClienteActual();
-    this.loadingCarrito[producto.id] = true;
-
-    const finalizar = () => this.loadingCarrito[producto.id] = false;
-
     if (!cliente) {
       const dialogRef = this.dialog.open(LoginComponent, {
         width: '400px',
@@ -72,35 +210,99 @@ export class DetalleProductoComponent {
         if (clienteLogueado) {
           this.generalService.setCliente(clienteLogueado);
           localStorage.setItem('cliente', JSON.stringify(clienteLogueado));
-          this.procesarProductoEnCarrito(clienteLogueado, producto, finalizar);
+          this.procesarProductoEnCarrito(clienteLogueado, producto);
         } else {
           this.toastService.toastMessage(
             'Debes iniciar sesión o continuar como invitado para agregar productos al carrito.',
             'orange',
             3000
           );
-          finalizar();
         }
       });
 
       return;
     }
 
-    this.procesarProductoEnCarrito(cliente, producto, finalizar);
+    this.procesarProductoEnCarrito(cliente, producto);
   }
 
+private procesarProductoEnCarrito(cliente: Cliente, producto: Producto) {
 
-    private procesarProductoEnCarrito(cliente: Cliente, producto: Producto, finalizar: () => void) {
-    this.generalService.cargarProductoCarrito(producto, 1)
-      .then(() => {
-        this.toastService.toastMessage('Producto agregado al carrito', 'green', 2000);
-      })
-      .catch(err => {
-        this.toastService.toastMessage('El producto no pudo agregarse', 'red', 2000);
-        console.error(err);
-      })
-      .finally(finalizar);
+  // 👉 Si hay variante, ESA variante es el producto real.
+  const productoFinal: any = this.selectedVariante ?? producto;
+
+  this.generalService.cargarProductoCarrito(productoFinal, this.cantidad)
+    .then(() => {
+      this.toastService.toastMessage('Producto agregado al carrito', 'green', 2000);
+    })
+    .catch(err => {
+      this.toastService.toastMessage('El producto no pudo agregarse', 'red', 2000);
+      console.error(err);
+    });
+}
+
+volverATienda() {
+  this.router.navigate(['/inicio']);   // 👉 Ajustá la ruta si tu tienda tiene otro path
+}
+
+puedeAgregar(): boolean {
+
+  if (this.sinStock) return false;
+
+  if (this.producto.tipoVariantes === 'none') return true;
+
+  if (this.producto.tipoVariantes === 'color') {
+    return this.selectedVariante !== null;
   }
 
+  if (this.producto.tipoVariantes === 'modelo') {
+    return this.selectedVariante !== null;  
+  }
+
+  if (this.producto.tipoVariantes === 'modelo+color') {
+    return this.modeloSeleccionado !== null && this.selectedVariante !== null;
+  }
+
+  return true;
+}
+
+
+get precioVisible(): number {
+  if (this.selectedVariante) {
+    return this.esMayorista
+      ? this.selectedVariante.precioMayorista
+      : this.selectedVariante.precioMinorista;
+  }
+
+  return this.esMayorista
+    ? this.producto.precioMayorista
+    : this.producto.precioMinorista;
+}
+
+get imagenVisible(): string {
+  return this.selectedVariante?.imagen || this.producto.imagen;
+}
+
+
+
+get stockVisible(): number {
+
+  // 👉 Si hay variante seleccionada
+  if (this.selectedVariante) {
+    return this.esMayorista
+      ? (this.selectedVariante.stockMayorista ?? 0)
+      : (this.selectedVariante.stockTotal ?? 0);
+  }
+
+  // 👉 Producto sin variantes
+  return this.esMayorista
+    ? (this.producto.stockMayorista ?? 0)
+    : (this.producto.stockTotal ?? 0);
+}
+
+
+get sinStock(): boolean {
+  return this.stockVisible <= 0;
+}
 
 }

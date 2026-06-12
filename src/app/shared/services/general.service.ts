@@ -160,19 +160,52 @@ export class GeneralService {
 
 
   //SERVICE PARA TRAER CLIENTE POR ID
-  async getProductoById(id: string) {
-    const productoRef = doc(this.firestore, `productos/${id}`);
-    const productoSnap = await getDoc(productoRef);
-    if (productoSnap.exists()) {
-      return [{ id: productoSnap.id, ...productoSnap.data() }];
+  // async getProductoById(id: string) {
+  //   const productoRef = doc(this.firestore, `productos/${id}`);
+  //   const productoSnap = await getDoc(productoRef);
+  //   if (productoSnap.exists()) {
+  //     return [{ id: productoSnap.id, ...productoSnap.data() }];
+  //   }
+  //   return [];
+  // }
+
+async getProductoById(id: string) {
+  const productoRef = doc(this.firestore, `productos/${id}`);
+  const productoSnap = await getDoc(productoRef);
+
+  if (!productoSnap.exists()) return null;
+
+  const producto: any = { id: productoSnap.id, ...productoSnap.data() };
+
+  let idPadre = producto.id;
+
+  // 👇 Si el producto tiene un padre, usamos ese id
+  if (producto.productoPadre) {
+    idPadre = producto.productoPadre;
+
+    // Traemos los datos del padre
+    const padreRef = doc(this.firestore, `productos/${idPadre}`);
+    const padreSnap = await getDoc(padreRef);
+    if (padreSnap.exists()) {
+      Object.assign(producto, { ...padreSnap.data(), id: padreSnap.id });
     }
-    return [];
   }
 
+  // 🔹 Ahora traemos las variantes del padre
+  const variantesRef = collection(this.firestore, 'productos');
+  const q = query(variantesRef, where('productoPadre', '==', idPadre));
+  const querySnapshot = await getDocs(q);
+
+  producto.variantes = querySnapshot.docs.map(docSnap => ({
+    id: docSnap.id,
+    ...docSnap.data()
+  }));
+
+  return producto;
+}
 
 
   async getProductoByNombre(nombre: string) {
-    console.log('nombre', nombre)
     const productosRef = collection(this.firestore, 'productos');
     const q = query(productosRef, where('id', '==', nombre));
     const querySnapshot = await getDocs(q);
@@ -187,104 +220,113 @@ export class GeneralService {
 
 
   //SERVICIO PARA CARGAR EN EL CARRITO EL PRODUCTO
+cargarProductoCarrito(producto: Producto, cantidad: number = 1): Promise<boolean> {
+  
+  const calcularStockTotal = (p: any) => {
+    if (!p.stockSucursales) return 0;
+    // Si viene como objeto → sumamos los valores
+    if (typeof p.stockSucursales === 'object' && !Array.isArray(p.stockSucursales)) {
+      return Object.values(p.stockSucursales).reduce((acc: number, cant: any) => acc + (Number(cant) || 0), 0);
+    }
+    // Si viene como array
+    return (p.stockSucursales || []).reduce((acc: number, s: any) => acc + (s?.cantidad || 0), 0);
+  };
 
-  cargarProductoCarrito(producto: Producto, cantidad: number = 1): Promise<boolean> {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const clienteEncontrado = await firstValueFrom(this.getCliente());
+      if (!clienteEncontrado) {
+        reject('No se encontró el cliente');
+        return;
+      }
 
-    const calcularStockTotal = (p: any) =>
-    (p.stockSucursales || []).reduce((acc: number, s: any) => acc + (s?.cantidad || 0), 0);
+      // 🔹 Caso invitado: guardamos en localStorage
+      if (clienteEncontrado.id === 'invitado') {
+        const carritoRaw = localStorage.getItem('carritoInvitado');
+        let carrito = carritoRaw ? JSON.parse(carritoRaw) : [];
 
 
-    return new Promise(async (resolve, reject) => {
-      try {
-        const clienteEncontrado = await firstValueFrom(this.getCliente());
-
-        if (!clienteEncontrado) {
-          reject('No se encontró el cliente');
-          return;
-        }
-
-        // 🟡 INVITADO: guardar en localStorage
-        if (clienteEncontrado.id === 'invitado') {
-          try {
-            const carritoRaw = localStorage.getItem('carritoInvitado');
-            let carrito = carritoRaw ? JSON.parse(carritoRaw) : [];
-
-            const index = carrito.findIndex(item => item.id === producto.id);
-            if (index > -1) {
-              carrito[index].cantidad += cantidad;
-            } else {
-              carrito.push({
-                id: producto.id,
-                imagen: producto.imagen,
-                nombre: producto.descripcion,
-                cantidad: cantidad,
-                precioOferta: producto.oferta,
-                stock: calcularStockTotal(producto),
-                precioFinal: producto.oferta ? producto.precioOferta : producto.precioMinorista,
-              });
-            }
-
-            localStorage.setItem('carritoInvitado', JSON.stringify(carrito));
-            this.carritoService.actualizarCantidadProductosDesdeLocalStorage();
-
-            // 🔄 Refrescar clienteSubject con el nuevo carrito
-            const clienteActualizado = new Cliente(
-              false,             // administrador
-              '',                // apellido
-              [],                // carrito
-              '',                 // cuit
-              '',                // direccion
-              null,                // dni
-              false,             // esMayorista
-              true,              // estado
-              [],                // historial
-              'invitado',        // id
-              '',                // mail
-              'Invitado',        // nombre
-              0,                 // puntos
-              '',                // razonSocial
-              '',                // telefono
-              'invitado',        // usuario
-            );
-            this.clienteSubject.next(clienteActualizado);
-
-            resolve(true);
-          } catch (e) {
-            reject('Error al guardar carrito del invitado: ' + e);
-          }
-
-          return;
-        }
-
-        // 🟢 CLIENTE LOGUEADO: actualizar Firebase
-        const productoExistente = clienteEncontrado.carrito.find(item => item.id === producto.id);
-        if (productoExistente) {
-          productoExistente.cantidad += cantidad;
+        const index = carrito.findIndex(item => item.codigoBarras === producto.codigoBarras);
+        if (index > -1) {
+          carrito[index].cantidad += cantidad;
         } else {
-          clienteEncontrado.carrito.push({
+          const uidCarrito = `${producto.id}-${(producto as any).modelo ?? ''}-${(producto as any).color ?? ''}`;
+
+          carrito.push({
+            uidCarrito,
             id: producto.id,
+            codigoBarras: producto.codigoBarras,
             imagen: producto.imagen,
             nombre: producto.descripcion,
-            cantidad: cantidad,
-            precioOferta: producto.oferta,
+            cantidad,
+            oferta: producto.oferta,
+            precioOferta: producto.precioOferta ?? null,
+            precioFinal: producto.oferta && producto.precioOferta
+              ? producto.precioOferta
+              : producto.precioMinorista,
             stock: calcularStockTotal(producto),
-            precioFinal: producto.oferta ? producto.precioOferta : producto.precioMinorista,
+            color: (producto as any).color || null,
+            modelo: (producto as any).modelo || null
           });
         }
 
-        const datosLimpios = JSON.parse(JSON.stringify(clienteEncontrado));
-        await this.clientesService.actualizarCliente(clienteEncontrado.id, datosLimpios);
+        localStorage.setItem('carritoInvitado', JSON.stringify(carrito));
+        this.carritoService.actualizarCantidadProductosDesdeLocalStorage();
 
-        this.carritoService.actualizarCantidadProductos(clienteEncontrado);
-        this.clienteSubject.next(clienteEncontrado);
 
+        const clienteActualizado = new Cliente(
+          false, '', carrito, '', '', null, false,
+          true, [], 'invitado', '', 'Invitado',
+          0, '', '', 'invitado'
+        );
+        this.clienteSubject.next(clienteActualizado);
         resolve(true);
-
-      } catch (error) {
-        reject('Error general en cargarProductoCarrito: ' + error);
+        return;
       }
-    });
-  }
+
+      // 🔹 Caso cliente logueado
+      const index = clienteEncontrado.carrito.findIndex(
+        item => item.codigoBarras === producto.codigoBarras
+      );
+
+      if (index > -1) {
+        clienteEncontrado.carrito[index].cantidad += cantidad;
+      } else {
+          const uidCarrito = `${producto.id}-${(producto as any).modelo ?? ''}-${(producto as any).color ?? ''}`;
+          clienteEncontrado.carrito.push({
+            uidCarrito,
+            id: producto.id,
+            codigoBarras: producto.codigoBarras,
+            imagen: producto.imagen,
+            nombre: producto.descripcion,
+            cantidad,
+            oferta: producto.oferta,
+            precioOferta: producto.precioOferta ?? null,
+            precioFinal: producto.oferta && producto.precioOferta
+              ? producto.precioOferta
+              : producto.precioMinorista,
+            stock: calcularStockTotal(producto),
+            color: (producto as any).color || null,
+            modelo: (producto as any).modelo || null
+          });
+      }
+
+      const datosLimpios = JSON.parse(JSON.stringify(clienteEncontrado));
+      await this.clientesService.actualizarCliente(clienteEncontrado.id, datosLimpios);
+
+      this.carritoService.actualizarCantidadProductos(clienteEncontrado);
+      this.clienteSubject.next(clienteEncontrado);
+      resolve(true);
+    } catch (error) {
+      reject('Error general en cargarProductoCarrito: ' + error);
+    }
+  });
+}
+
+
+
+
+  
   //FUNCION PARA FORMATEAR FECHA
   formatearFechaDesdeDate(fecha: Date): string {
     const dia = fecha.getDate().toString().padStart(2, '0');
@@ -296,3 +338,6 @@ export class GeneralService {
     return `${dia}/${mes}/${anio} ${horas}:${minutos}`;
   }
 }
+
+
+

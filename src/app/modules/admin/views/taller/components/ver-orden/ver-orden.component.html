@@ -13,6 +13,14 @@
       <h2>👤 Datos del cliente</h2>
       <p><strong>Nombre:</strong> {{ orden.apellidoCliente }}, {{ orden.nombreCliente }}</p>
       <p><strong>Teléfono:</strong> {{ orden.telefonoCliente }}</p>
+
+      <!-- 🏛️ Gremio -->
+      <p *ngIf="orden.esGremio">
+        <strong>Gremio:</strong>
+        <span class="badge-gremio">
+          {{ orden.gremioNombre || 'Afiliado' }}
+        </span>
+      </p>
     </div>
 
     <!-- 💻 Datos del equipo -->
@@ -21,6 +29,11 @@
       <p><strong>Equipo:</strong> {{ orden.equipo }}</p>
       <p *ngIf="orden.colorEquipo"><strong>Color:</strong> {{ orden.colorEquipo }}</p>
       <p *ngIf="orden.imei"><strong>IMEI:</strong> {{ orden.imei }}</p>
+
+      <!-- 🔓 NUEVO -->
+      <p *ngIf="orden.codigoDesbloqueo">
+        <strong>🔓 Código de desbloqueo:</strong> {{ orden.codigoDesbloqueo }}
+      </p>
     </div>
 
     <!-- 📝 Detalles de la orden -->

@@ -1,10 +1,10 @@
 import { Component, Inject } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, FormArray } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { Producto } from 'src/app/modules/shop/models/producto.model';
-import { FormArray } from '@angular/forms';
 import { SucursalesService } from 'src/app/modules/admin/services/sucursales.service';
-
+import { Storage, ref, uploadBytes, getDownloadURL } from '@angular/fire/storage';
+import { Auth } from '@angular/fire/auth';
 
 
 @Component({
@@ -13,36 +13,33 @@ import { SucursalesService } from 'src/app/modules/admin/services/sucursales.ser
   styleUrls: ['./edicion-producto.component.css']
 })
 export class EdicionProductoComponent {
-
   formProducto!: FormGroup;
   sucursales: { id: string; nombre: string }[] = [];
 
-
   constructor(
+    private storage: Storage ,
     private fb: FormBuilder,
     private dialogRef: MatDialogRef<EdicionProductoComponent>,
     @Inject(MAT_DIALOG_DATA) public producto: Producto,
-    private sucursalesService: SucursalesService
+    private sucursalesService: SucursalesService,
+      private auth: Auth   // 👈 AGREGAR
+
   ) {}
 
-ngOnInit(): void {
-
-  this.sucursalesService.obtenerSucursales().subscribe(sucursales => {
-    this.sucursales = sucursales.map(s => ({
-      id: s.id || '', // Si por algún motivo no viene id, se usa string vacío
-      nombre: s.nombre
-    }));
-
-    this.crearFormulario();
-  });
-
-}
+  ngOnInit(): void {
+    this.sucursalesService.obtenerSucursales().subscribe(sucursales => {
+      this.sucursales = sucursales.map(s => ({ id: s.id, nombre: s.nombre }));
+      this.crearFormulario();
+    });
+  }
 
 private crearFormulario(): void {
   this.formProducto = this.fb.group({
     codigoBarras: [this.producto.codigoBarras, Validators.required],
     descripcion: [this.producto.descripcion, Validators.required],
+    subdescripcion: [ (this.producto as any).subdescripcion || '' ], // si usás subdescripcion
     imagen: [this.producto.imagen],
+    color: [ (this.producto as any).color || '#000000' ], // 🔹 CONTROL QUE FALTABA
     rubro: [this.producto.rubro, Validators.required],
     subrubro: [this.producto.subrubro, Validators.required],
     marca: [this.producto.marca, Validators.required],
@@ -60,68 +57,135 @@ private crearFormulario(): void {
     destacado: [this.producto.destacado ?? false],
 
     stockMinimo: [this.producto.stockMinimo, [Validators.min(0)]],
+    stockMayorista: [this.producto.stockMayorista || 0],
 
     stockSucursales: this.fb.array(
       this.sucursales.map(s => this.fb.group({
         sucursalId: [s.id],
         cantidad: [this.producto.stockSucursales?.find(ss => ss.sucursalId === s.id)?.cantidad || 0, [Validators.min(0)]]
       }))
+    ),
+
+    variantes: this.fb.array(
+      (this.producto.variantes || []).map((v: any) =>
+        this.fb.group({
+          id: [v.id || null],
+          modelo: [v.modelo || null],               // 🔹 soporte modelo (modelo+color)
+          color: [v.color || '#000000'],
+          codigoBarras: [v.codigoBarras || ''],
+          imagen: [v.imagen || ''],
+          stockMayorista: [v.stockMayorista || 0],
+          stockSucursales: this.fb.array(
+            this.sucursales.map(s => this.fb.group({
+              sucursalId: [s.id],
+              cantidad: [v.stockSucursales?.find(ss => ss.sucursalId === s.id)?.cantidad || 0]
+            }))
+          )
+        })
+      )
     )
   });
 
   this.setupConditionalFields();
 }
 
+
   private setupConditionalFields(): void {
-    this.formProducto.get('ventaMinorista')?.valueChanges.subscribe((checked: boolean) => {
-      const ctrl = this.formProducto.get('precioMinorista');
-      checked ? ctrl?.enable() : ctrl?.disable();
-    });
+    const toggleControl = (control: string, condition: string) => {
+      this.formProducto.get(condition)?.valueChanges.subscribe((checked: boolean) => {
+        const ctrl = this.formProducto.get(control);
+        checked ? ctrl?.enable() : ctrl?.disable();
+      });
+    };
 
-    this.formProducto.get('ventaMayorista')?.valueChanges.subscribe((checked: boolean) => {
-      const ctrl = this.formProducto.get('precioMayorista');
-      checked ? ctrl?.enable() : ctrl?.disable();
-    });
+    toggleControl('precioMinorista', 'ventaMinorista');
+    toggleControl('precioMayorista', 'ventaMayorista');
+    toggleControl('precioOferta', 'oferta');
+  }
 
-    this.formProducto.get('oferta')?.valueChanges.subscribe((checked: boolean) => {
-      const ctrl = this.formProducto.get('precioOferta');
-      checked ? ctrl?.enable() : ctrl?.disable();
-    });
+agregarVariante(): void {
+  const grupo = this.fb.group({
+    id: [null],
+    modelo: [null],            // opcional
+    color: ['#000000'],
+    codigoBarras: [''],
+    imagen: [''],
+    stockMayorista: [0],
+    stockSucursales: this.fb.array(
+      this.sucursales.map(s => this.fb.group({
+        sucursalId: [s.id],
+        cantidad: [0]
+      }))
+    )
+  });
+  this.variantesArray.push(grupo);
+}
 
-    // Inicializar controles deshabilitados si corresponde
-    if (!this.formProducto.get('ventaMinorista')?.value) {
-      this.formProducto.get('precioMinorista')?.disable();
+  eliminarVariante(index: number): void {
+    this.variantesArray.removeAt(index);
+  }
+
+  guardar(): void {
+    if (this.formProducto.invalid) {
+      this.formProducto.markAllAsTouched();
+      return;
     }
-    if (!this.formProducto.get('ventaMayorista')?.value) {
-      this.formProducto.get('precioMayorista')?.disable();
-    }
-    if (!this.formProducto.get('oferta')?.value) {
-      this.formProducto.get('precioOferta')?.disable();
+
+    const valores = this.formProducto.getRawValue();
+
+    const productoActualizado: Producto = {
+      ...this.producto,
+      ...valores,
+      stockSucursales: valores.stockSucursales.map((s: any) => ({
+        sucursalId: s.sucursalId,
+        cantidad: Number(s.cantidad) || 0
+      })),
+        variantes: valores.variantes.map((v: any) => ({
+          id: v.id || undefined,
+          modelo: v.modelo || null,
+          color: v.color,
+          codigoBarras: v.codigoBarras,
+          imagen: v.imagen || null,
+          stockMayorista: Number(v.stockMayorista),
+          stockSucursales: v.stockSucursales.map((s: any) => ({
+            sucursalId: s.sucursalId,
+            cantidad: Number(s.cantidad) || 0
+        }))
+      }))
+    };
+
+    this.dialogRef.close(productoActualizado);
+  }
+
+  get stockArray(): FormArray {
+    return this.formProducto.get('stockSucursales') as FormArray;
+  }
+
+  get variantesArray(): FormArray {
+    return this.formProducto.get('variantes') as FormArray;
+  }
+
+  getStockSucursales(index: number): FormArray {
+    return this.variantesArray.at(index).get('stockSucursales') as FormArray;
+  }
+
+  async onImagenSeleccionada(event: any) {
+    const file: File = event.target.files[0];
+    if (!file) return;
+
+    try {
+      const nombreArchivo = `productos/${Date.now()}_${file.name}`;
+      const storageRef = ref(this.storage, nombreArchivo);
+
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+
+      this.formProducto.get('imagen')?.setValue(url);
+
+    } catch (error) {
+      console.error('Error subiendo imagen', error);
     }
   }
 
-guardar(): void {
-  if (this.formProducto.invalid) {
-    this.formProducto.markAllAsTouched();
-    return;
-  }
-
-  const valores = this.formProducto.getRawValue();
-
-  const productoActualizado: Producto = {
-    ...this.producto,
-    ...valores,
-    stockSucursales: valores.stockSucursales.map((s: any) => ({
-      sucursalId: s.sucursalId,
-      cantidad: Number(s.cantidad) || 0
-    }))
-  };
-
-  this.dialogRef.close(productoActualizado);
-}
-
-get stockArray(): FormArray {
-  return this.formProducto.get('stockSucursales') as FormArray;
-}
 
 }

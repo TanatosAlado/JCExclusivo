@@ -1,45 +1,134 @@
-import { Component, Input, ViewEncapsulation } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 import { Producto } from '../../models/producto.model';
+import { AuthService } from 'src/app/modules/auth/services/auth.service';
+import { Router } from '@angular/router';
+import { LoginComponent } from 'src/app/modules/auth/views/login/login.component';
+import { Cliente } from 'src/app/modules/auth/models/cliente.model';
 import { GeneralService } from 'src/app/shared/services/general.service';
 import { ToastService } from 'src/app/shared/services/toast.service';
 import { MatDialog } from '@angular/material/dialog';
-import { LoginComponent } from 'src/app/modules/auth/views/login/login.component';
-import { Cliente } from 'src/app/modules/auth/models/cliente.model';
-import { Router } from '@angular/router';
+import { InfoEmpresaService } from 'src/app/shared/services/info-empresa.service';
 
 @Component({
   selector: 'app-item',
   templateUrl: './item.component.html',
-  styleUrls: ['./item.component.css'],
-  encapsulation: ViewEncapsulation.None
+  styleUrls: ['./item.component.css']
 })
-export class ItemComponent {
+export class ItemComponent implements OnInit {
 
   @Input() producto!: Producto;
   @Input() esMayorista: boolean = false;
+
+  selectedVariante: any = null;
+  varianteSeleccionada: number | null = null;
   loadingCarrito: { [id: string]: boolean } = {};
 
+  modelosUnicos: string[] = [];
+  modeloSeleccionado: string | null = null;
+  coloresFiltrados: any[] = [];
+  dolar = 1; // fallback por si no carga
+
   constructor(
+    private authService: AuthService,
+    private router: Router,
     private generalService: GeneralService,
     private toastService: ToastService,
     private dialog: MatDialog,
-    private router: Router
-  ) { }
+    private infoEmpresaService: InfoEmpresaService
+  ) {}
 
-  calcularDescuento(producto: Producto): number {
-    const precioBase = this.esMayorista ? producto.precioMayorista : producto.precioMinorista;
-    if (producto.oferta && producto.precioOferta < precioBase) {
-      const descuento = 100 - (producto.precioOferta * 100) / precioBase;
-      return Math.round(descuento);
+  ngOnInit(): void {
+
+      this.infoEmpresaService.obtenerInfoGeneral().subscribe(info => {
+        if (info?.dolar) {
+          this.dolar = info.dolar;
+        }
+      });
+    // detectar si el cliente es mayorista
+    this.authService.getUsuarioActual().subscribe(cliente => {
+      this.esMayorista = cliente?.esMayorista ?? false;
+    });
+
+    // seguridad: si no hay producto, salimos
+    if (!this.producto) return;
+
+    // Si el producto tiene variantes...
+    if (Array.isArray(this.producto.variantes) && this.producto.variantes.length > 0) {
+      // Creá una función de normalización para evitar problemas de mayúsculas/espacios
+      const normalize = (s: any) => (typeof s === 'string' ? s.trim().toLowerCase() : '');
+
+      // obtener modelos únicos normalizados pero mostrar la versión "amigable"
+      const modelosMap = new Map<string, string>(); // key = normalized, value = first original
+      this.producto.variantes.forEach(v => {
+        const raw = v?.modelo ?? '';
+        const key = normalize(raw);
+        if (key && !modelosMap.has(key)) {
+          modelosMap.set(key, raw.trim());
+        }
+      });
+      this.modelosUnicos = Array.from(modelosMap.values());
+
+      // Si el producto es solo variantes por color (sin modelos), mostramos colores ya
+      if (this.producto.tipoVariantes === 'color') {
+        this.coloresFiltrados = this.producto.variantes.slice();
+      }
+
+      // Si queremos preseleccionar la primera variante disponible:
+      if (this.coloresFiltrados.length === 0 && this.producto.tipoVariantes !== 'modelo+color') {
+        this.selectedVariante = this.producto.variantes[0];
+        this.varianteSeleccionada = 0;
+      }
     }
-    return 0;
   }
 
+  // Cuando elegimos un modelo (pasamos la etiqueta tal como la mostramos)
+  seleccionarModelo(modeloLabel: string) {
+    this.modeloSeleccionado = modeloLabel;
+    const normalize = (s: any) => (typeof s === 'string' ? s.trim().toLowerCase() : '');
+    const key = normalize(modeloLabel);
+
+    // Filtramos variantes cuyo modelo normalizado coincida
+    this.coloresFiltrados = (this.producto.variantes || []).filter(v => normalize(v?.modelo) === key);
+
+
+    // limpiar selección previa de variante
+    this.selectedVariante = null;
+    this.varianteSeleccionada = null;
+  }
+
+  // Acepta tanto índice (number) como objeto variante
+  seleccionarVariante(arg: number | any) {
+    if (typeof arg === 'number') {
+      const idx = arg as number;
+      this.selectedVariante = this.producto.variantes?.[idx] ?? null;
+      this.varianteSeleccionada = idx;
+    } else {
+      // arg es la variante misma
+      this.selectedVariante = arg;
+      this.varianteSeleccionada = this.producto.variantes?.indexOf(arg) ?? null;
+    }
+  }
+
+  // Suma stock (busca propiedad 'cantidad' o 'stock' por compatibilidad)
+  getStockTotal(item: any): number {
+    if (!item) return 0;
+    const arr = Array.isArray(item.stockSucursales) ? item.stockSucursales : [];
+    return arr.reduce((sum: number, s: any) => {
+      // soporte para 'cantidad' o 'stock'
+      const c = (s && (s.cantidad ?? s.stock)) || 0;
+      return sum + Number(c);
+    }, 0);
+  }
+
+  // Agregar al carrito (igual que ya tenías)
   agregarCarrito(producto: Producto) {
-    console.log('Agregando al carrito:', producto);
+    if (producto.tipoVariantes && producto.tipoVariantes !== 'none') {
+      console.warn('Intento de agregar al carrito un producto con variantes. Redirigir a detalle en su lugar.');
+      // opcional: podés mostrar un toast informando al usuario
+      return;
+    }
     const cliente = this.generalService.getClienteActual();
     this.loadingCarrito[producto.id] = true;
-
     const finalizar = () => this.loadingCarrito[producto.id] = false;
 
     if (!cliente) {
@@ -83,8 +172,16 @@ export class ItemComponent {
       .finally(finalizar);
   }
 
-  // Navegamos al detalle usando el id (mejor que descripcion porque es único)
   verDetalle(producto: Producto) {
-    this.router.navigate([`producto/${producto.id}`]);
+    this.router.navigate(['/producto', producto.id]);
+  }
+
+  getPrecioMayoristaPesos(): number {
+    const precioUsd =
+      this.selectedVariante?.precioMayorista ??
+      this.producto.precioMayorista ??
+      0;
+
+    return precioUsd * this.dolar;
   }
 }

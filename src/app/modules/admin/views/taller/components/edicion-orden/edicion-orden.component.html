@@ -30,6 +30,21 @@
         <input matInput formControlName="imei">
     </mat-form-field>
 
+    <mat-form-field appearance="outline" class="full-width fadeIn second">
+        <mat-label>Código de desbloqueo</mat-label>
+        <input matInput formControlName="codigoDesbloqueo">
+    </mat-form-field>
+
+    <mat-checkbox formControlName="esGremio" class="fadeIn second">
+        Cliente perteneciente a gremio
+    </mat-checkbox>
+
+    <mat-form-field appearance="outline" class="full-width fadeIn second"
+        *ngIf="formOrdenes.get('esGremio')?.value">
+        <mat-label>Gremio</mat-label>
+        <input matInput formControlName="gremioNombre">
+    </mat-form-field>
+
     <div class="form-grid">
         <mat-form-field appearance="outline" class="form-field fadeIn second">
             <mat-label>Equipo</mat-label>

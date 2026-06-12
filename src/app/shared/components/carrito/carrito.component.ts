@@ -102,17 +102,18 @@ export class CarritoComponent {
     }
   }
 
-  eliminarDelCarrito(productoId: string) {
-    this.carrito = this.carrito.filter(p => p.id !== productoId);
+  eliminarDelCarrito(uidCarrito: string) {
+    this.carrito = this.carrito.filter(p => p.uidCarrito !== uidCarrito);
     this.cliente.carrito = this.carrito; // sincronizar
 
     if (this.cliente.id !== 'invitado') {
-      this.carritoService.deleteProductoCarrito(this.cliente.id, productoId);
+      this.carritoService.deleteProductoCarrito(this.cliente.id, uidCarrito);
     }
 
     this.guardarCambiosCarrito();
     this.carritoService.actualizarCantidadProductos(this.cliente);
   }
+
 
   navigateCheckout() {
     const offcanvasElement = document.getElementById('offcanvasCarrito');
@@ -179,4 +180,5 @@ export class CarritoComponent {
   getTotalPrecio(): number {
     return this.carrito.reduce((acc, prod) => acc + (prod.precioFinal * prod.cantidad), 0);
   }
+
 }

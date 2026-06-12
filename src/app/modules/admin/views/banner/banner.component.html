@@ -10,6 +10,14 @@
       <h5 class="card-title">Subir imagen para el banner</h5>
 
       <div class="mb-3">
+        <label class="form-label">Categoría del banner</label>
+        <select class="form-select" [(ngModel)]="categoriaSeleccionada" (change)="cargarArchivos()">
+          <option value="mayorista">Mayorista</option>
+          <option value="minorista">Minorista</option>
+        </select>
+      </div>
+
+      <div class="mb-3">
         <input type="file" class="form-control" (change)="onFileSelected($event)">
       </div>
 

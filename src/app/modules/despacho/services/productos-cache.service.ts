@@ -30,7 +30,6 @@ export class ProductosCacheService {
     }
     await tx.done;
 
-    console.log(`✅ Sincronizados ${productos.length} productos en IndexedDB`);
     return productos;
   }
 

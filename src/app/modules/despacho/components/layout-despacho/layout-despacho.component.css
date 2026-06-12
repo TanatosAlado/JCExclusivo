@@ -10,53 +10,69 @@
     font-weight: bold;
   }
 
-  /* Estilo para inputs de búsqueda */
-  input[type="text"], input[type="number"] {
+  input[type="text"],
+  input[type="number"] {
     height: 42px;
     font-size: 1rem;
   }
 
-  /* Botones principales */
   .btn {
     font-size: 1rem;
     padding: 8px 14px;
   }
 
-  /* Botones de acción en el carrito */
   table td button {
     padding: 4px 8px;
     font-size: 0.9rem;
   }
 
-  /* Total destacado */
   h4 {
     font-weight: bold;
-    color: #198754; 
+    color: #198754;
   }
 
-  /* Mejor separación en la tabla */
-  table th, table td {
+  table th,
+  table td {
     vertical-align: middle;
   }
 
-  /* Búsqueda manual: botones de producto */
   .btn-outline-primary {
     margin-bottom: 5px;
     font-size: 0.9rem;
   }
 
-  /* Responsive */
+  /* 💡 Mejora visual */
+  table {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  /* 💡 Hover en filas */
+  tbody tr:hover {
+    background-color: #f1f3f5;
+  }
+
   @media (max-width: 768px) {
     .border-end {
       border-right: none !important;
       border-bottom: 2px solid #dee2e6 !important;
     }
+
     .d-flex {
       flex-direction: column;
       align-items: flex-start !important;
     }
+
     h4 {
       margin-top: 10px;
     }
   }
+}
+
+.centrar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: monospace;
 }
