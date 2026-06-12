@@ -32,7 +32,7 @@
           </div>
           <div class="info-precios mt-2">
             <label>Stock: {{ producto.stock }}</label>
-            <strong class="precio-final">{{ producto.precioFinal * producto.cantidad | currency }}</strong>
+            <strong class="precio-final">{{ getPrecioProducto(producto) * producto.cantidad | currency:'ARS' }}</strong>
           </div>
         </div>
       </div>

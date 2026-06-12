@@ -32,7 +32,7 @@ export class ProductosService {
     return this.getProductos().pipe(
       map(productos =>
         productos.filter(p =>
-          p.nombre.toLowerCase().includes(nombre.toLowerCase())
+          p.descripcion.toLowerCase().includes(nombre.toLowerCase())
         )
       )
     );

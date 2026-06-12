@@ -222,16 +222,6 @@ async getProductoById(id: string) {
   //SERVICIO PARA CARGAR EN EL CARRITO EL PRODUCTO
 cargarProductoCarrito(producto: Producto, cantidad: number = 1): Promise<boolean> {    // ACA ESTA EL QUILOMBO CON EL STOCK EN EL CARRITO, HAY QUE VER BIEN COMO CALCULARLO PARA QUE NO DE PROBLEMAS CON LAS VARIANTES
 
-  // const calcularStockTotal = (p: any) => {
-  //   if (!p.stockSucursales) return 0;
-  //   // Si viene como objeto → sumamos los valores
-  //   if (typeof p.stockSucursales === 'object' && !Array.isArray(p.stockSucursales)) {
-  //     return Object.values(p.stockSucursales).reduce((acc: number, cant: any) => acc + (Number(cant) || 0), 0);
-  //   }
-  //   // Si viene como array
-  //   return (p.stockSucursales || []).reduce((acc: number, s: any) => acc + (s?.cantidad || 0), 0);
-  // };
-
   const calcularStockSegunCliente = (p: any, cliente: Cliente) => {
 
   const calcularMinorista = () => {
@@ -291,11 +281,8 @@ cargarProductoCarrito(producto: Producto, cantidad: number = 1): Promise<boolean
             oferta: producto.oferta,
             precioOferta: producto.precioOferta ?? null,
             precioFinal: obtenerPrecio(producto, clienteEncontrado),
-            // precioFinal: producto.oferta && producto.precioOferta
-            //   ? producto.precioOferta
-            //   : producto.precioMinorista,
-              stock: calcularStockSegunCliente(producto, clienteEncontrado),
-            // stock: calcularStockTotal(producto),
+            moneda: producto.moneda || 'ARS',
+            stock: calcularStockSegunCliente(producto, clienteEncontrado),
             color: (producto as any).color || null,
             modelo: (producto as any).modelo || null
           });
@@ -342,11 +329,8 @@ cargarProductoCarrito(producto: Producto, cantidad: number = 1): Promise<boolean
             oferta: producto.oferta,
             precioOferta: producto.precioOferta ?? null,
             precioFinal: obtenerPrecio(producto, clienteEncontrado),
-            // precioFinal: producto.oferta && producto.precioOferta
-            //   ? producto.precioOferta
-            //   : producto.precioMinorista,
-              stock: calcularStockSegunCliente(producto, clienteEncontrado),
-            // stock: calcularStockTotal(producto),
+            moneda: producto.moneda || 'ARS',
+            stock: calcularStockSegunCliente(producto, clienteEncontrado),
             color: (producto as any).color || null,
             modelo: (producto as any).modelo || null
           });

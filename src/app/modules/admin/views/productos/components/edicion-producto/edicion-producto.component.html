@@ -93,6 +93,27 @@
     <mat-checkbox formControlName="destacado">¿Es destacado?</mat-checkbox>
   </div>
 
+  <div class="form-grid">
+
+    <mat-form-field appearance="outline" class="form-field">
+      <mat-label>Moneda</mat-label>
+
+      <mat-select formControlName="moneda">
+
+        <mat-option value="ARS">
+          Pesos Argentinos (ARS)
+        </mat-option>
+
+        <mat-option value="USD">
+          Dólares (USD)
+        </mat-option>
+
+      </mat-select>
+
+    </mat-form-field>
+
+  </div>
+
   <!-- 📦 Stock principal -->
   <h3>📦 Stock por sucursal (producto principal)</h3>
   <div formArrayName="stockSucursales" class="form-grid">

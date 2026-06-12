@@ -24,7 +24,7 @@
     <!-- 🔹 Precio -->
     <div class="precios">
       <ng-container *ngIf="esMayorista; else vistaMinorista">
-        <h3>{{ precioVisible | currency }}</h3>
+        <h3>{{ precioVisible | currency:'ARS':'symbol':'1.0-0' }}</h3>
       </ng-container>
 
       <ng-template #vistaMinorista>

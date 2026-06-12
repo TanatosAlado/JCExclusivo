@@ -236,55 +236,6 @@ export class AltaProductoComponent implements OnInit {
     this.form.setControl('variantes', arr);
   }
 
-  // guardarProductoColor() {
-  //   if (this.form.invalid) {
-  //     this.form.markAllAsTouched();
-  //     return;
-  //   }
-
-  //   this.guardando = true;
-  //   try {
-  //     // Construir el producto final
-  //     const formValue = this.form.value;
-
-  //     const producto: Producto = new Producto(
-  //       uuidv4(),                     // id
-  //       //    formValue.codigoBarras,       // codigoBarras (producto base)
-  //       '',
-  //       formValue.descripcion,
-  //       formValue.subdescripcion,
-  //       formValue.precioCosto,
-  //       formValue.ventaMinorista,
-  //       formValue.precioMinorista,
-  //       formValue.ventaMayorista,
-  //       formValue.precioMayorista,
-  //       formValue.moneda,
-  //       formValue.imagen,             // imagen única
-  //       formValue.rubro,
-  //       formValue.subrubro,
-  //       formValue.marca,
-  //       formValue.destacado,
-  //       formValue.oferta,
-  //       formValue.precioOferta,
-  //       formValue.precioSinImpuestos,
-  //       formValue.stockMinimo,
-  //       formValue.stockSucursales,
-  //       formValue.stockMayorista,
-  //       formValue.variantes.map((v: any) => ({
-  //         color: this.sanitizeColor(v.color),
-  //         codigoBarras: v.codigoBarras,
-  //         stockSucursales: v.stockSucursales,
-  //         stockMayorista: v.stockMayorista
-  //       })),
-  //       'color' // tipoVariantes
-  //     );
-
-  //     // TODO: enviar a Firestore
-  //   } finally {
-  //     this.guardando = false;
-  //   }
-  // }
-
   guardarProductoModeloColor() {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -427,6 +378,7 @@ async guardarProducto() {
       };
 
       const productosRef = collection(this.firestore, 'productos');
+      console.log('Guardando producto único con payload:', payloadUnico);
       const docRef = await addDoc(productosRef, payloadUnico);
 
       // 🔥 IMPORTANTE: asignar ID interno
@@ -454,7 +406,7 @@ async guardarProducto() {
           precioSinImpuestos: Number(base.precioSinImpuestos || 0),
           precioMinorista: Number(v.precioMinorista ?? base.precioMinorista ?? 0),
           precioMayorista: Number(v.precioMayorista ?? base.precioMayorista ?? 0),
-          moneda: this.producto.moneda || 'ARS',
+          moneda: base.moneda || 'ARS',
           oferta: Boolean(base.oferta),
           precioOferta: base.oferta ? Number(base.precioOferta || 0) : null,
           destacado: Boolean(base.destacado),
@@ -496,7 +448,7 @@ async guardarProducto() {
           precioSinImpuestos: Number(base.precioSinImpuestos || 0),
           precioMinorista: Number(base.precioMinorista || 0),
           precioMayorista: Number(base.precioMayorista || 0),
-          moneda: this.producto.moneda || 'ARS',
+          moneda: base.moneda || 'ARS',
           oferta: Boolean(base.oferta),
           precioOferta: base.oferta ? Number(base.precioOferta || 0) : null,
           destacado: Boolean(base.destacado),
@@ -542,7 +494,7 @@ async guardarProducto() {
             precioSinImpuestos: Number(base.precioSinImpuestos || 0),
             precioMinorista: Number(color.precioMinorista ?? base.precioMinorista ?? 0),
             precioMayorista: Number(color.precioMayorista ?? base.precioMayorista ?? 0),
-            moneda: formValue.moneda,
+            moneda: base.moneda || 'ARS',
             oferta: Boolean(base.oferta),
             precioOferta: base.oferta ? Number(base.precioOferta || 0) : null,
             destacado: Boolean(base.destacado),

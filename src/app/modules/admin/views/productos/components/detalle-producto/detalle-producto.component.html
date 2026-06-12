@@ -25,15 +25,30 @@
 
   <!-- PRECIOS -->
   <div class="bloque precios">
-    <p><strong>Precio Minorista:</strong> $ {{ producto.precioMinorista }}</p>
+
+    <p>
+      <strong>Precio Minorista:</strong>
+      {{ getSimboloMoneda(producto.moneda) }}
+      {{ producto.precioMinorista }}
+    </p>
 
     <p *ngIf="producto.precioMayorista > 0">
-      <strong>Precio Mayorista:</strong> U$S {{ producto.precioMayorista }}
+      <strong>Precio Mayorista:</strong>
+      {{ getSimboloMoneda(producto.moneda) }}
+      {{ producto.precioMayorista }}
     </p>
 
     <p *ngIf="producto.oferta">
-      <strong>Precio Oferta:</strong> $ {{ producto.precioOferta }}
+      <strong>Precio Oferta:</strong>
+      {{ getSimboloMoneda(producto.moneda) }}
+      {{ producto.precioOferta }}
     </p>
+
+    <p>
+      <strong>Moneda:</strong>
+      {{ producto.moneda || 'ARS' }}
+    </p>
+
   </div>
 
   <!-- STOCK -->

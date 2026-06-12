@@ -228,211 +228,651 @@ export class CheckoutComponent {
   }
 
   //FUNCION PARA CREAR EL PEDIDO
-  async createPedido(puntoRestar: number, puntosSumar: number) {
-    const carritoCliente = this.clienteEncontrado.carrito;
+  
+//   async createPedido(puntoRestar: number, puntosSumar: number) {
+//     const carritoCliente = this.clienteEncontrado.carrito;
 
-    const total = this.generalService.getTotalPrecio(
-      this.clienteEncontrado,
-      this.usarPuntos,
-      this.valorMonetarioPorPunto,
-      this.cuponAplicado
-    );
+//     const total = this.generalService.getTotalPrecio(
+//       this.clienteEncontrado,
+//       this.usarPuntos,
+//       this.valorMonetarioPorPunto,
+//       this.cuponAplicado
+//     );
 
-    let direccion = 'S/E';
-    let pago = 'S/P';
-    const envio = this.radioButtonSeleccionado === 'domicilio' ? 'Envío' : 'Retiro en sucursal';
+//     let direccion = 'S/E';
+//     let pago = 'S/P';
+//     const envio = this.radioButtonSeleccionado === 'domicilio' ? 'Envío' : 'Retiro en sucursal';
 
-    if (this.radioButtonSeleccionado === 'domicilio') {
-      direccion = this.formCheckout.get('domicilioEntrega')?.value;
-      pago = this.opcionPagoSeleccionada === 'efectivo' ? 'Efectivo' : 'Transferencia';
-    }
+//     if (this.radioButtonSeleccionado === 'domicilio') {
+//       direccion = this.formCheckout.get('domicilioEntrega')?.value;
+//       pago = this.opcionPagoSeleccionada === 'efectivo' ? 'Efectivo' : 'Transferencia';
+//     }
 
-    const unPedido: Pedido = {
-      id: '',
-      nroPedido: this.contador[0]?.contador != null ? this.contador[0].contador + 1 : 1,
-      fecha: this.generalService.formatearFechaDesdeDate(new Date()),
-      user: this.formCheckout.get('user')?.value,
-      mail: this.formCheckout.get('mail')?.value,
-      telefono: this.formCheckout.get('telefono')?.value,
-      domicilioEntrega: direccion,
-      carrito: carritoCliente,
-      entrega: envio,
-      pago: pago,
-      total: total,
-      estado: 'pendiente',
-      nombreCliente: this.formCheckout.get('user')?.value,
-      apellidoCliente: '',
-    };
+//     const unPedido: Pedido = {
+//       id: '',
+//       nroPedido: this.contador[0]?.contador != null ? this.contador[0].contador + 1 : 1,
+//       fecha: this.generalService.formatearFechaDesdeDate(new Date()),
+//       user: this.formCheckout.get('user')?.value,
+//       mail: this.formCheckout.get('mail')?.value,
+//       telefono: this.formCheckout.get('telefono')?.value,
+//       domicilioEntrega: direccion,
+//       carrito: carritoCliente,
+//       entrega: envio,
+//       pago: pago,
+//       total: total,
+//       estado: 'pendiente',
+//       nombreCliente: this.formCheckout.get('user')?.value,
+//       apellidoCliente: '',
+//     };
 
-    try {
-      const docRef = await this.pedidoService.createPedido(unPedido);
-      this.updateIdPedido(docRef.id, unPedido);
+//     try {
+//       const docRef = await this.pedidoService.createPedido(unPedido);
+//       this.updateIdPedido(docRef.id, unPedido);
 
-      // 🟢 CLIENTE LOGUEADO
-      if (this.clienteEncontrado.id !== 'invitado') {
-        const historico = {
-          fecha: unPedido.fecha,
-          nroPedido: unPedido.nroPedido,
-          carrito: carritoCliente,
-          entrega: unPedido.entrega,
-          pago: unPedido.pago,
-          total: unPedido.total,
-          id: docRef.id,
-        };
-        this.clienteEncontrado.historial.push(historico);
-        this.clienteEncontrado.carrito = [];
+//       // 🟢 CLIENTE LOGUEADO
+//       if (this.clienteEncontrado.id !== 'invitado') {
+//         const historico = {
+//           fecha: unPedido.fecha,
+//           nroPedido: unPedido.nroPedido,
+//           carrito: carritoCliente,
+//           entrega: unPedido.entrega,
+//           pago: unPedido.pago,
+//           total: unPedido.total,
+//           id: docRef.id,
+//         };
+//         this.clienteEncontrado.historial.push(historico);
+//         this.clienteEncontrado.carrito = [];
 
-        const puntosGanados = Math.floor(puntosSumar);
-        const puntosGastados = Math.floor(puntoRestar);
-        this.clienteEncontrado.puntos =
-          this.clienteEncontrado.puntos - puntosGastados + puntosGanados;
+//         const puntosGanados = Math.floor(puntosSumar);
+//         const puntosGastados = Math.floor(puntoRestar);
+//         this.clienteEncontrado.puntos =
+//           this.clienteEncontrado.puntos - puntosGastados + puntosGanados;
 
-        if (this.clienteEncontrado.esMayorista && !this.clienteEncontrado.mayoristaActivado) {
-          this.clienteEncontrado.mayoristaActivado = historico.total >= this.montoParaActivar;
-        }
+//         if (this.clienteEncontrado.esMayorista && !this.clienteEncontrado.mayoristaActivado) {
+//           this.clienteEncontrado.mayoristaActivado = historico.total >= this.montoParaActivar;
+//         }
 
-        await this.clienteService.actualizarCliente(this.clienteEncontrado.id, this.clienteEncontrado);
-      } else {
-        // 🟡 INVITADO
-        localStorage.removeItem('carritoInvitado');
-      }
+//         await this.clienteService.actualizarCliente(this.clienteEncontrado.id, this.clienteEncontrado);
+//       } else {
+//         // 🟡 INVITADO
+//         localStorage.removeItem('carritoInvitado');
+//       }
 
-      // 🔁 Actualización de stock
-      const sucursalCentralId = 'GtVWr5IHmosOOB8l6u6j';
-      const sucursalADescontar =
-        this.radioButtonSeleccionado === 'local' && this.sucursalSeleccionada
-          ? this.sucursalSeleccionada
-          : sucursalCentralId;
+//       // 🔁 Actualización de stock
+//       const sucursalCentralId = 'GtVWr5IHmosOOB8l6u6j';
+//       const sucursalADescontar =
+//         this.radioButtonSeleccionado === 'local' && this.sucursalSeleccionada
+//           ? this.sucursalSeleccionada
+//           : sucursalCentralId;
 
-      for (const item of carritoCliente) {
+//       for (const item of carritoCliente) {
+//         try {
+//           // 1) Determinar id real del documento del producto en Firestore
+//           // Si en el carrito guardás id compuesto (productoId-...), intentamos recuperar el padre
+//           let productDocId = item.id;
+//           // si tenés productoPadre en el item, preferirlo
+//           if (!productDocId && item.productoPadre) {
+//             productDocId = item.productoPadre;
+//           }
+//           // si el id tiene guion y acaso es "productoId-variant", tomamos la primera parte
+//           if (productDocId && productDocId.includes('-')) {
+//             const first = productDocId.split('-')[0];
+//             // comprobamos si existe ese doc; si existe lo usamos
+//             const testRef = doc(this.firestore, 'productos', first);
+//             const testSnap = await getDoc(testRef);
+//             if (testSnap.exists()) productDocId = first;
+//             // sino dejamos el id original (por si guardás el id real)
+//           }
+
+//           const productoRef = doc(this.firestore, 'productos', productDocId);
+
+//           // 2) Ejecutar transacción por cada producto para lectura/actualización segura
+//           await runTransaction(this.firestore, async (tx) => {
+//             const prodSnap = await tx.get(productoRef);
+//             if (!prodSnap.exists()) {
+//               console.warn('Producto no encontrado en transacción para item:', item);
+//               return;
+//             }
+
+//             const productoData: any = prodSnap.data();
+
+            
+//             // Helper: convertir mapa->array si corresponde
+//             const mapToArray = (maybeMap: any) => {
+//               if (!maybeMap) return [];
+//               if (Array.isArray(maybeMap)) return maybeMap;
+//               // es un mapa { id: cantidad, ... }
+//               return Object.entries(maybeMap).map(([sucursalId, cantidad]) => ({
+//                 sucursalId,
+//                 cantidad: Number(cantidad) || 0
+//               }));
+//             };
+
+//             // Convertir stock principal
+//             productoData.stockSucursales = mapToArray(productoData.stockSucursales);
+
+//             // Buscar variante por codigoBarras (si corresponde)
+//             let varianteIndex = -1;
+//             let varianteObj: any = null;
+//             if (productoData.variantes && Array.isArray(productoData.variantes)) {
+//               varianteIndex = productoData.variantes.findIndex(
+//                 (v: any) => v.codigoBarras === item.codigoBarras
+//               );
+//               if (varianteIndex >= 0) {
+//                 varianteObj = productoData.variantes[varianteIndex];
+//                 // convertir stock de la variante
+//                 varianteObj.stockSucursales = mapToArray(varianteObj.stockSucursales);
+//               }
+//             }
+
+//             // Cantidad a descontar
+//             let remaining = Number(item.cantidad) || 0;
+//             if (remaining <= 0) {
+//               console.warn('Cantidad inválida en carrito item:', item);
+//               return;
+//             }
+
+//             // Función que distribuye remaining entre un array de sucursales (mutando el array)
+//             const distribuirEntreSucursales = (sucursalesArr: any[], sucursalPrioridadId?: string) => {
+//               if (!sucursalesArr || sucursalesArr.length === 0) return;
+
+//               // Reordenar: priorizar la sucursal seleccionada primero, luego las demás
+//               let ordered = [...sucursalesArr];
+//               if (sucursalPrioridadId) {
+//                 ordered = [
+//                   ...ordered.filter(s => s.sucursalId === sucursalPrioridadId),
+//                   ...ordered.filter(s => s.sucursalId !== sucursalPrioridadId)
+//                 ];
+//               }
+
+//               for (const s of ordered) {
+//                 if (remaining <= 0) break;
+//                 const available = Number(s.cantidad) || 0;
+//                 if (available <= 0) continue;
+//                 const take = Math.min(available, remaining);
+//                 s.cantidad = available - take;
+//                 remaining -= take;
+//               }
+
+//               // Si quedaron sucursales sin ser actualizadas (order cambió), reflectar mutaciones en sucursalesArr
+//               // ordered contiene referencias a objetos de sucursalesArr, así que los cambios ya están aplicados.
+//             };
+
+//             // Descontar: si hay variante, primero sobre la variante
+//             if (varianteObj) {
+//               distribuirEntreSucursales(varianteObj.stockSucursales, sucursalADescontar);
+//               // si aún queda cantidad por descontar, intentar descontar del stock principal del producto (fallback)
+//               if (remaining > 0) {
+//                 distribuirEntreSucursales(productoData.stockSucursales, sucursalADescontar);
+//               }
+
+//               // Reemplazar la variante actualizada en el array
+//               productoData.variantes[varianteIndex] = varianteObj;
+
+//               // Guardar cambios en la transacción
+//               tx.update(productoRef, { variantes: productoData.variantes });
+//             } else {
+//               // No es variante: descontar del producto principal
+//               distribuirEntreSucursales(productoData.stockSucursales, sucursalADescontar);
+
+//               tx.update(productoRef, { stockSucursales: productoData.stockSucursales });
+//             }
+
+//             // LOG útil para debugging
+//             // console.log(
+//             //   `Stock actualizado para producto ${productDocId} (item ${item.codigoBarras || ''}). Remaining NOT covered: ${remaining}`
+//             // );
+//           }); // end transaction
+
+//         } catch (err) {
+//           console.error('Error en update stock para item:', item, err);
+//         }
+// }
+
+//      // console.log('✅ Pedido creado y stock actualizado correctamente.');
+//     } catch (error) {
+//       console.error('Error al crear pedido:', error);
+//     }
+//   }
+
+
+async createPedido(puntoRestar: number, puntosSumar: number) {
+
+const carritoCliente = this.clienteEncontrado.carrito;
+
+const total = this.generalService.getTotalPrecio(
+this.clienteEncontrado,
+this.usarPuntos,
+this.valorMonetarioPorPunto,
+this.cuponAplicado
+);
+
+let direccion = 'S/E';
+let pago = 'S/P';
+
+const envio =
+this.radioButtonSeleccionado === 'domicilio'
+? 'Envío'
+: 'Retiro en sucursal';
+
+if (this.radioButtonSeleccionado === 'domicilio') {
+
+
+direccion = this.formCheckout.get('domicilioEntrega')?.value;
+
+pago =
+  this.opcionPagoSeleccionada === 'efectivo'
+    ? 'Efectivo'
+    : 'Transferencia';
+
+
+}
+
+const unPedido: Pedido = {
+id: '',
+nroPedido:
+this.contador[0]?.contador != null
+? this.contador[0].contador + 1
+: 1,
+
+
+fecha: this.generalService.formatearFechaDesdeDate(new Date()),
+
+user: this.formCheckout.get('user')?.value,
+mail: this.formCheckout.get('mail')?.value,
+telefono: this.formCheckout.get('telefono')?.value,
+domicilioEntrega: direccion,
+
+carrito: carritoCliente,
+
+entrega: envio,
+pago: pago,
+
+total: total,
+
+estado: 'pendiente',
+
+nombreCliente: this.formCheckout.get('user')?.value,
+apellidoCliente: '',
+
+
+};
+
+try {
+
+
+const docRef = await this.pedidoService.createPedido(unPedido);
+
+this.updateIdPedido(docRef.id, unPedido);
+
+// =====================================================
+// CLIENTE LOGUEADO
+// =====================================================
+
+if (this.clienteEncontrado.id !== 'invitado') {
+
+  const historico = {
+    fecha: unPedido.fecha,
+    nroPedido: unPedido.nroPedido,
+    carrito: carritoCliente,
+    entrega: unPedido.entrega,
+    pago: unPedido.pago,
+    total: unPedido.total,
+    id: docRef.id,
+  };
+
+  this.clienteEncontrado.historial.push(historico);
+
+  this.clienteEncontrado.carrito = [];
+
+  const puntosGanados = Math.floor(puntosSumar);
+
+  const puntosGastados = Math.floor(puntoRestar);
+
+  this.clienteEncontrado.puntos =
+    this.clienteEncontrado.puntos -
+    puntosGastados +
+    puntosGanados;
+
+  if (
+    this.clienteEncontrado.esMayorista &&
+    !this.clienteEncontrado.mayoristaActivado
+  ) {
+
+    this.clienteEncontrado.mayoristaActivado =
+      historico.total >= this.montoParaActivar;
+  }
+
+  await this.clienteService.actualizarCliente(
+    this.clienteEncontrado.id,
+    this.clienteEncontrado
+  );
+
+} else {
+
+  // INVITADO
+  localStorage.removeItem('carritoInvitado');
+}
+
+// =====================================================
+// STOCK
+// =====================================================
+
+const esMayorista = this.clienteEncontrado.esMayorista;
+
+const sucursalCentralId = 'GtVWr5IHmosOOB8l6u6j';
+
+const sucursalADescontar =
+  this.radioButtonSeleccionado === 'local' &&
+  this.sucursalSeleccionada
+    ? this.sucursalSeleccionada
+    : sucursalCentralId;
+
+for (const item of carritoCliente) {
+
   try {
-    // 1) Determinar id real del documento del producto en Firestore
-    // Si en el carrito guardás id compuesto (productoId-...), intentamos recuperar el padre
+
     let productDocId = item.id;
-    // si tenés productoPadre en el item, preferirlo
+
     if (!productDocId && item.productoPadre) {
       productDocId = item.productoPadre;
     }
-    // si el id tiene guion y acaso es "productoId-variant", tomamos la primera parte
+
     if (productDocId && productDocId.includes('-')) {
+
       const first = productDocId.split('-')[0];
-      // comprobamos si existe ese doc; si existe lo usamos
+
       const testRef = doc(this.firestore, 'productos', first);
+
       const testSnap = await getDoc(testRef);
-      if (testSnap.exists()) productDocId = first;
-      // sino dejamos el id original (por si guardás el id real)
+
+      if (testSnap.exists()) {
+        productDocId = first;
+      }
     }
 
-    const productoRef = doc(this.firestore, 'productos', productDocId);
+    const productoRef = doc(
+      this.firestore,
+      'productos',
+      productDocId
+    );
 
-    // 2) Ejecutar transacción por cada producto para lectura/actualización segura
     await runTransaction(this.firestore, async (tx) => {
+
       const prodSnap = await tx.get(productoRef);
+
       if (!prodSnap.exists()) {
-        console.warn('Producto no encontrado en transacción para item:', item);
+        console.warn('Producto no encontrado:', item);
         return;
       }
 
       const productoData: any = prodSnap.data();
 
-      
-      // Helper: convertir mapa->array si corresponde
+      // ============================================
+      // Helper
+      // ============================================
+
       const mapToArray = (maybeMap: any) => {
+
         if (!maybeMap) return [];
+
         if (Array.isArray(maybeMap)) return maybeMap;
-        // es un mapa { id: cantidad, ... }
-        return Object.entries(maybeMap).map(([sucursalId, cantidad]) => ({
-          sucursalId,
-          cantidad: Number(cantidad) || 0
-        }));
+
+        return Object.entries(maybeMap).map(
+          ([sucursalId, cantidad]) => ({
+            sucursalId,
+            cantidad: Number(cantidad) || 0
+          })
+        );
       };
 
-      // Convertir stock principal
-      productoData.stockSucursales = mapToArray(productoData.stockSucursales);
+      productoData.stockSucursales =
+        mapToArray(productoData.stockSucursales);
 
-      // Buscar variante por codigoBarras (si corresponde)
+      // ============================================
+      // Buscar variante
+      // ============================================
+
       let varianteIndex = -1;
+
       let varianteObj: any = null;
-      if (productoData.variantes && Array.isArray(productoData.variantes)) {
-        varianteIndex = productoData.variantes.findIndex(
-          (v: any) => v.codigoBarras === item.codigoBarras
-        );
+
+      if (
+        productoData.variantes &&
+        Array.isArray(productoData.variantes)
+      ) {
+
+        varianteIndex =
+          productoData.variantes.findIndex(
+            (v: any) =>
+              v.codigoBarras === item.codigoBarras
+          );
+
         if (varianteIndex >= 0) {
-          varianteObj = productoData.variantes[varianteIndex];
-          // convertir stock de la variante
-          varianteObj.stockSucursales = mapToArray(varianteObj.stockSucursales);
+
+          varianteObj =
+            productoData.variantes[varianteIndex];
+
+          varianteObj.stockSucursales =
+            mapToArray(varianteObj.stockSucursales);
         }
       }
 
-      // Cantidad a descontar
       let remaining = Number(item.cantidad) || 0;
+
       if (remaining <= 0) {
-        console.warn('Cantidad inválida en carrito item:', item);
+        console.warn('Cantidad inválida');
         return;
       }
 
-      // Función que distribuye remaining entre un array de sucursales (mutando el array)
-      const distribuirEntreSucursales = (sucursalesArr: any[], sucursalPrioridadId?: string) => {
-        if (!sucursalesArr || sucursalesArr.length === 0) return;
+      // ============================================
+      // Distribuir sucursales
+      // ============================================
 
-        // Reordenar: priorizar la sucursal seleccionada primero, luego las demás
+      const distribuirEntreSucursales = (
+        sucursalesArr: any[],
+        sucursalPrioridadId?: string
+      ) => {
+
+        if (!sucursalesArr?.length) return;
+
         let ordered = [...sucursalesArr];
+
         if (sucursalPrioridadId) {
+
           ordered = [
-            ...ordered.filter(s => s.sucursalId === sucursalPrioridadId),
-            ...ordered.filter(s => s.sucursalId !== sucursalPrioridadId)
+            ...ordered.filter(
+              s => s.sucursalId === sucursalPrioridadId
+            ),
+            ...ordered.filter(
+              s => s.sucursalId !== sucursalPrioridadId
+            )
           ];
         }
 
         for (const s of ordered) {
+
           if (remaining <= 0) break;
-          const available = Number(s.cantidad) || 0;
+
+          const available =
+            Number(s.cantidad) || 0;
+
           if (available <= 0) continue;
-          const take = Math.min(available, remaining);
+
+          const take = Math.min(
+            available,
+            remaining
+          );
+
           s.cantidad = available - take;
+
           remaining -= take;
         }
-
-        // Si quedaron sucursales sin ser actualizadas (order cambió), reflectar mutaciones en sucursalesArr
-        // ordered contiene referencias a objetos de sucursalesArr, así que los cambios ya están aplicados.
       };
 
-      // Descontar: si hay variante, primero sobre la variante
+      // ============================================
+      // PRODUCTO CON VARIANTE
+      // ============================================
+
       if (varianteObj) {
-        distribuirEntreSucursales(varianteObj.stockSucursales, sucursalADescontar);
-        // si aún queda cantidad por descontar, intentar descontar del stock principal del producto (fallback)
-        if (remaining > 0) {
-          distribuirEntreSucursales(productoData.stockSucursales, sucursalADescontar);
+
+        // =====================================
+        // MAYORISTA
+        // =====================================
+
+        if (esMayorista) {
+
+          // intenta usar stockMayorista variante
+          if (
+            varianteObj.stockMayorista != null
+          ) {
+
+            const stockActual =
+              Number(
+                varianteObj.stockMayorista
+              ) || 0;
+
+            if (stockActual < remaining) {
+
+              throw new Error(
+                `Stock mayorista insuficiente para ${item.nombre}`
+              );
+            }
+
+            varianteObj.stockMayorista =
+              stockActual - remaining;
+
+            remaining = 0;
+
+          } else {
+
+            // fallback al padre
+
+            const stockPadre =
+              Number(
+                productoData.stockMayorista
+              ) || 0;
+
+            if (stockPadre < remaining) {
+
+              throw new Error(
+                `Stock mayorista insuficiente para ${item.nombre}`
+              );
+            }
+
+            productoData.stockMayorista =
+              stockPadre - remaining;
+
+            remaining = 0;
+          }
+
+        } else {
+
+          // =====================================
+          // MINORISTA
+          // =====================================
+
+          distribuirEntreSucursales(
+            varianteObj.stockSucursales,
+            sucursalADescontar
+          );
+
+          if (remaining > 0) {
+
+            throw new Error(
+              `Stock insuficiente en sucursales para ${item.nombre}`
+            );
+          }
         }
 
-        // Reemplazar la variante actualizada en el array
-        productoData.variantes[varianteIndex] = varianteObj;
+        productoData.variantes[varianteIndex] =
+          varianteObj;
 
-        // Guardar cambios en la transacción
-        tx.update(productoRef, { variantes: productoData.variantes });
+        tx.update(productoRef, {
+          variantes: productoData.variantes,
+          stockMayorista:
+            productoData.stockMayorista ?? 0
+        });
+
       } else {
-        // No es variante: descontar del producto principal
-        distribuirEntreSucursales(productoData.stockSucursales, sucursalADescontar);
 
-        tx.update(productoRef, { stockSucursales: productoData.stockSucursales });
+        // =====================================
+        // PRODUCTO NORMAL
+        // =====================================
+
+        if (esMayorista) {
+
+          const stockActual =
+            Number(
+              productoData.stockMayorista
+            ) || 0;
+
+          if (stockActual < remaining) {
+
+            throw new Error(
+              `Stock mayorista insuficiente para ${item.nombre}`
+            );
+          }
+
+          productoData.stockMayorista =
+            stockActual - remaining;
+
+          remaining = 0;
+
+          tx.update(productoRef, {
+            stockMayorista:
+              productoData.stockMayorista
+          });
+
+        } else {
+
+          distribuirEntreSucursales(
+            productoData.stockSucursales,
+            sucursalADescontar
+          );
+
+          if (remaining > 0) {
+
+            throw new Error(
+              `Stock insuficiente para ${item.nombre}`
+            );
+          }
+
+          tx.update(productoRef, {
+            stockSucursales:
+              productoData.stockSucursales
+          });
+        }
       }
 
-      // LOG útil para debugging
-      // console.log(
-      //   `Stock actualizado para producto ${productDocId} (item ${item.codigoBarras || ''}). Remaining NOT covered: ${remaining}`
-      // );
-    }); // end transaction
+    });
 
   } catch (err) {
-    console.error('Error en update stock para item:', item, err);
+
+    console.error(
+      'Error actualizando stock:',
+      item,
+      err
+    );
+
+    throw err;
   }
 }
 
-     // console.log('✅ Pedido creado y stock actualizado correctamente.');
-    } catch (error) {
-      console.error('Error al crear pedido:', error);
-    }
-  }
+// console.log('Pedido creado correctamente');
+
+
+} catch (error) {
+
+
+console.error(
+  'Error al crear pedido:',
+  error
+);
+
+
+}
+}
 
 
 

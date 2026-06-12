@@ -36,8 +36,7 @@ export class ItemComponent implements OnInit {
     private generalService: GeneralService,
     private toastService: ToastService,
     private dialog: MatDialog,
-    private infoEmpresaService: InfoEmpresaService,
-    private ecommerceState: EcommerceStateService
+    private infoEmpresaService: InfoEmpresaService
   ) {}
 
   ngOnInit(): void {
@@ -188,12 +187,29 @@ export class ItemComponent implements OnInit {
     );
   }
 
-  getPrecioMayoristaPesos(): number {
-    const precioUsd =
-      this.selectedVariante?.precioMayorista ??
-      this.producto.precioMayorista ??
-      0;
+  // getPrecioMayoristaPesos(): number {
+  //   const precioUsd =
+  //     this.selectedVariante?.precioMayorista ??
+  //     this.producto.precioMayorista ??
+  //     0;
 
-    return precioUsd * this.dolar;
+  //   return precioUsd * this.dolar;
+  // }
+
+  getPrecioMayoristaPesos(): number {
+
+    const precio =
+      this.producto.precioMayorista ?? 0;
+
+    const moneda =
+      this.producto.moneda ?? 'ARS';
+
+    if (moneda === 'USD') {
+      return precio * this.dolar;
+    }
+
+    return precio;
   }
+
+
 }
