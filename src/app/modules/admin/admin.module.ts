@@ -32,6 +32,7 @@ import { AltaSucursalComponent } from './views/sucursales/components/alta-sucurs
 import { DetalleSucursalComponent } from './views/sucursales/components/detalle-sucursal/detalle-sucursal.component';
 
 
+
 @NgModule({
   declarations: [
     AdminLayoutComponent,
@@ -66,7 +67,7 @@ import { DetalleSucursalComponent } from './views/sucursales/components/detalle-
   imports: [
     CommonModule,
     SharedModule,
-    MatSelectModule
+    MatSelectModule,
   ]
 })
 export class AdminModule { }

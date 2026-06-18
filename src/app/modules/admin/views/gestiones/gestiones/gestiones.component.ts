@@ -64,6 +64,13 @@ export class GestionesComponent {
       icono: 'fas fa-map-marker-alt',
       ruta: '/gestiones/sucursales',
     },
+
+     {
+      titulo: 'Marquesina',
+      descripcion: 'Gestión de marquesina',
+      icono: 'fa-solid fa-bullhorn',
+      ruta: '/gestiones/marquesina',
+    },
     
   ];
 

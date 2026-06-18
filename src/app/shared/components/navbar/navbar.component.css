@@ -24,6 +24,9 @@
   justify-content: center;
 }
 
+.navbar {
+  margin-top: 28px;
+}
 .container {
   margin-top: 2%;
 }
