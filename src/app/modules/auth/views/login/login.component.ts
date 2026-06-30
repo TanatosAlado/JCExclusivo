@@ -18,6 +18,8 @@ export class LoginComponent {
   contrasena: string = '';
   loginFail: boolean = false
   public loginMayorista: boolean = false;
+  emailRecuperacion: string = '';
+  mostrarRecuperacion: boolean = false;
 
   constructor(private authService: AuthService, 
               private dialogRef: MatDialogRef<LoginComponent>, 
@@ -95,5 +97,60 @@ export class LoginComponent {
     this.authService.setUsuarioActual(clienteInvitado);
     this.dialogRef.close(clienteInvitado);
   }
+
+
+  async recuperarContrasena(): Promise<void> {
+
+    if (!this.emailRecuperacion || this.emailRecuperacion.trim() === '') {
+
+      this.snackBar.open('Ingrese un correo válido', 'Cerrar', {
+        duration: 3000,
+        panelClass: ['snackbar-error']
+      });
+
+      return;
+    }
+
+    try {
+
+      await this.authService.recuperarPassword(this.emailRecuperacion);
+
+      this.snackBar.open(
+        'Te enviamos un correo para restablecer tu contraseña',
+        'Cerrar',
+        {
+          duration: 5000,
+          panelClass: ['snackbar-success']
+        }
+      );
+
+    } catch (error: any) {
+
+      console.error(error);
+
+      let mensaje = 'Ocurrió un error';
+
+      switch (error.code) {
+
+        case 'auth/user-not-found':
+          mensaje = 'No existe una cuenta con ese correo';
+          break;
+
+        case 'auth/invalid-email':
+          mensaje = 'Correo inválido';
+          break;
+
+        default:
+          mensaje = 'No se pudo enviar el correo de recuperación';
+          break;
+      }
+
+      this.snackBar.open(mensaje, 'Cerrar', {
+        duration: 4000,
+        panelClass: ['snackbar-error']
+      });
+    }
+  }
+
 
 }

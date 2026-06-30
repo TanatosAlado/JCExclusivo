@@ -467,7 +467,7 @@ abrirCaja(sucursalIdExistente?: string) {
       fecha: new Date().toISOString(),
       tipoPrecio: this.tipoPrecio,
       cliente: this.clienteActual
-        ? { dni: this.clienteActual.dni, nombre: this.clienteActual.nombre }
+        ? { dni: this.clienteActual.dni, nombre: this.clienteActual.nombre, tipo: this.clienteActual.tipo, puntos: this.clienteActual.puntos }
         : null,
       items: this.carrito,
       total: totalBase,
@@ -520,93 +520,26 @@ abrirCaja(sucursalIdExistente?: string) {
     this.metodoPago = null;
   }
 
-  // async finalizarVenta() {
-  //   if (this.carrito.length === 0) return;
-
-  //   if (!this.metodoPago) {
-  //     this.mostrarErrorPago = true;
-  //     return;
-  //   }
-
-  //   this.mostrarErrorPago = false;
-
-  //   // preferimos cajaActiva en memoria, si no existe usamos lo de service (localStorage)
-  //   const cajaActiva = this.cajaActiva || this.cajaService.getCajaActiva();
-  //   if (!cajaActiva) {
-  //     Swal.fire('❌ No hay caja abierta', 'Debes abrir caja antes de vender.', 'error');
-  //     return;
-  //   }
-
-  //   if (!confirm("¿Desea confirmar la venta por $" + this.total.toFixed(2) + "?")) {
-  //     return;
-  //   }
-
-  //   const totalBase = this.clienteActual && this.clienteActual.tipo === 'minorista'
-  //     ? this.generalService.getTotalPrecioDespacho(
-  //         this.total,
-  //         this.clienteActual.puntos,
-  //         this.usarPuntos,
-  //         this.valorMonetarioPorPunto,
-  //         this.cuponAplicado
-  //       )
-  //     : this.total;
-
-  //   const totalFinal = this.calcularTotalConMetodoPago(totalBase, this.metodoPago);
-
-  //   const venta = {
-  //     fecha: new Date().toISOString(),
-  //     tipoPrecio: this.tipoPrecio,
-  //     cliente: this.clienteActual ? { dni: this.clienteActual.dni, nombre: this.clienteActual.nombre } : null,
-  //     items: this.carrito,
-  //     total: totalBase,
-  //     metodoPago: this.metodoPago,
-  //     sucursalId: cajaActiva.sucursalId,
-  //     cajaId: cajaActiva.id
-  //   };
-
-  //   await addDoc(collection(this.firestore, 'Ventas'), venta);
-
-  //   for (const item of venta.items) {
-  //     const productoRef = doc(this.firestore, 'Productos', item.productoId);
-  //     const productoSnap = await getDoc(productoRef);
-
-  //     if (productoSnap.exists()) {
-  //       const productoData = productoSnap.data();
-  //       const stockActual = productoData['stock'] ?? 0; // por si no existe el campo
-  //       const nuevoStock = stockActual - item.cantidad;
-  //       await updateDoc(productoRef, { stock: nuevoStock >= 0 ? nuevoStock : 0 });
-  //     }
-  //   }
-
-  //   Swal.fire({
-  //     title: '✅ Venta realizada',
-  //     text: 'La venta fue registrada correctamente.',
-  //     icon: 'success',
-  //     showCancelButton: true,
-  //     confirmButtonText: 'Ver comprobante',
-  //     cancelButtonText: 'Cerrar'
-  //   }).then((result) => {
-  //     if (result.isConfirmed) {
-  //       this.abrirComprobante(venta);
-  //     }
-  //   });
-
-  //   // Reset
-  //   this.carrito = [];
-  //   this.total = 0;
-  //   this.clienteActual = null;
-  //   this.tipoPrecio = 'minorista';
-  //   this.productoCache = {};
-  //   this.metodoPago = null;
-  // }
 
   abrirComprobante(venta: any) {
+    console.log('Generando comprobante para venta:', venta);
     const win = window.open('', '_blank', 'width=800,height=600');
     if (!win) return;
 
-    const wspTexto = !venta.cliente || venta.cliente.tipo === 'mayorista'
-      ? '3426985223'
-      : '3425209886';
+    // const wspTexto = !venta.cliente || venta.cliente.tipo === 'mayorista'
+    //   ? '3426985223'
+    //   : '3425209886';
+
+    // 🔹 Tipo de cliente
+    const esMayorista = venta.cliente?.tipo === 'mayorista';
+
+    const wspTexto = esMayorista
+    ? '3426985223'
+    : '3425209886';
+
+    const tituloEmpresa = esMayorista
+      ? 'JC MAYORISTA'
+      : 'JC EXCLUSIVO';  
 
     // 🧠 TOTAL BASE
     const totalBase = venta.total;
@@ -712,15 +645,16 @@ abrirCaja(sucursalIdExistente?: string) {
               display: flex;
               justify-content: center;
               align-items: center;
+              color: #000 !important;
             }
           </style>
         </head>
         <body>
 
           <div class="center">
-            <img src= "../../../../../assets/logo.png" width="120"/>
+            <img src= "../../../../../assets/logo2.png" width="120"/>
           </div>
-          <h2>JC EXCLUSIVO</h2>
+          <h2>${tituloEmpresa}</h2>
           <h3>WhatsApp: ${wspTexto}</h3>
 
 
@@ -755,20 +689,23 @@ abrirCaja(sucursalIdExistente?: string) {
           </table>
 
           <!-- 💰 Totales -->
-          <p class="tachado">Subtotal: $${totalBase.toFixed(2)}</p>
 
-          ${detalleCupon ? `<p class="descuento">Cupón aplicado: ${detalleCupon}</p>` : ''}
-          ${venta.usarPuntos ? `<p class="descuento">Se aplicaron puntos del cliente</p>` : ''}
-          ${detallePago ? `<p class="descuento">${detallePago}</p>` : ''}
+          ${!esMayorista ? `
+            <p class="tachado">Subtotal: $${totalBase.toFixed(2)}</p>
 
-          <p class="descuento">
-            Descuento total: $${descuentoTotal.toFixed(2)}
-          </p>
+            ${detalleCupon ? `<p class="descuento">Cupón aplicado: ${detalleCupon}</p>` : ''}
+            ${venta.usarPuntos ? `<p class="descuento">Se aplicaron puntos del cliente</p>` : ''}
+            ${detallePago ? `<p class="descuento">${detallePago}</p>` : ''}
+
+            <p class="descuento">
+              Descuento total: $${descuentoTotal.toFixed(2)}
+            </p>
+          ` : ''}
 
           <p class="total">TOTAL FINAL: $${totalFinal.toFixed(2)}</p>
 
           <h2>¡Gracias por su compra! 🙌</h2>
-          <h3>https://storejcexclusivo.web.app/</h3>
+          <h3>https://jcexclusivo.com.ar/</h3>
 
           <script>window.print();</script>
         </body>
