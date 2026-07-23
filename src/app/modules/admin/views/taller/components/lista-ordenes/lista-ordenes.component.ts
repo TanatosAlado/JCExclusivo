@@ -31,6 +31,7 @@ export class ListaOrdenesComponent {
   @ViewChild('paginatorOrdenesFinalizados') paginatorOrdenesFinalizadas!: MatPaginator;
   @ViewChild('paginatorOrdenesEliminados') paginatorOrdenesEliminadas!: MatPaginator;
   displayedColumns: string[] = ['numeroOrden', 'cliente', 'imei', 'equipo', 'estado', 'fechaIngreso', 'acciones'];
+  displayedColumnsFinalizadas: string[] = [ 'numeroOrden', 'cliente', 'imei', 'equipo', 'estado', 'fechaIngreso', 'fechaEntrega', 'acciones' ];
 
   constructor(private dialog: MatDialog, private ordenesService: OrdenesService,private cdRef: ChangeDetectorRef, private toastService:ToastService) { 
 
@@ -67,8 +68,8 @@ export class ListaOrdenesComponent {
     if (this.datasourceOrdenesFinalizadas&& this.activeTab===2) {
       this.datasourceOrdenesFinalizadas.paginator = this.paginator;
     }
-     if (this.datasourceOrdenesFinalizadas&& this.activeTab===3) {
-      this.datasourceOrdenesFinalizadas.paginator = this.paginator;
+    if (this.datasourceOrdenesEliminadas && this.activeTab === 3) {
+        this.datasourceOrdenesEliminadas.paginator = this.paginator;
     }
   }
 
