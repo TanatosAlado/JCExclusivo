@@ -13,9 +13,18 @@ app-item {
   width: 20%;
 }
 
-.pagination{
+/* .pagination{
   z-index: 0;
   position: relative;
+} */
+
+.pagination{
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: .25rem;
+    z-index: 0;
+    position: relative;
 }
 
 @media (max-width: 1200px) {
@@ -41,3 +50,5 @@ app-item {
     width: 100%;
   }
 }
+
+

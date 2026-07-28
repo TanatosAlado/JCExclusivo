@@ -31,6 +31,9 @@ export class GrillaItemComponent {
 
   paginaActual: number = 1;
   itemsPorPagina: number = 10;
+
+  readonly MAX_BOTONES = 5;
+
   productosPaginados: Producto[] = [];
   public esMayorista: boolean = false;
 
@@ -108,7 +111,9 @@ export class GrillaItemComponent {
       const subrubroOk = this.filtroSubrubro ? p.subrubro === this.filtroSubrubro : true;
       const destacadoOk = this.soloDestacados ? p.destacado === true : true;
       const marcaOk = this.filtroMarca ? p.marca === this.filtroMarca : true;
-      const nombreOk = this.filtroNombre ? p.descripcion?.toLowerCase().includes(this.filtroNombre.toLowerCase()) : true;
+      const nombreOk = this.filtroNombre
+      ? this.coincideBusqueda(p.descripcion, this.filtroNombre)
+      : true;
 
       // 👇 precio correcto según tipo de cliente
       const precios = p.variantes?.length
@@ -144,12 +149,84 @@ export class GrillaItemComponent {
   }
 
   cambiarPagina(pagina: number) {
+
+    if (pagina < 1 || pagina > this.totalPaginas) {
+      return;
+    }
+
     this.paginaActual = pagina;
     this.actualizarPaginados();
+
+    window.scroll({
+      top: 0,
+      behavior: 'smooth'
+    });
+
+  }
+
+  get totalPaginas(): number {
+    return Math.ceil(this.productosFiltrados.length / this.itemsPorPagina);
   }
 
 
+  get paginas(): (number | string)[] {
 
+    const total = this.totalPaginas;
 
+    if (total <= 7) {
+      return Array.from({ length: total }, (_, i) => i + 1);
+    }
+
+    const paginas: (number | string)[] = [];
+
+    paginas.push(1);
+
+    let inicio = Math.max(2, this.paginaActual - 2);
+    let fin = Math.min(total - 1, this.paginaActual + 2);
+
+    if (this.paginaActual <= 4) {
+      fin = 5;
+    }
+
+    if (this.paginaActual >= total - 3) {
+      inicio = total - 4;
+    }
+
+    if (inicio > 2) {
+      paginas.push('...');
+    }
+
+    for (let i = inicio; i <= fin; i++) {
+      paginas.push(i);
+    }
+
+    if (fin < total - 1) {
+      paginas.push('...');
+    }
+
+    paginas.push(total);
+
+    return paginas;
+  }
+
+  private normalizarTexto(texto: string): string {
+    return texto
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // elimina tildes
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, ' ');
+  }  
+
+  private coincideBusqueda(descripcion: string | undefined, busqueda: string): boolean {
+    if (!descripcion) {
+      return false;
+    }
+
+    const texto = this.normalizarTexto(descripcion);
+    const palabras = this.normalizarTexto(busqueda).split(' ');
+
+    return palabras.every(palabra => texto.includes(palabra));
+  }
 
 }

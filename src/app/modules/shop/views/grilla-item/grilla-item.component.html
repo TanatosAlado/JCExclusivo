@@ -66,20 +66,20 @@
             <!-- <app-item [producto]="producto" [esMayorista]="esMayorista"></app-item> -->
             <!-- <app-item [producto]="producto" [esMayorista]="esMayorista" (click)="guardarEstado()"> </app-item> -->
             <app-item
-  [producto]="producto"
-  [esMayorista]="esMayorista"
-  [estadoGrilla]="{
-    filtroNombre: filtroNombre,
-    filtroRubro: filtroRubro,
-    filtroSubrubro: filtroSubrubro,
-    filtroMarca: filtroMarca,
-    precioMin: precioMin,
-    precioMax: precioMax,
-    soloDestacados: soloDestacados,
-    paginaActual: paginaActual,
-    scrollY: $any(window).scrollY
-  }">
-</app-item>
+                [producto]="producto"
+                [esMayorista]="esMayorista"
+                [estadoGrilla]="{
+                    filtroNombre: filtroNombre,
+                    filtroRubro: filtroRubro,
+                    filtroSubrubro: filtroSubrubro,
+                    filtroMarca: filtroMarca,
+                    precioMin: precioMin,
+                    precioMax: precioMax,
+                    soloDestacados: soloDestacados,
+                    paginaActual: paginaActual,
+                    scrollY: $any(window).scrollY
+                }">
+            </app-item>
         </div>
     </div>
 
@@ -88,21 +88,50 @@
 
 
         <ul class="pagination justify-content-center">
-            <li class="page-item" [class.disabled]="paginaActual === 1" (click)="cambiarPagina(paginaActual - 1)">
+
+            <!-- Primera -->
+            <li class="page-item"
+                [class.disabled]="paginaActual === 1"
+                (click)="cambiarPagina(1)">
+                <a class="page-link">&laquo;</a>
+            </li>
+
+            <!-- Anterior -->
+            <li class="page-item"
+                [class.disabled]="paginaActual === 1"
+                (click)="cambiarPagina(paginaActual - 1)">
                 <a class="page-link">Anterior</a>
             </li>
 
-            <li class="page-item"
-                *ngFor="let pagina of [].constructor(Math.ceil(productosFiltrados.length / itemsPorPagina)); let i = index"
-                [class.active]="paginaActual === i + 1" (click)="cambiarPagina(i + 1)">
-                <a class="page-link">{{ i + 1 }}</a>
+            <!-- Páginas -->
+            <li
+                *ngFor="let pagina of paginas"
+                class="page-item"
+                [class.active]="pagina === paginaActual"
+                [class.disabled]="pagina === '...'">
+
+                <a
+                    class="page-link"
+                    (click)="pagina !== '...' && cambiarPagina(+pagina)">
+                    {{ pagina }}
+                </a>
+
             </li>
 
+            <!-- Siguiente -->
             <li class="page-item"
-                [class.disabled]="paginaActual === Math.ceil(productosFiltrados.length / itemsPorPagina)"
+                [class.disabled]="paginaActual === totalPaginas"
                 (click)="cambiarPagina(paginaActual + 1)">
                 <a class="page-link">Siguiente</a>
             </li>
+
+            <!-- Última -->
+            <li class="page-item"
+                [class.disabled]="paginaActual === totalPaginas"
+                (click)="cambiarPagina(totalPaginas)">
+                <a class="page-link">&raquo;</a>
+            </li>
+
         </ul>
     </nav>
 
