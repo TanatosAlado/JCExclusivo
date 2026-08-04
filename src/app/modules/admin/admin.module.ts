@@ -30,6 +30,7 @@ import { SucursalesComponent } from './views/sucursales/sucursales.component';
 import { ListaSucursalesComponent } from './views/sucursales/components/lista-sucursales/lista-sucursales.component';
 import { AltaSucursalComponent } from './views/sucursales/components/alta-sucursal/alta-sucursal.component';
 import { DetalleSucursalComponent } from './views/sucursales/components/detalle-sucursal/detalle-sucursal.component';
+import { IngresoStockComponent } from './views/productos/components/ingreso-stock/ingreso-stock.component';
 
 
 @NgModule({
@@ -62,6 +63,7 @@ import { DetalleSucursalComponent } from './views/sucursales/components/detalle-
     ListaSucursalesComponent,
     AltaSucursalComponent,
     DetalleSucursalComponent,
+    IngresoStockComponent,
   ],
   imports: [
     CommonModule,

@@ -1,14 +1,15 @@
 import { Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
 import { addDoc, collection, collectionData, deleteDoc, doc, Firestore, query, updateDoc, where } from '@angular/fire/firestore';
-import { Producto } from '../models/producto.model';
+import { Producto, StockSucursal } from '../models/producto.model';
+import { ProductosCacheService } from '../../despacho/services/productos-cache.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ProductosService {
 
-  constructor(private firestore: Firestore) { }
+  constructor(private firestore: Firestore, private productosCache: ProductosCacheService) { }
 
    obtenerProductos(): Observable<Producto[]> {
     const ref = collection(this.firestore, 'productos');
@@ -44,11 +45,29 @@ export class ProductosService {
     return collectionData(q) as Observable<Producto[]>;
   }
 
-  actualizarProducto(producto: Producto): Promise<void> {
+  async actualizarProducto(producto: Producto): Promise<void> {
     const docRef = doc(this.firestore, 'productos', producto.id);
-    return updateDoc(docRef, { ...producto });
+    await updateDoc(docRef, {
+      ...producto
+    });
+    // ✅ Actualizamos también la copia local
+    await this.productosCache.actualizarProducto(producto);
   }
 
+  actualizarStockProducto(
+      id: string,
+      stockSucursales: StockSucursal[],
+      stockMayorista: number
+  ): Promise<void> {
+
+      const docRef = doc(this.firestore, 'productos', id);
+
+      return updateDoc(docRef, {
+          stockSucursales,
+          stockMayorista
+      });
+
+  }
 
   obtenerProductosAgrupados(): Observable<Producto[]> {
     const ref = collection(this.firestore, 'productos');
@@ -69,9 +88,12 @@ export class ProductosService {
             if (Array.isArray(p.stockSucursales)) {
               stockSucursalesArray = p.stockSucursales;
             } else {
-              stockSucursalesArray = Object.values(p.stockSucursales).map((cantidad: any) => ({
-                cantidad
-              }));
+              stockSucursalesArray = Object.entries(p.stockSucursales).map(
+                ([sucursalId, cantidad]: any) => ({
+                  sucursalId,
+                  cantidad: Number(cantidad) || 0
+                })
+              );
             }
           }
 
@@ -126,6 +148,29 @@ export class ProductosService {
               oferta: p.oferta
             });
           }
+        });
+
+        Object.values(agrupados).forEach((producto: any) => {
+
+          // Si tiene variantes, el stock del padre es la suma
+          if (producto.variantes.length > 0) {
+
+            producto.stockTotal = producto.variantes.reduce(
+              (acc: number, variante: any) => acc + (variante.stockTotal || 0),
+              0
+            );
+
+            producto.stockMayorista = producto.variantes.reduce(
+              (acc: number, variante: any) => acc + (variante.stockMayorista || 0),
+              0
+            );
+
+          }
+
+          producto.stockGlobal =
+            (producto.stockTotal || 0) +
+            (producto.stockMayorista || 0);
+
         });
 
         return Object.values(agrupados);

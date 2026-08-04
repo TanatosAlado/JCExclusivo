@@ -208,3 +208,57 @@ a{
   font-size: 0.6rem;  
   line-height: 1.2;
 }
+
+
+:host{
+    transition:.25s;
+}
+
+:host:hover{
+    transform:translateY(-4px);
+}
+
+.sin-stock-card{
+    filter: grayscale(.65);
+    opacity:.82;
+    transition:.25s;
+}
+
+.stock-ribbon{
+    position:absolute;
+    top:18px;
+    right:-48px;
+    width:170px;
+    text-align:center;
+    background:#d32f2f;
+    color:#fff;
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:1px;
+    padding:6px 0;
+    transform:rotate(45deg);
+    z-index:20;
+    box-shadow:0 3px 10px rgba(0,0,0,.25);
+}
+
+.product-img{
+    position:relative;
+    overflow:hidden;
+}
+
+.sin-stock img{
+    filter: grayscale(100%);
+    transition: .3s;
+}
+
+.sin-stock{
+    opacity:.75;
+}
+
+.sin-stock .product-action{
+    opacity:.35;
+}
+
+.sin-stock:hover{
+    transform:none;
+}

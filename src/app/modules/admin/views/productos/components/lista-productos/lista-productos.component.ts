@@ -12,6 +12,8 @@ import { ToastService } from 'src/app/shared/services/toast.service';
 import * as XLSX from 'xlsx';
 
 import { InfoEmpresaService } from 'src/app/shared/services/info-empresa.service';
+import { IngresoStockComponent } from '../ingreso-stock/ingreso-stock.component';
+import { firstValueFrom } from 'rxjs';
 
 
 @Component({
@@ -278,5 +280,92 @@ normalizarStock(producto: any) {
     return element.stockSucursales.reduce((total, s) => total + (s.cantidad || 0), 0);
   }
 
+  abrirIngresoStock(): void {
+    this.dialog.open(IngresoStockComponent,{
+      width:'900px',
+      maxWidth:'95vw'
+    });
+  }
+
+
+
+// Migracion de estructura
+// async migrarStockSucursales() {
+
+//   const productos = await firstValueFrom(
+//     this.productosService.obtenerProductos()
+//   );
+
+//   const SUCURSAL_ACTIVA = 'm0CEkvmZpfjgP9uBvYyH';
+
+//   for (const producto of productos) {
+
+//     let stockSucursales: any[] = [];
+
+//     // Si viene con formato viejo (objeto)
+//     if (
+//       producto.stockSucursales &&
+//       !Array.isArray(producto.stockSucursales)
+//     ) {
+
+//       stockSucursales = Object.keys(producto.stockSucursales).map(key => ({
+//         sucursalId: key,
+//         cantidad: producto.stockSucursales[key] || 0
+//       }));
+
+//     } else {
+
+//       stockSucursales = producto.stockSucursales || [];
+
+//     }
+
+//     // Dejamos solamente la sucursal vigente
+//     stockSucursales = stockSucursales.filter(
+//       s => s.sucursalId === SUCURSAL_ACTIVA
+//     );
+
+//     console.log({
+//       producto: producto.descripcion,
+//       antes: producto.stockSucursales,
+//       despues: stockSucursales
+//     });
+
+//     // ✅ Modificamos el objeto existente
+//     producto.stockSucursales = stockSucursales;
+
+//     // ✅ Guardamos
+//     await this.productosService.actualizarProducto(producto);
+
+//     console.log('✔ Migrado:', producto.descripcion);
+
+//   }
+
+//   console.log('✅ Migración finalizada');
+// }
+
+//Back up 
+// async backupProductos() {
+
+//   const productos = await firstValueFrom(
+//     this.productosService.obtenerProductos()
+//   );
+
+//   const blob = new Blob(
+//     [JSON.stringify(productos, null, 2)],
+//     { type: 'application/json' }
+//   );
+
+//   const url = URL.createObjectURL(blob);
+
+//   const a = document.createElement('a');
+
+//   a.href = url;
+//   a.download = 'productos-backup.json';
+
+//   a.click();
+
+//   URL.revokeObjectURL(url);
+
+// }
 
 }

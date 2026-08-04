@@ -32,6 +32,7 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { MAT_DATE_LOCALE } from '@angular/material/core';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { MatSelectModule } from '@angular/material/select';
+import { MatListModule } from '@angular/material/list';
 
 
 @NgModule({
@@ -70,7 +71,8 @@ import { MatSelectModule } from '@angular/material/select';
     MatDatepickerModule,
     MatNativeDateModule,
     BrowserAnimationsModule,
-    MatSelectModule
+    MatSelectModule,
+    MatListModule
   ],
   exports: [
     NavbarComponent,
@@ -102,7 +104,8 @@ import { MatSelectModule } from '@angular/material/select';
     MatDatepickerModule,
     MatNativeDateModule,
     BrowserAnimationsModule,
-    MatSelectModule
+    MatSelectModule,
+    MatListModule
   ],
   providers: [
       { provide: MAT_DATE_LOCALE, useValue: 'es-AR' } 

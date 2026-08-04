@@ -1,6 +1,11 @@
-<div class="product-item bg-light mb-4">
+<div class="product-item bg-light mb-4" [class.sin-stock]="!tieneStockDisponible()">
     <!-- 🖼 Imagen principal -->
     <div class="product-img position-relative overflow-hidden">
+        <div
+            class="stock-ribbon"
+            *ngIf="!tieneStockDisponible()">
+            SIN STOCK
+        </div>
         <img class="img-fluid w-100" [src]="
         selectedVariante?.imagen ||
         producto.imagen ||
@@ -9,18 +14,28 @@
 
 <div class="product-action">
   <!-- Mostrar botón de carrito solo si no tiene variantes -->
-  <a *ngIf="producto.tipoVariantes === 'none'; else carritoDeshabilitado"
-     (click)="agregarCarrito(producto)"
-     title="Agregar al carrito">
-    <i class="fa fa-shopping-cart"></i>
-  </a>
+    <a
+        *ngIf="producto.tipoVariantes === 'none' && !sinStock;
+            else carritoDeshabilitado"
+        (click)="agregarCarrito(producto)"
+        title="Agregar al carrito">
+
+        <i class="fa fa-shopping-cart"></i>
+
+    </a>
 
   <!-- Template para carrito deshabilitado (mismo ícono pero gris y con tooltip) -->
-  <ng-template #carritoDeshabilitado>
-    <a class="disabled" title="Producto con variantes. Abrí el detalle para seleccionar la variante">
-      <i class="fa fa-shopping-cart"></i>
-    </a>
-  </ng-template>
+    <ng-template #carritoDeshabilitado>
+        <a
+            class="disabled"
+            [title]="
+                sinStock
+                ? 'Producto sin stock'
+                : 'Producto con variantes. Abrí el detalle para seleccionar la variante'
+            ">
+            <i class="fa fa-shopping-cart"></i>
+        </a>
+    </ng-template>
 
   <!-- Lupa / Ver detalle (si tiene variantes mostramos tooltip que lo indique) -->
   <a (click)="verDetalle(producto)"
@@ -35,7 +50,7 @@
     <!-- 🧾 Info del producto -->
     <div class="text-center py-4">
         <!-- Descripción -->
-        <a class="h6 text-decoration-none text-truncate" href="">
+        <a (click)="verDetalle(producto)" class="h6 text-decoration-none text-truncate">
             {{ producto.descripcion }}
         </a>
 

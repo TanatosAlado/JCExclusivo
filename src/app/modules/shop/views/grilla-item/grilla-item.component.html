@@ -1,4 +1,4 @@
-<div class="container mt-4">
+<div class="container-fluid mt-4">
 
     <!-- ========================= -->
     <!-- BUSCADOR -->
@@ -8,14 +8,15 @@
 
         <div class="col-lg-7 col-md-9">
 
-            <div class="card shadow-sm border-0 p-3">
+            <div class="search-wrapper">
+
+                <i class="bi bi-search"></i>
 
                 <input
-                    type="text"
                     class="form-control form-control-lg"
-                    placeholder="🔍 Buscar productos..."
+                    placeholder="Buscar por nombre, marca o modelo..."
                     [(ngModel)]="filtroNombre"
-                    (input)="filtrarProductos()" />
+                    (input)="filtrarProductos()">
 
             </div>
 
@@ -28,159 +29,163 @@
     <!-- CONTENIDO -->
     <!-- ========================= -->
 
-    <div class="row">
+    <div class="catalogo">
 
-        <!-- ========================================= -->
-        <!-- FILTROS -->
-        <!-- ========================================= -->
+        <div class="row">
 
-        <div class="col-lg-3 mb-4">
+            <!-- ========================================= -->
+            <!-- FILTROS -->
+            <!-- ========================================= -->
 
-            <div class="card shadow-sm border-0 filtros-card">
+            <div class="col-lg-3 col-xl-2 mb-4">
 
-                <div class="card-body">
+                <div class="card shadow-sm border-0 filtros-card">
 
-                    <h5 class="mb-4">
-                        ⚙️ Filtros
-                    </h5>
+                    <div class="card-body">
 
-                    <!-- Rubro -->
+                        <h5 class="mb-4">
+                            ⚙️ Filtros
+                        </h5>
 
-                    <div class="mb-3">
+                        <!-- Rubro -->
 
-                        <label class="form-label">
-                            Rubro
-                        </label>
+                        <div class="mb-3">
 
-                        <select
-                            class="form-select"
-                            [(ngModel)]="filtroRubro"
-                            (change)="filtrarProductos()">
+                            <label class="form-label">
+                                Rubro
+                            </label>
 
-                            <option value="">
-                                Todos los rubros
-                            </option>
+                            <select
+                                class="form-select"
+                                [(ngModel)]="filtroRubro"
+                                (change)="filtrarProductos()">
 
-                            <option
-                                *ngFor="let rubro of rubros"
-                                [value]="rubro">
+                                <option value="">
+                                    Todos los rubros
+                                </option>
 
-                                {{ rubro }}
+                                <option
+                                    *ngFor="let rubro of rubros"
+                                    [value]="rubro">
 
-                            </option>
+                                    {{ rubro }}
 
-                        </select>
+                                </option>
 
-                    </div>
+                            </select>
 
-                    <!-- Subrubro -->
+                        </div>
 
-                    <div class="mb-3">
+                        <!-- Subrubro -->
 
-                        <label class="form-label">
-                            Subrubro
-                        </label>
+                        <div class="mb-3">
 
-                        <select
-                            class="form-select"
-                            [(ngModel)]="filtroSubrubro"
-                            (change)="filtrarProductos()"
-                            [disabled]="!filtroRubro">
+                            <label class="form-label">
+                                Subrubro
+                            </label>
 
-                            <option value="">
-                                Todos los subrubros
-                            </option>
+                            <select
+                                class="form-select"
+                                [(ngModel)]="filtroSubrubro"
+                                (change)="filtrarProductos()"
+                                [disabled]="!filtroRubro">
 
-                            <option
-                                *ngFor="let sub of subrubros"
-                                [value]="sub">
+                                <option value="">
+                                    Todos los subrubros
+                                </option>
 
-                                {{ sub }}
+                                <option
+                                    *ngFor="let sub of subrubros"
+                                    [value]="sub">
 
-                            </option>
+                                    {{ sub }}
 
-                        </select>
+                                </option>
 
-                    </div>
+                            </select>
 
-                    <!-- Marca -->
+                        </div>
 
-                    <div class="mb-3">
+                        <!-- Marca -->
 
-                        <label class="form-label">
-                            Marca
-                        </label>
+                        <div class="mb-3">
 
-                        <select
-                            class="form-select"
-                            [(ngModel)]="filtroMarca"
-                            (change)="filtrarProductos()">
+                            <label class="form-label">
+                                Marca
+                            </label>
 
-                            <option value="">
-                                Todas las marcas
-                            </option>
+                            <select
+                                class="form-select"
+                                [(ngModel)]="filtroMarca"
+                                (change)="filtrarProductos()">
 
-                            <option
-                                *ngFor="let marca of marcas"
-                                [value]="marca">
+                                <option value="">
+                                    Todas las marcas
+                                </option>
 
-                                {{ marca }}
+                                <option
+                                    *ngFor="let marca of marcas"
+                                    [value]="marca">
 
-                            </option>
+                                    {{ marca }}
 
-                        </select>
+                                </option>
 
-                    </div>
+                            </select>
 
-                    <!-- Precio mínimo -->
+                        </div>
 
-                    <div class="mb-3">
+                        <!-- Precio mínimo -->
 
-                        <label class="form-label">
-                            Precio mínimo
-                        </label>
+                        <div class="mb-3">
 
-                        <input
-                            type="number"
-                            class="form-control"
-                            placeholder="$ Min"
-                            [(ngModel)]="precioMin"
-                            (input)="filtrarProductos()" />
+                            <label class="form-label">
+                                Precio mínimo
+                            </label>
 
-                    </div>
+                            <input
+                                type="number"
+                                class="form-control"
+                                placeholder="$ Min"
+                                [(ngModel)]="precioMin"
+                                (input)="filtrarProductos()" />
 
-                    <!-- Precio máximo -->
+                        </div>
 
-                    <div class="mb-4">
+                        <!-- Precio máximo -->
 
-                        <label class="form-label">
-                            Precio máximo
-                        </label>
+                        <div class="mb-4">
 
-                        <input
-                            type="number"
-                            class="form-control"
-                            placeholder="$ Máx"
-                            [(ngModel)]="precioMax"
-                            (input)="filtrarProductos()" />
+                            <label class="form-label">
+                                Precio máximo
+                            </label>
 
-                    </div>
+                            <input
+                                type="number"
+                                class="form-control"
+                                placeholder="$ Máx"
+                                [(ngModel)]="precioMax"
+                                (input)="filtrarProductos()" />
 
-                    <!-- Destacados -->
+                        </div>
 
-                    <div class="form-check">
+                        <!-- Destacados -->
 
-                        <input
-                            class="form-check-input"
-                            type="checkbox"
-                            [(ngModel)]="soloDestacados"
-                            (change)="filtrarProductos()">
+                        <div class="form-check">
 
-                        <label class="form-check-label">
+                            <input
+                                class="form-check-input"
+                                type="checkbox"
+                                [(ngModel)]="soloDestacados"
+                                (change)="filtrarProductos()">
 
-                            ★ Solo destacados
+                            <label class="form-check-label">
 
-                        </label>
+                                ★ Solo destacados
+
+                            </label>
+
+                        </div>
 
                     </div>
 
@@ -188,37 +193,50 @@
 
             </div>
 
-        </div>
 
+            <!-- ========================================= -->
+            <!-- PRODUCTOS -->
+            <!-- ========================================= -->
 
-        <!-- ========================================= -->
-        <!-- PRODUCTOS -->
-        <!-- ========================================= -->
+            <div class="col-lg-9 col-xl-10 ps-lg-4">
 
-        <div class="col-lg-9">
+                <div class="productos-container">
+                    <div class="productos-header">
+                        <h5>
+                            Productos
+                        </h5>
 
-            <div class="row">
+                        <span>
+                            {{ productosFiltrados.length }}
+                            productos encontrados
+                        </span>
+                    </div>
+                </div>
 
-                <div
-                    class="col-6 col-sm-6 col-md-4 col-xl-3 col-5-per-row mb-4"
-                    *ngFor="let producto of productosPaginados">
+                <div class="row productos-container">
 
-                    <app-item
-                        [producto]="producto"
-                        [esMayorista]="esMayorista"
-                        [estadoGrilla]="{
-                            filtroNombre: filtroNombre,
-                            filtroRubro: filtroRubro,
-                            filtroSubrubro: filtroSubrubro,
-                            filtroMarca: filtroMarca,
-                            precioMin: precioMin,
-                            precioMax: precioMax,
-                            soloDestacados: soloDestacados,
-                            paginaActual: paginaActual,
-                            scrollY: $any(window).scrollY
-                        }">
+                    <div
+                        class="col-6 col-sm-6 col-md-4 col-xl-3 col-5-per-row mb-4"
+                        *ngFor="let producto of productosPaginados">
 
-                    </app-item>
+                        <app-item
+                            [producto]="producto"
+                            [esMayorista]="esMayorista"
+                            [estadoGrilla]="{
+                                filtroNombre: filtroNombre,
+                                filtroRubro: filtroRubro,
+                                filtroSubrubro: filtroSubrubro,
+                                filtroMarca: filtroMarca,
+                                precioMin: precioMin,
+                                precioMax: precioMax,
+                                soloDestacados: soloDestacados,
+                                paginaActual: paginaActual,
+                                scrollY: $any(window).scrollY
+                            }">
+
+                        </app-item>
+
+                    </div>
 
                 </div>
 
@@ -227,6 +245,7 @@
         </div>
 
     </div>
+
 
 
     <!-- ========================= -->

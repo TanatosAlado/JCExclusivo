@@ -52,7 +52,22 @@ export class GrillaItemComponent {
 
       this.productosService.obtenerProductosAgrupados().subscribe(productos => {
 
+console.table(
+  productos.map(p => ({
+    descripcion: p.descripcion,
+    tipoVariantes: p.tipoVariantes,
+    variantes: p.variantes?.length ?? 0,
+    stockTotal: p.stockTotal,
+    stockMayorista: p.stockMayorista,
+    stockSucursales: p.stockSucursales
+  }))
+);
+
         this.productosOriginal = productos;
+        console.log('TOTAL RECIBIDOS:', this.productosOriginal.length);
+
+        console.log('PRODUCTO MALLA:', this.productosOriginal.find(p => p.descripcion.includes('MALLA')));
+        
 
         this.rubros = [...new Set(productos.map(p => p.rubro))];
         this.marcas = [...new Set(productos.map(p => p.marca))];
@@ -71,6 +86,8 @@ export class GrillaItemComponent {
         }
 
         this.filtrarProductos(false);
+        console.log('TOTAL FILTRADOS:', this.productosFiltrados.length);
+        console.log('TOTAL PAGINADOS:', this.productosPaginados.length);
 
         // 🔥 restaurar scroll
         setTimeout(() => {
