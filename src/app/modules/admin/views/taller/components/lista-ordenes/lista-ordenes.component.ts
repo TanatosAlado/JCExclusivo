@@ -31,6 +31,7 @@ export class ListaOrdenesComponent {
   @ViewChild('paginatorOrdenesFinalizados') paginatorOrdenesFinalizadas!: MatPaginator;
   @ViewChild('paginatorOrdenesEliminados') paginatorOrdenesEliminadas!: MatPaginator;
   displayedColumns: string[] = ['numeroOrden', 'cliente', 'imei', 'equipo', 'estado', 'fechaIngreso', 'acciones'];
+  displayedColumnsFinalizadas: string[] = [ 'numeroOrden', 'cliente', 'imei', 'equipo', 'fechaIngreso', 'fechaEntrega', 'garantia', 'acciones' ];
 
   constructor(private dialog: MatDialog, private ordenesService: OrdenesService,private cdRef: ChangeDetectorRef, private toastService:ToastService) { 
 
@@ -67,8 +68,8 @@ export class ListaOrdenesComponent {
     if (this.datasourceOrdenesFinalizadas&& this.activeTab===2) {
       this.datasourceOrdenesFinalizadas.paginator = this.paginator;
     }
-     if (this.datasourceOrdenesFinalizadas&& this.activeTab===3) {
-      this.datasourceOrdenesFinalizadas.paginator = this.paginator;
+    if (this.datasourceOrdenesEliminadas && this.activeTab === 3) {
+        this.datasourceOrdenesEliminadas.paginator = this.paginator;
     }
   }
 
@@ -81,9 +82,13 @@ export class ListaOrdenesComponent {
     });
 
     this.ordenesService.getOrdenPorTipo('Ordenes Finalizadas').subscribe(data => {
-      this.ordenesFinalizadas = data.sort((a, b) => b.numeroOrden - a.numeroOrden);
+      this.ordenesFinalizadas = data.sort((a: any, b: any) => {
+        const fechaA = a.fechaEntrega?.seconds ?? 0;
+        const fechaB = b.fechaEntrega?.seconds ?? 0;
+        return fechaB - fechaA;
+      });
       this.datasourceOrdenesFinalizadas = new MatTableDataSource(this.ordenesFinalizadas);
-      this.datasourceOrdenesPendientes.paginator = this.paginatorOrdenesFinalizadas;
+      this.datasourceOrdenesFinalizadas.paginator = this.paginatorOrdenesFinalizadas;
       this.cdRef.detectChanges();
     });
 
@@ -156,22 +161,46 @@ abrirModalAltaOrden(): void {
     // abrir confirmación y eliminar
   }
 
-    moverDocumento(id: string, origen: string, destino: string) {
+  actualizarPaginadores(): void {
+    if (this.datasourceOrdenesPendientes) {
+      this.datasourceOrdenesPendientes.paginator = this.paginatorOrdenesPendientes;
+    }
+    if (this.datasourceOrdenesFinalizadas) {
+      this.datasourceOrdenesFinalizadas.paginator = this.paginatorOrdenesFinalizadas;
+    }
+    if (this.datasourceOrdenesEliminadas) {
+      this.datasourceOrdenesEliminadas.paginator = this.paginatorOrdenesEliminadas;
+    }
+  }
+
+  moverDocumento(id: string, origen: string, destino: string) {
     this.ordenesService.moverDocumento(id, origen, destino)
-      .then(() => {
-        if ((origen == 'Ordenes Pendientes') && (destino == 'Ordenes Finalizadas')) {
-          this.toastService.toastMessage('Orden finalizada con éxito', 'green', 2000);
-        } else if ((origen == 'Ordenes Pendientes') && (destino == 'Ordenes Eliminadas')) {
-          this.toastService.toastMessage('Orden eliminada con éxito', 'green', 2000);
-        } else if ((origen == 'Ordenes Finalizadas') && (destino == 'Ordenes Pendientes')) {
-          this.toastService.toastMessage('Orden regresada a pendientes con éxito', 'green', 2000);
-        } else if ((origen == 'Orden Finalizadas') && (destino == 'Ordenes Eliminadas')) {
-          this.toastService.toastMessage('Orden eliminado con éxito', 'green', 2000);
-        } else if ((origen == 'Ordenes Eliminadas') && (destino == 'Ordenes Pendientes')) {
-          this.toastService.toastMessage('Orden regresado a pendientes con éxito', 'green', 2000);
-        }
-        //this.getPedidos();
-      })
+    .then(() => {
+      this.toastService.toastMessage(
+        'Orden actualizada correctamente',
+        'green',
+        2000
+      );
+
+      setTimeout(() => {
+        this.setDataSourceAttributes();
+      });
+      // this.cdRef.detectChanges();
+      // this.actualizarPaginadores();
+    });
+      // .then(() => {
+      //   if ((origen == 'Ordenes Pendientes') && (destino == 'Ordenes Finalizadas')) {
+      //     this.toastService.toastMessage('Orden finalizada con éxito', 'green', 2000);
+      //   } else if ((origen == 'Ordenes Pendientes') && (destino == 'Ordenes Eliminadas')) {
+      //     this.toastService.toastMessage('Orden eliminada con éxito', 'green', 2000);
+      //   } else if ((origen == 'Ordenes Finalizadas') && (destino == 'Ordenes Pendientes')) {
+      //     this.toastService.toastMessage('Orden regresada a pendientes con éxito', 'green', 2000);
+      //   } else if ((origen == 'Orden Finalizadas') && (destino == 'Ordenes Eliminadas')) {
+      //     this.toastService.toastMessage('Orden eliminado con éxito', 'green', 2000);
+      //   } else if ((origen == 'Ordenes Eliminadas') && (destino == 'Ordenes Pendientes')) {
+      //     this.toastService.toastMessage('Orden regresado a pendientes con éxito', 'green', 2000);
+      //   }
+      // })
   }
 
   openConfirmDialog(id: string, tabla: string) {
@@ -183,6 +212,64 @@ abrirModalAltaOrden(): void {
       }
     });
   }
+
+  obtenerEstadoGarantia(orden: Orden): string {
+
+    // No posee garantía
+    if (!orden.garantia) {
+      return 'Sin garantía';
+    }
+
+    // Si falta información asumimos que la garantía venció
+    if (!orden.fechaEntrega || !orden.diasGarantia) {
+      return 'Garantía vencida';
+    }
+
+    const fechaEntrega = new Date(
+      (orden.fechaEntrega as any).seconds * 1000
+    );
+
+    const fechaVencimiento = new Date(fechaEntrega);
+
+    fechaVencimiento.setDate(
+      fechaVencimiento.getDate() + orden.diasGarantia
+    );
+
+    const hoy = new Date();
+
+    return hoy <= fechaVencimiento
+      ? 'En garantía'
+      : 'Garantía vencida';
+  }
+
+  obtenerClaseGarantia(orden: Orden): string {
+
+    if (!orden.garantia) {
+      return 'sin-garantia';
+    }
+
+    if (!orden.fechaEntrega || !orden.diasGarantia) {
+      return 'garantia-vencida';
+    }
+
+    const fechaEntrega = new Date(
+      (orden.fechaEntrega as any).seconds * 1000
+    );
+
+    const fechaVencimiento = new Date(fechaEntrega);
+
+    fechaVencimiento.setDate(
+      fechaVencimiento.getDate() + orden.diasGarantia
+    );
+
+    const hoy = new Date();
+
+    return hoy <= fechaVencimiento
+      ? 'en-garantia'
+      : 'garantia-vencida';
+  }
+
+
 }
 
 

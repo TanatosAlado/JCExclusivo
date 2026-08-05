@@ -122,8 +122,28 @@ export class ItemComponent implements OnInit {
     }, 0);
   }
 
+  get stockDisponible(): number {
+    if (this.esMayorista) {
+      return this.producto.stockMayorista ?? 0;
+    }
+    return this.getStockTotal(this.producto);
+  }
+
+  get sinStock(): boolean {
+    return this.stockDisponible <= 0;
+  }
+
   // Agregar al carrito (igual que ya tenías)
   agregarCarrito(producto: Producto) {
+    if (this.sinStock) {
+      this.toastService.toastMessage(
+        'El producto no tiene stock disponible.',
+        'orange',
+        2500
+      );
+      return;
+    }
+
     if (producto.tipoVariantes && producto.tipoVariantes !== 'none') {
       console.warn('Intento de agregar al carrito un producto con variantes. Redirigir a detalle en su lugar.');
       // opcional: podés mostrar un toast informando al usuario
@@ -187,15 +207,6 @@ export class ItemComponent implements OnInit {
     );
   }
 
-  // getPrecioMayoristaPesos(): number {
-  //   const precioUsd =
-  //     this.selectedVariante?.precioMayorista ??
-  //     this.producto.precioMayorista ??
-  //     0;
-
-  //   return precioUsd * this.dolar;
-  // }
-
   getPrecioMayoristaPesos(): number {
 
     const precio =
@@ -211,5 +222,22 @@ export class ItemComponent implements OnInit {
     return precio;
   }
 
+tieneStockDisponible(): boolean {
+
+    if (this.producto.tipoVariantes === 'none') {
+
+        return this.esMayorista
+            ? (this.producto.stockMayorista ?? 0) > 0
+            : (this.producto.stockTotal ?? 0) > 0;
+
+    }
+
+    return (this.producto.variantes || []).some(v =>
+        this.esMayorista
+            ? (v.stockMayorista ?? 0) > 0
+            : (v.stockTotal ?? 0) > 0
+    );
+
+}
 
 }

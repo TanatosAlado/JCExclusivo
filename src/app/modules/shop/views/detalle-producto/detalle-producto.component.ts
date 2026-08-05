@@ -194,11 +194,6 @@ seleccionarVariante(variante: VarianteProducto) {
   if (totalStock === 0) {
     this.cantidad = 1;
   }
-
-  // Actualizamos datos dinámicamente
-  // this.producto.imagen = variante.imagen || this.producto.imagen;
-  // this.producto.precioMinorista = variante.precioMinorista || this.producto.precioMinorista;
-  // this.producto.precioMayorista = variante.precioMayorista || this.producto.precioMayorista;
 }
 
 
@@ -273,7 +268,6 @@ volverATienda() {
     }
   );
   
-  //this.router.navigate(['/inicio']);   // 👉 Ajustá la ruta si tu tienda tiene otro path
 }
 
 puedeAgregar(): boolean {
@@ -297,18 +291,6 @@ puedeAgregar(): boolean {
   return true;
 }
 
-
-// get precioVisible(): number {
-//   if (this.selectedVariante) {
-//     return this.esMayorista
-//       ? this.selectedVariante.precioMayorista
-//       : this.selectedVariante.precioMinorista;
-//   }
-
-//   return this.esMayorista
-//     ? this.producto.precioMayorista
-//     : this.producto.precioMinorista;
-// }
 
   get precioVisible(): number {
 

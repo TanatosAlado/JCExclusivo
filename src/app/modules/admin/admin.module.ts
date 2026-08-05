@@ -30,6 +30,7 @@ import { SucursalesComponent } from './views/sucursales/sucursales.component';
 import { ListaSucursalesComponent } from './views/sucursales/components/lista-sucursales/lista-sucursales.component';
 import { AltaSucursalComponent } from './views/sucursales/components/alta-sucursal/alta-sucursal.component';
 import { DetalleSucursalComponent } from './views/sucursales/components/detalle-sucursal/detalle-sucursal.component';
+import { IngresoStockComponent } from './views/productos/components/ingreso-stock/ingreso-stock.component';
 import { MarquesinaComponent } from './views/marquesina/marquesina.component';
 import { AltaMarquesinaComponent } from './views/marquesina/components/alta-marquesina/alta-marquesina.component';
 import { EditarMarquesinaComponent } from './views/marquesina/components/editar-marquesina/editar-marquesina.component';
@@ -68,6 +69,7 @@ import { MatRadioModule } from '@angular/material/radio';
     ListaSucursalesComponent,
     AltaSucursalComponent,
     DetalleSucursalComponent,
+    IngresoStockComponent,
     MarquesinaComponent,
     AltaMarquesinaComponent,
     EditarMarquesinaComponent,

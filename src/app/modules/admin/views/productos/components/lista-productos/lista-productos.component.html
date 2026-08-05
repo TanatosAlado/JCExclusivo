@@ -8,8 +8,21 @@
         Nuevo
       </button>
 
+  <button
+    mat-raised-button
+    color="accent"
+    (click)="abrirIngresoStock()">
+
+    <mat-icon>inventory_2</mat-icon>
+    Ingreso Stock
+
+  </button>
+
+
       <!-- Input file oculto -->
       <input #fileInput type="file" (change)="onFileChange($event)" accept=".xlsx, .xls" hidden />
+
+
 
       <!-- Botón para disparar el input -->
       <!-- <button mat-raised-button color="primary" (click)="fileInput.click()">

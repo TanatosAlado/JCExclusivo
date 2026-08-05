@@ -6,6 +6,7 @@ import { CarritoService } from './carrito.service';
 import { doc, Firestore, getDoc } from '@angular/fire/firestore';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { Producto } from 'src/app/modules/shop/models/producto.model';
+import { InfoEmpresaService } from './info-empresa.service';
 
 @Injectable({
   providedIn: 'root'
@@ -13,10 +14,20 @@ import { Producto } from 'src/app/modules/shop/models/producto.model';
 export class GeneralService {
 
   private clienteSubject = new BehaviorSubject<Cliente | null>(null);
+  dolar: number = 1;
 
-  constructor(private clientesService: ClientesService, private carritoService: CarritoService, private firestore: Firestore) {
+  constructor(private clientesService: ClientesService, private carritoService: CarritoService, private firestore: Firestore, private infoEmpresaService: InfoEmpresaService) {
     this.inicializarClienteDesdeStorage();
   }
+
+    async ngOnInit() {
+      this.getCliente()
+      this.infoEmpresaService.obtenerInfoGeneral().subscribe(info => {
+        if (info?.dolar) {
+          this.dolar = info.dolar;
+        }
+      });
+    }
 
   private async inicializarClienteDesdeStorage() {
     const clienteId = localStorage.getItem('cliente');
@@ -92,11 +103,51 @@ export class GeneralService {
   }
 
   //FUNCION PARA OBTENER LA CANTIDAD TOTAL A PAGAR DEL CARRITO DEL CLIENTE
-  getTotalPrecio(cliente: any, usarPuntos: boolean = false, valorMonetarioPorPunto: number = 50, cuponAplicado: any = null): number {
-    let total = cliente.carrito.reduce(
-      (sum: number, prod: any) => sum + (prod.precioFinal * prod.cantidad),
-      0
-    );
+  // getTotalPrecio(cliente: any, usarPuntos: boolean = false, valorMonetarioPorPunto: number = 50, cuponAplicado: any = null): number {
+  //   let total = cliente.carrito.reduce(
+  //     (sum: number, prod: any) => sum + (prod.precioFinal * prod.cantidad),
+  //     0
+  //   );
+
+  //   // Aplicar cupón si está disponible
+  //   if (cuponAplicado && cuponAplicado.activo) {
+  //     if (cuponAplicado.tipo === 'porcentaje') {
+  //       const descuento = (cuponAplicado.valor / 100) * total;
+  //       total -= descuento;
+  //     } else if (cuponAplicado.tipo === 'monto') {
+  //       total -= cuponAplicado.valor;
+  //     }
+
+  //     // Asegurarse de que el total no sea negativo
+  //     total = Math.max(total, 0);
+  //   }
+
+  //   // Aplicar puntos si corresponde
+  //   if (usarPuntos && cliente.puntos > 0) {
+  //     const maxPuntosPorMonto = Math.floor(total / valorMonetarioPorPunto);
+  //     const puntosUsables = Math.min(cliente.puntos, maxPuntosPorMonto);
+  //     const descuento = puntosUsables * valorMonetarioPorPunto;
+  //     total = Math.max(total - descuento, 0);
+  //   }
+
+  //   return total;
+  // }
+
+  getTotalPrecio(
+    cliente: any,
+    usarPuntos: boolean = false,
+    valorMonetarioPorPunto: number = 50,
+    cuponAplicado: any = null
+  ): number {
+    let total = (cliente.carrito || []).reduce((sum: number, prod: any) => {
+      let precio = Number(prod.precioFinal) || 0;
+
+      if (prod.moneda === 'USD') {
+        precio *= this.dolar;
+      }
+      const cantidad = Number(prod.cantidad) || 0;
+      return sum + (precio * cantidad);
+    }, 0);
 
     // Aplicar cupón si está disponible
     if (cuponAplicado && cuponAplicado.activo) {
@@ -106,8 +157,6 @@ export class GeneralService {
       } else if (cuponAplicado.tipo === 'monto') {
         total -= cuponAplicado.valor;
       }
-
-      // Asegurarse de que el total no sea negativo
       total = Math.max(total, 0);
     }
 
@@ -118,7 +167,6 @@ export class GeneralService {
       const descuento = puntosUsables * valorMonetarioPorPunto;
       total = Math.max(total - descuento, 0);
     }
-
     return total;
   }
 

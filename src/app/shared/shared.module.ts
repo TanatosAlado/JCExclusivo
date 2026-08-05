@@ -32,6 +32,7 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { MAT_DATE_LOCALE } from '@angular/material/core';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { MatSelectModule } from '@angular/material/select';
+import { MatListModule } from '@angular/material/list';
 import { EstiloMarquesinaComponent } from './components/estilo-marquesina/estilo-marquesina.component';
 
 
@@ -75,6 +76,7 @@ import { EstiloMarquesinaComponent } from './components/estilo-marquesina/estilo
     MatNativeDateModule,
     BrowserAnimationsModule,
     MatSelectModule,
+    MatListModule,
     
    
     
@@ -110,6 +112,7 @@ import { EstiloMarquesinaComponent } from './components/estilo-marquesina/estilo
     MatNativeDateModule,
     BrowserAnimationsModule,
     MatSelectModule,
+    MatListModule,
     EstiloMarquesinaComponent
     
  ],

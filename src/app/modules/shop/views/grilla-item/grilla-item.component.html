@@ -1,113 +1,319 @@
-<div class="container mt-4">
+<div class="container-fluid mt-4">
 
-    <!-- Filtros arriba -->
-    <div class="card p-3 mb-4 shadow-sm filter-bar">
-        <div class="row g-3 align-items-end">
+    <!-- ========================= -->
+    <!-- BUSCADOR -->
+    <!-- ========================= -->
 
-            <!-- Buscar por nombre -->
-            <div class="col-md-2">
-                <input type="text" class="form-control" placeholder="Buscar por nombre" [(ngModel)]="filtroNombre"
-                    (input)="filtrarProductos()" />
+    <div class="row justify-content-center mb-4">
+
+        <div class="col-lg-7 col-md-9">
+
+            <div class="search-wrapper">
+
+                <i class="bi bi-search"></i>
+
+                <input
+                    class="form-control form-control-lg"
+                    placeholder="Buscar por nombre, marca o modelo..."
+                    [(ngModel)]="filtroNombre"
+                    (input)="filtrarProductos()">
+
             </div>
 
-            <!-- Filtro rubro -->
-            <div class="col-md-2">
-                <select class="form-select" [(ngModel)]="filtroRubro" (change)="filtrarProductos()">
-                    <option value="">Todos los rubros</option>
-                    <option *ngFor="let rubro of rubros" [value]="rubro">{{ rubro }}</option>
-                </select>
-            </div>
+        </div>
 
-            <!-- Filtro subrubro -->
-            <div class="col-md-2">
-                <select class="form-select" [(ngModel)]="filtroSubrubro" (change)="filtrarProductos()"
-                    [disabled]="!filtroRubro">
-                    <option value="">Todos los subrubros</option>
-                    <option *ngFor="let sub of subrubros" [value]="sub">{{ sub }}</option>
-                </select>
-            </div>
+    </div>
 
-            <!-- Filtro marca -->
-            <div class="col-md-2">
-                <select class="form-select" [(ngModel)]="filtroMarca" (change)="filtrarProductos()">
-                    <option value="">Todas las marcas</option>
-                    <option *ngFor="let marca of marcas" [value]="marca">{{ marca }}</option>
-                </select>
-            </div>
 
-            <!-- Precio mínimo -->
-            <div class="col-md-1">
-                <input type="number" class="form-control" placeholder="$ Min" [(ngModel)]="precioMin"
-                    (input)="filtrarProductos()" />
-            </div>
+    <!-- ========================= -->
+    <!-- CONTENIDO -->
+    <!-- ========================= -->
 
-            <!-- Precio máximo -->
-            <div class="col-md-1">
-                <input type="number" class="form-control" placeholder="$ Máx" [(ngModel)]="precioMax"
-                    (input)="filtrarProductos()" />
-            </div>
+    <div class="catalogo">
 
-            <!-- Solo destacados -->
-            <div class="col-md-2 d-flex justify-content-center align-items-center">
-                <div class="form-check d-flex align-items-center">
-                    <input class="form-check-input me-2" type="checkbox" [(ngModel)]="soloDestacados"
-                        (change)="filtrarProductos()" />
-                    <label class="form-check-label" title="Mostrar solo productos destacados">★ Destacado</label>
+        <div class="row">
+
+            <!-- ========================================= -->
+            <!-- FILTROS -->
+            <!-- ========================================= -->
+
+            <div class="col-lg-3 col-xl-2 mb-4">
+
+                <div class="card shadow-sm border-0 filtros-card">
+
+                    <div class="card-body">
+
+                        <h5 class="mb-4">
+                            ⚙️ Filtros
+                        </h5>
+
+                        <!-- Rubro -->
+
+                        <div class="mb-3">
+
+                            <label class="form-label">
+                                Rubro
+                            </label>
+
+                            <select
+                                class="form-select"
+                                [(ngModel)]="filtroRubro"
+                                (change)="filtrarProductos()">
+
+                                <option value="">
+                                    Todos los rubros
+                                </option>
+
+                                <option
+                                    *ngFor="let rubro of rubros"
+                                    [value]="rubro">
+
+                                    {{ rubro }}
+
+                                </option>
+
+                            </select>
+
+                        </div>
+
+                        <!-- Subrubro -->
+
+                        <div class="mb-3">
+
+                            <label class="form-label">
+                                Subrubro
+                            </label>
+
+                            <select
+                                class="form-select"
+                                [(ngModel)]="filtroSubrubro"
+                                (change)="filtrarProductos()"
+                                [disabled]="!filtroRubro">
+
+                                <option value="">
+                                    Todos los subrubros
+                                </option>
+
+                                <option
+                                    *ngFor="let sub of subrubros"
+                                    [value]="sub">
+
+                                    {{ sub }}
+
+                                </option>
+
+                            </select>
+
+                        </div>
+
+                        <!-- Marca -->
+
+                        <div class="mb-3">
+
+                            <label class="form-label">
+                                Marca
+                            </label>
+
+                            <select
+                                class="form-select"
+                                [(ngModel)]="filtroMarca"
+                                (change)="filtrarProductos()">
+
+                                <option value="">
+                                    Todas las marcas
+                                </option>
+
+                                <option
+                                    *ngFor="let marca of marcas"
+                                    [value]="marca">
+
+                                    {{ marca }}
+
+                                </option>
+
+                            </select>
+
+                        </div>
+
+                        <!-- Precio mínimo -->
+
+                        <div class="mb-3">
+
+                            <label class="form-label">
+                                Precio mínimo
+                            </label>
+
+                            <input
+                                type="number"
+                                class="form-control"
+                                placeholder="$ Min"
+                                [(ngModel)]="precioMin"
+                                (input)="filtrarProductos()" />
+
+                        </div>
+
+                        <!-- Precio máximo -->
+
+                        <div class="mb-4">
+
+                            <label class="form-label">
+                                Precio máximo
+                            </label>
+
+                            <input
+                                type="number"
+                                class="form-control"
+                                placeholder="$ Máx"
+                                [(ngModel)]="precioMax"
+                                (input)="filtrarProductos()" />
+
+                        </div>
+
+                        <!-- Destacados -->
+
+                        <div class="form-check">
+
+                            <input
+                                class="form-check-input"
+                                type="checkbox"
+                                [(ngModel)]="soloDestacados"
+                                (change)="filtrarProductos()">
+
+                            <label class="form-check-label">
+
+                                ★ Solo destacados
+
+                            </label>
+
+                        </div>
+
+                    </div>
+
                 </div>
+
+            </div>
+
+
+            <!-- ========================================= -->
+            <!-- PRODUCTOS -->
+            <!-- ========================================= -->
+
+            <div class="col-lg-9 col-xl-10 ps-lg-4">
+
+                <div class="productos-container">
+                    <div class="productos-header">
+                        <h5>
+                            Productos
+                        </h5>
+
+                        <span>
+                            {{ productosFiltrados.length }}
+                            productos encontrados
+                        </span>
+                    </div>
+                </div>
+
+                <div class="row productos-container">
+
+                    <div
+                        class="col-6 col-sm-6 col-md-4 col-xl-3 col-5-per-row mb-4"
+                        *ngFor="let producto of productosPaginados">
+
+                        <app-item
+                            [producto]="producto"
+                            [esMayorista]="esMayorista"
+                            [estadoGrilla]="{
+                                filtroNombre: filtroNombre,
+                                filtroRubro: filtroRubro,
+                                filtroSubrubro: filtroSubrubro,
+                                filtroMarca: filtroMarca,
+                                precioMin: precioMin,
+                                precioMax: precioMax,
+                                soloDestacados: soloDestacados,
+                                paginaActual: paginaActual,
+                                scrollY: $any(window).scrollY
+                            }">
+
+                        </app-item>
+
+                    </div>
+
+                </div>
+
             </div>
 
         </div>
+
     </div>
 
-    <!-- Grilla de productos -->
-    <div class="row">
-        <div class="col-6 col-sm-4 col-md-3 col-lg-2-4 col-5-per-row mb-4" *ngFor="let producto of productosPaginados">
 
-            <!-- <app-item [producto]="producto" [esMayorista]="esMayorista"></app-item> -->
-            <!-- <app-item [producto]="producto" [esMayorista]="esMayorista" (click)="guardarEstado()"> </app-item> -->
-            <app-item
-  [producto]="producto"
-  [esMayorista]="esMayorista"
-  [estadoGrilla]="{
-    filtroNombre: filtroNombre,
-    filtroRubro: filtroRubro,
-    filtroSubrubro: filtroSubrubro,
-    filtroMarca: filtroMarca,
-    precioMin: precioMin,
-    precioMax: precioMax,
-    soloDestacados: soloDestacados,
-    paginaActual: paginaActual,
-    scrollY: $any(window).scrollY
-  }">
-</app-item>
-        </div>
-    </div>
 
+    <!-- ========================= -->
+    <!-- PAGINADOR -->
+    <!-- ========================= -->
 
     <nav *ngIf="productosFiltrados.length > 0">
 
-
         <ul class="pagination justify-content-center">
-            <li class="page-item" [class.disabled]="paginaActual === 1" (click)="cambiarPagina(paginaActual - 1)">
-                <a class="page-link">Anterior</a>
+
+            <li class="page-item"
+                [class.disabled]="paginaActual === 1"
+                (click)="cambiarPagina(1)">
+
+                <a class="page-link">&laquo;</a>
+
             </li>
 
             <li class="page-item"
-                *ngFor="let pagina of [].constructor(Math.ceil(productosFiltrados.length / itemsPorPagina)); let i = index"
-                [class.active]="paginaActual === i + 1" (click)="cambiarPagina(i + 1)">
-                <a class="page-link">{{ i + 1 }}</a>
+                [class.disabled]="paginaActual === 1"
+                (click)="cambiarPagina(paginaActual - 1)">
+
+                <a class="page-link">
+                    Anterior
+                </a>
+
+            </li>
+
+            <li
+                *ngFor="let pagina of paginas"
+                class="page-item"
+                [class.active]="pagina === paginaActual"
+                [class.disabled]="pagina === '...'">
+
+                <a
+                    class="page-link"
+                    (click)="pagina !== '...' && cambiarPagina(+pagina)">
+
+                    {{ pagina }}
+
+                </a>
+
             </li>
 
             <li class="page-item"
-                [class.disabled]="paginaActual === Math.ceil(productosFiltrados.length / itemsPorPagina)"
+                [class.disabled]="paginaActual === totalPaginas"
                 (click)="cambiarPagina(paginaActual + 1)">
-                <a class="page-link">Siguiente</a>
+
+                <a class="page-link">
+                    Siguiente
+                </a>
+
             </li>
+
+            <li class="page-item"
+                [class.disabled]="paginaActual === totalPaginas"
+                (click)="cambiarPagina(totalPaginas)">
+
+                <a class="page-link">
+                    &raquo;
+                </a>
+
+            </li>
+
         </ul>
+
     </nav>
 
-
 </div>
+
 <app-whatsapp></app-whatsapp>
-
-

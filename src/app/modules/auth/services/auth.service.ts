@@ -3,7 +3,7 @@ import { BehaviorSubject, Observable } from 'rxjs';
 import { RegistroComponent } from '../views/registro/registro.component';
 import { MatDialog } from '@angular/material/dialog';
 import { Cliente } from '../models/cliente.model';
-import { Auth, signInWithEmailAndPassword } from '@angular/fire/auth';
+import { Auth, signInWithEmailAndPassword, sendPasswordResetEmail  } from '@angular/fire/auth';
 import { collection, doc, Firestore, getDoc, getDocs, query, where } from '@angular/fire/firestore';
 import { GeneralService } from 'src/app/shared/services/general.service';
 
@@ -74,6 +74,11 @@ setUsuarioActual(cliente: Cliente): void {
     this.clienteActualSubject.next(null);
     localStorage.removeItem(this.STORAGE_KEY);
     localStorage.removeItem('cliente');
+  }
+
+
+  async recuperarPassword(email: string): Promise<void> {
+    return await sendPasswordResetEmail(this.auth, email);
   }
 
 }

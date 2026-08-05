@@ -174,7 +174,8 @@
               </h6>
               <div class="contenedor-productos"></div>
               <div class="info-precios mt-2">
-                <strong class="precio-final">{{ producto.precioFinal * producto.cantidad | currency }}</strong>
+                <!-- <strong class="precio-final">{{ producto.precioFinal * producto.cantidad | currency }}</strong> -->
+                <strong class="precio-final"> {{ getPrecioProducto(producto) * producto.cantidad | currency:'ARS' }} </strong>
               </div>
             </div>
           </div>
@@ -272,7 +273,8 @@
           <div class="card-body d-flex justify-content-between align-items-center">
             <h5 class="m-0">Total a pagar:</h5>
             <h5 class="m-0 text-primary">
-              {{ generalService.getTotalPrecio(cliente, usarPuntos, valorMonetarioPorPunto, cuponAplicado) | currency }}
+              <!-- {{ generalService.getTotalPrecio(cliente, usarPuntos, valorMonetarioPorPunto, cuponAplicado) | currency }} -->
+              {{ getTotalPrecio(cliente, usarPuntos, valorMonetarioPorPunto, cuponAplicado) | currency }}
             </h5>
           </div>
         </div>

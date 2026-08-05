@@ -172,3 +172,29 @@ color:var(--color-primario)
   color: white;
   font-weight: bold;
 }
+
+.estado-garantia {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+}
+
+.estado-garantia i {
+  font-size: 10px;
+}
+
+
+.en-garantia {
+  color: #2e7d32;
+}
+
+
+.garantia-vencida {
+  color: #c62828;
+}
+
+
+.sin-garantia {
+  color: #757575;
+}
