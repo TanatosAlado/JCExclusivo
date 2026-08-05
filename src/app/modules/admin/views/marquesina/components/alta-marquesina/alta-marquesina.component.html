@@ -1,0 +1,42 @@
+<div class="logo-container">
+  <img src="assets/logo.png" alt="Logo" class="logo-modal">
+</div>
+
+<mat-dialog-content [formGroup]="formAltaMarquesina" class="form-grid">
+  <mat-form-field appearance="outline">
+    <mat-label>Descripción</mat-label>
+    <input matInput formControlName="descripcion">
+    <mat-error *ngIf="formAltaMarquesina.get('descripcion')?.hasError('required')">
+      La descripción es obligatoria
+    </mat-error>
+  </mat-form-field>
+
+  <div class="radio-group-container">
+    <mat-radio-group formControlName="tipoCliente">
+      <mat-radio-button value="Mayorista">
+        Mayorista
+      </mat-radio-button>
+
+      <mat-radio-button value="Minorista">
+        Minorista
+      </mat-radio-button>
+    </mat-radio-group>
+
+    <mat-error *ngIf="formAltaMarquesina.get('tipoCliente')?.hasError('required')">
+      El tipo de cliente es obligatorio
+    </mat-error>
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="center">
+     <button
+    mat-raised-button
+    color="primary"
+    (click)="guardar()"
+    [disabled]="formAltaMarquesina.invalid">
+    Guardar
+  </button>
+  <button mat-button (click)="cancelar()">Cancelar</button>
+ 
+</mat-dialog-actions>
+

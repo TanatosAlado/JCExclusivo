@@ -1,29 +1,24 @@
 <div class="container mt-5">
   <div class="tabla-container">
-<div class="button-container">
+    <div class="button-container">
 
 
-  <!-- Botón Nuevo -->
-  <button mat-raised-button class="boton-nuevo" (click)="abrirModalAltaProducto()">
-    Nuevo
-  </button>
+      <!-- Botón Nuevo -->
+      <button mat-raised-button class="boton-nuevo" (click)="abrirModalAltaProducto()">
+        Nuevo
+      </button>
 
-  <!-- Input file oculto -->
-  <input 
-    #fileInput 
-    type="file" 
-    (change)="onFileChange($event)" 
-    accept=".xlsx, .xls" 
-    hidden
-  />
+      <!-- Input file oculto -->
+      <input #fileInput type="file" (change)="onFileChange($event)" accept=".xlsx, .xls" hidden />
 
-  <!-- Botón para disparar el input -->
-  <!-- <button mat-raised-button color="primary" (click)="fileInput.click()">
+      <!-- Botón para disparar el input -->
+      <!-- <button mat-raised-button color="primary" (click)="fileInput.click()">
     Subir Excel
   </button> -->
-</div>
+    </div>
 
-    <input class="search-input" (keyup)="applyFilter($event,datasourceProductos)" placeholder="Búsqueda Productos" #input>
+    <input class="search-input" (keyup)="applyFilter($event,datasourceProductos)" placeholder="Búsqueda Productos"
+      #input>
 
     <div class="tabla-scroll">
       <table mat-table [dataSource]="datasourceProductos" class="mat-elevation-z8" style="width: 100%;">
@@ -48,10 +43,7 @@
             <!-- Si tiene modelo + color -->
             <ng-container *ngIf="row.tipoVariantes === 'modelo+color'">
               {{ row.modelo }} /
-              <span 
-                class="color-dot"
-                [style.backgroundColor]="row.color"
-                [title]="row.color">
+              <span class="color-dot" [style.backgroundColor]="row.color" [title]="row.color">
               </span>
             </ng-container>
 
@@ -62,10 +54,7 @@
 
             <!-- Si solo tiene color -->
             <ng-container *ngIf="row.tipoVariantes === 'color'">
-              <span 
-                class="color-dot"
-                [style.backgroundColor]="row.color"
-                [title]="row.color">
+              <span class="color-dot" [style.backgroundColor]="row.color" [title]="row.color">
               </span>
             </ng-container>
 
