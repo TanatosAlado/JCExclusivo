@@ -5,6 +5,7 @@ import { Producto } from 'src/app/modules/shop/models/producto.model';
 import { SucursalesService } from 'src/app/modules/admin/services/sucursales.service';
 import { Storage, ref, uploadBytes, getDownloadURL } from '@angular/fire/storage';
 import { Auth } from '@angular/fire/auth';
+import { ProductosService } from 'src/app/modules/shop/services/productos.service'; 
 
 
 @Component({
@@ -15,6 +16,7 @@ import { Auth } from '@angular/fire/auth';
 export class EdicionProductoComponent {
   formProducto!: FormGroup;
   sucursales: { id: string; nombre: string }[] = [];
+  variantesEliminadas: string[] = [];
 
   constructor(
     private storage: Storage ,
@@ -22,14 +24,91 @@ export class EdicionProductoComponent {
     private dialogRef: MatDialogRef<EdicionProductoComponent>,
     @Inject(MAT_DIALOG_DATA) public producto: Producto,
     private sucursalesService: SucursalesService,
+    private productosService: ProductosService,
       private auth: Auth   // 👈 AGREGAR
 
   ) {}
 
   ngOnInit(): void {
+
     this.sucursalesService.obtenerSucursales().subscribe(sucursales => {
-      this.sucursales = sucursales.map(s => ({ id: s.id, nombre: s.nombre }));
+
+      this.sucursales = sucursales.map(s => ({
+        id: s.id,
+        nombre: s.nombre
+      }));
+
+      // Primero creamos el formulario con los datos
+      // del producto que estamos editando.
       this.crearFormulario();
+
+      // 🔥 Buscamos el productoPadre real desde Firestore
+      const productoPadre = (this.producto as any).productoPadre;
+
+      if (!productoPadre) {
+        console.log('ℹ️ El producto no pertenece a un grupo de variantes.');
+        return;
+      }
+
+      console.log('🧩 Producto padre:', productoPadre);
+
+      // 🔥 Buscamos TODAS las variantes reales
+      this.productosService
+        .obtenerVariantesPorProductoPadre(productoPadre)
+        .then(variantes => {
+
+          console.log('🎨 Variantes encontradas:', variantes);
+
+          // FormArray de variantes del formulario
+          const variantesArray = this.variantesArray;
+          
+          // Limpiamos las variantes que pudiera haber cargado
+          // originalmente crearFormulario()
+          variantesArray.clear();
+
+          // 🔥 Agregamos las variantes reales de Firestore
+          variantes.forEach((variante: any) => {
+            const grupo = this.fb.group({
+              id: [variante.id || null],
+              modelo: [variante.modelo || null],
+              color: [variante.color || '#000000'],
+              codigoBarras: [variante.codigoBarras || ''],
+              imagen: [variante.imagen || ''],
+              stockMayorista: [
+                Number(variante.stockMayorista || 0)
+              ],
+
+              stockSucursales: this.fb.array(
+                this.sucursales.map(s => {
+                  const stockExistente =
+                    variante.stockSucursales?.find(
+                      (ss: any) =>
+                        ss.sucursalId === s.id
+                    );
+
+                  return this.fb.group({
+                    sucursalId: [s.id],
+                    cantidad: [
+                      Number(stockExistente?.cantidad || 0)
+                    ]
+                  });
+                })
+              )
+            });
+            variantesArray.push(grupo);
+          });
+          console.log(
+            '🧩 FormArray variantes cargado:',
+            variantesArray.getRawValue()
+          );
+        })
+        .catch(error => {
+
+          console.error(
+            '❌ Error obteniendo variantes:',
+            error
+          );
+        });
     });
   }
 
@@ -123,41 +202,62 @@ agregarVariante(): void {
 }
 
   eliminarVariante(index: number): void {
+
+
+    // La quitamos inmediatamente del formulario.
     this.variantesArray.removeAt(index);
   }
 
+
   guardar(): void {
+
     if (this.formProducto.invalid) {
       this.formProducto.markAllAsTouched();
       return;
     }
 
     const valores = this.formProducto.getRawValue();
-
     const productoActualizado: Producto = {
       ...this.producto,
       ...valores,
       moneda: valores.moneda || 'ARS',
+
+      // Stock general del producto
       stockSucursales: valores.stockSucursales.map((s: any) => ({
         sucursalId: s.sucursalId,
         cantidad: Number(s.cantidad) || 0
       })),
-        variantes: valores.variantes.map((v: any) => ({
-          id: v.id || undefined,
-          modelo: v.modelo || null,
-          color: v.color,
-          codigoBarras: v.codigoBarras,
-          imagen: v.imagen || null,
-          stockMayorista: Number(v.stockMayorista),
-          stockSucursales: v.stockSucursales.map((s: any) => ({
-            sucursalId: s.sucursalId,
-            cantidad: Number(s.cantidad) || 0
+
+      // Variantes
+      variantes: valores.variantes.map((v: any) => ({
+
+        // 🔥 IMPORTANTE:
+        // Si la variante ya existía, conserva su ID.
+        // Si fue agregada desde "+ Agregar Variante",
+        // tendrá id = null y quedará como undefined.
+        id: v.id || undefined,
+
+        modelo: v.modelo || null,
+        color: v.color || '#000000',
+        codigoBarras: v.codigoBarras || '',
+        imagen: v.imagen || null,
+
+        stockMayorista: Number(v.stockMayorista) || 0,
+
+        stockSucursales: (v.stockSucursales || []).map((s: any) => ({
+          sucursalId: s.sucursalId,
+          cantidad: Number(s.cantidad) || 0
         }))
       }))
     };
 
+    
+
     this.dialogRef.close(productoActualizado);
   }
+
+
+
 
   get stockArray(): FormArray {
     return this.formProducto.get('stockSucursales') as FormArray;

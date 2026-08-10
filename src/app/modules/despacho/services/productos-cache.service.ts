@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Firestore, collection, getDocs } from '@angular/fire/firestore';
 import { openDB } from 'idb';
-import { Producto } from '../../shop/models/producto.model';
+import { Producto, VarianteProducto } from '../../shop/models/producto.model';
 
 @Injectable({
   providedIn: 'root'
@@ -47,11 +47,52 @@ export class ProductosCacheService {
     });
 
     const db = await this.dbPromise;
+
     const tx = db.transaction('productos', 'readwrite');
 
-    for (const p of productos) {
-      await tx.store.put(p);
+    // =====================================================
+    // 1️⃣ IDs que existen actualmente en Firestore
+    // =====================================================
+
+    const idsFirestore = new Set(
+      productos.map(p => p.id)
+    );
+
+    // =====================================================
+    // 2️⃣ Obtener todos los productos actuales de IndexedDB
+    // =====================================================
+
+    const productosCache = await tx.store.getAll();
+
+    // =====================================================
+    // 3️⃣ Eliminar de IndexedDB los que ya no existen
+    //    en Firestore
+    // =====================================================
+
+    for (const productoCache of productosCache) {
+
+      if (!idsFirestore.has(productoCache.id)) {
+
+        await tx.store.delete(
+          productoCache.id
+        );
+
+      }
     }
+
+    // =====================================================
+    // 4️⃣ Guardar / actualizar productos actuales
+    // =====================================================
+
+    for (const p of productos) {
+
+      await tx.store.put(p);
+
+    }
+
+    // =====================================================
+    // 5️⃣ Confirmar transacción
+    // =====================================================
 
     await tx.done;
 
@@ -79,9 +120,22 @@ export class ProductosCacheService {
     );
   }
 
-  async actualizarProducto(producto: Producto): Promise<void> {
+  async actualizarProducto(
+    producto: Producto | VarianteProducto
+  ): Promise<void> {
+
     const db = await this.dbPromise;
-    await db.put('productos', producto);
+
+    await db.put(
+      'productos',
+      producto
+    );
   }
+
+  async eliminarProducto(id: string): Promise<void> {
+    const db = await this.dbPromise;
+    await db.delete('productos', id);
+  }
+
 
 }
