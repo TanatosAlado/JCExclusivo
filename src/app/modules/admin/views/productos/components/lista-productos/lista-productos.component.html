@@ -1,42 +1,57 @@
 <div class="container mt-5">
   <div class="tabla-container">
-<div class="button-container">
+    <div class="button-container">
 
+      <!-- Acciones principales -->
+      <button
+        mat-raised-button
+        class="boton-nuevo"
+        (click)="abrirModalAltaProducto()">
 
-  <!-- Botón Nuevo -->
-  <button mat-raised-button class="boton-nuevo" (click)="abrirModalAltaProducto()">
-    Nuevo
-  </button>
+        <mat-icon>add</mat-icon>
+        Nuevo
 
-  <button
-    mat-raised-button
-    color="accent"
-    (click)="abrirIngresoStock()">
+      </button>
 
-    <mat-icon>inventory_2</mat-icon>
-    Ingreso Stock
+      <button
+        mat-raised-button
+        class="boton-stock"
+        (click)="abrirIngresoStock()">
 
-  </button>
+        <mat-icon>inventory_2</mat-icon>
+        Ingreso Stock
 
+      </button>
 
-  <!-- Input file oculto -->
-  <input 
-    #fileInput 
-    type="file" 
-    (change)="onFileChange($event)" 
-    accept=".xlsx, .xls" 
-    hidden
-  />
+      <!-- Acciones Excel -->
+      <div class="acciones-excel">
 
+        <button
+          mat-raised-button
+          class="boton-excel boton-excel-completo"
+          (click)="exportarExcelCompleto()">
 
+          <mat-icon>download</mat-icon>
+          Listado completo
 
-  <!-- Botón para disparar el input -->
-  <!-- <button mat-raised-button color="primary" (click)="fileInput.click()">
-    Subir Excel
-  </button> -->
-</div>
+        </button>
 
-    <input class="search-input" (keyup)="applyFilter($event,datasourceProductos)" placeholder="Búsqueda Productos" #input>
+        <button
+          mat-raised-button
+          class="boton-excel boton-excel-filtrado"
+          (click)="exportarExcelFiltrado()"
+          [disabled]="!filtroActual">
+
+          <mat-icon>filter_alt</mat-icon>
+          Búsqueda
+
+        </button>
+
+      </div>
+
+    </div>
+
+    <input class="search-input" [value]="filtroActual" (keyup)="applyFilter($event,datasourceProductos)" placeholder="Búsqueda Productos" #input>
 
     <div class="tabla-scroll">
       <table mat-table [dataSource]="datasourceProductos" class="mat-elevation-z8" style="width: 100%;">

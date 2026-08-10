@@ -248,14 +248,7 @@ export class CheckoutComponent {
         this.abrirModal()
 
         } catch (error) {
-
-        console.error('================================');
-        console.error('ERROR CREANDO PEDIDO');
-        console.error(error);
-        console.error('Cliente:', this.clienteEncontrado?.mail);
-        console.error('Carrito:', this.clienteEncontrado.carrito);
-        console.error('================================');
-
+          
         throw error;
         }
   
@@ -327,13 +320,7 @@ export class CheckoutComponent {
 
     try {
 
-    
-    console.log('1 - Creando pedido');
     const docRef = await this.pedidoService.createPedido(unPedido);
-    console.log('2 - Pedido creado', docRef.id);
-
-    console.log('3 - ID actualizado');
-    console.log('4 - Actualizando cliente');
 
     await this.updateIdPedido(docRef.id, unPedido);
 
@@ -381,10 +368,6 @@ export class CheckoutComponent {
         this.clienteEncontrado
       );
 
-        console.log('5 - Cliente actualizado');
-
-        console.log('6 - Comenzando descuento de stock');
-
     } else {
 
       // INVITADO
@@ -405,11 +388,7 @@ export class CheckoutComponent {
         ? this.sucursalSeleccionada
         : sucursalCentralId;
 
-        console.log('Sucursal a descontar:', sucursalADescontar);
-
     for (const item of carritoCliente) {
-
-      console.log('Descontando:', item.nombre);
 
       try {
 
@@ -698,10 +677,8 @@ export class CheckoutComponent {
 
         throw err;
       }
-      console.log('OK:', item.nombre);
     }
 
-    // console.log('Pedido creado correctamente');
 
 
     } catch (error) {

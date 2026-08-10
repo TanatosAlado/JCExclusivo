@@ -32,6 +32,8 @@ export class ListaProductosComponent {
   datasourceProductos: MatTableDataSource<Producto>
   paginator!: MatPaginator;
   public productoAEliminar: string = '';
+  // filtroActual = '';
+  filtroActual: string = '';
 
   constructor(public dialog: MatDialog, private productosService: ProductosService, private toastService: ToastService, private infoEmpresaService: InfoEmpresaService) {
 
@@ -98,32 +100,106 @@ getDescripcionVariantes(p: any): string {
 
 
   //FUNCION PARA FILTRAR POR CUALQUIER PALABRA QUE SE ESCRIBA EN EL FILTRO
-  applyFilter(event: Event, datasource: MatTableDataSource<any>) {
-    const filterValue = (event.target as HTMLInputElement).value;
-    datasource.filter = filterValue.trim().toLowerCase();
+  applyFilter(
+    event: Event,
+    datasource: MatTableDataSource<any>
+  ): void {
+
+    this.filtroActual = (event.target as HTMLInputElement).value
+      .trim()
+      .toLowerCase();
+
+    datasource.filter = this.filtroActual;
+
+    // Cada vez que cambia la búsqueda,
+    // volvemos a la primera página.
+    if (this.paginator) {
+      this.paginator.firstPage();
+    }
   }
 
-obtenerProductos(): void {
-  this.productosService.obtenerProductos().subscribe((productos: Producto[]) => {
+  obtenerProductos(): void {
 
-    // 🔥 Primero normalizamos cada producto
-    const productosNormalizados = productos.map(p => this.normalizarStock(p));
+    this.productosService.obtenerProductos().subscribe(
+      (productos: Producto[]) => {
 
-    // 🔥 Después calculamos stockTotal y armamos los demás datos
-    this.productos = productosNormalizados.map(p => ({
-      ...p,
-      stockTotal: this.getStockTotal(p),
-      stockGlobal: p.stockGlobal ?? 0
-    }));
+        // 🔥 Primero normalizamos cada producto
+        const productosNormalizados = productos.map(
+          p => this.normalizarStock(p)
+        );
 
-    this.rubrosUnicos = [...new Set(this.productos.map(p => p.rubro.toUpperCase()))];
-    this.subrubrosUnicos = [...new Set(this.productos.map(p => p.subrubro.toUpperCase()))];
-    this.marcasUnicas = [...new Set(this.productos.map(p => p.marca.toUpperCase()))];
+        // 🔥 Después calculamos stockTotal y armamos los demás datos
+        this.productos = productosNormalizados.map(p => ({
+          ...p,
+          stockTotal: this.getStockTotal(p),
+          stockGlobal: p.stockGlobal ?? 0
+        }));
 
-    this.datasourceProductos = new MatTableDataSource(this.productos);
-    this.datasourceProductos.paginator = this.paginator;
-  });
-}
+        this.rubrosUnicos = [
+          ...new Set(
+            this.productos.map(p => p.rubro?.toUpperCase())
+          )
+        ];
+
+        this.subrubrosUnicos = [
+          ...new Set(
+            this.productos.map(p => p.subrubro?.toUpperCase())
+          )
+        ];
+
+        this.marcasUnicas = [
+          ...new Set(
+            this.productos.map(p => p.marca?.toUpperCase())
+          )
+        ];
+
+        // 🧱 Creamos nuevamente el datasource
+        this.datasourceProductos =
+          new MatTableDataSource(this.productos);
+
+        // 🔎 Buscador personalizado
+        this.datasourceProductos.filterPredicate =
+          (producto: Producto, filtro: string): boolean => {
+
+            // Unimos todos los campos que queremos poder buscar
+            const textoProducto = [
+
+              producto.descripcion,
+              producto.rubro,
+              producto.subrubro,
+              producto.marca,
+              producto.codigoBarras,
+
+              // Por si algún producto tiene estos campos
+              (producto as any).modelo,
+              (producto as any).color
+
+            ]
+            .filter(valor =>
+              valor !== null &&
+              valor !== undefined &&
+              valor !== ''
+            )
+            .join(' ');
+
+            return this.coincideBusqueda(
+              textoProducto,
+              filtro
+            );
+          };
+
+        // 🔄 Restauramos la búsqueda anterior
+        // después de reconstruir el datasource.
+        this.datasourceProductos.filter =
+          this.filtroActual;
+
+        // 📄 Paginador
+        this.datasourceProductos.paginator =
+          this.paginator;
+
+      }
+    );
+  }
 
 normalizarStock(producto: any) {
 
@@ -288,84 +364,198 @@ normalizarStock(producto: any) {
   }
 
 
+  private normalizarTexto(texto: string): string {
+    return (texto || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, ' ');
+  }
 
-// Migracion de estructura
-// async migrarStockSucursales() {
+  private coincideBusqueda(
+    texto: any,
+    busqueda: string
+  ): boolean {
 
-//   const productos = await firstValueFrom(
-//     this.productosService.obtenerProductos()
-//   );
+    if (texto === null || texto === undefined || !busqueda) {
+      return false;
+    }
 
-//   const SUCURSAL_ACTIVA = 'm0CEkvmZpfjgP9uBvYyH';
+    const normalizar = (valor: string): string => {
 
-//   for (const producto of productos) {
+      return valor
+        .toString()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim();
+    };
 
-//     let stockSucursales: any[] = [];
+    const textoNormalizado = normalizar(texto);
 
-//     // Si viene con formato viejo (objeto)
-//     if (
-//       producto.stockSucursales &&
-//       !Array.isArray(producto.stockSucursales)
-//     ) {
+    const palabras = normalizar(busqueda)
+      .split(/\s+/)
+      .filter(Boolean);
 
-//       stockSucursales = Object.keys(producto.stockSucursales).map(key => ({
-//         sucursalId: key,
-//         cantidad: producto.stockSucursales[key] || 0
-//       }));
+    // Todas las palabras buscadas deben aparecer
+    // dentro del texto, pero no importa el orden.
+    return palabras.every(palabra =>
+      textoNormalizado.includes(palabra)
+    );
+  }
 
-//     } else {
+  exportarExcelCompleto(): void {
 
-//       stockSucursales = producto.stockSucursales || [];
+    const productos = this.productos;
 
-//     }
+    if (!productos || productos.length === 0) {
+      this.toastService.toastMessage(
+        'No hay productos para exportar',
+        'orange',
+        2000
+      );
+      return;
+    }
 
-//     // Dejamos solamente la sucursal vigente
-//     stockSucursales = stockSucursales.filter(
-//       s => s.sucursalId === SUCURSAL_ACTIVA
-//     );
+    const datosExcel = productos.map(producto =>
+      this.prepararProductoParaExcel(producto)
+    );
 
-//     console.log({
-//       producto: producto.descripcion,
-//       antes: producto.stockSucursales,
-//       despues: stockSucursales
-//     });
+    this.descargarExcel(datosExcel, 'Listado_Completo_Productos');
+  }  
 
-//     // ✅ Modificamos el objeto existente
-//     producto.stockSucursales = stockSucursales;
+  exportarExcelFiltrado(): void {
 
-//     // ✅ Guardamos
-//     await this.productosService.actualizarProducto(producto);
+    if (!this.filtroActual) {
+      this.toastService.toastMessage(
+        'No hay una búsqueda activa',
+        'orange',
+        2000
+      );
+      return;
+    }
 
-//     console.log('✔ Migrado:', producto.descripcion);
+    const productosFiltrados = this.datasourceProductos.filteredData;
 
-//   }
+    if (!productosFiltrados || productosFiltrados.length === 0) {
+      this.toastService.toastMessage(
+        'La búsqueda no tiene resultados para exportar',
+        'orange',
+        2000
+      );
+      return;
+    }
 
-//   console.log('✅ Migración finalizada');
-// }
+    const datosExcel = productosFiltrados.map(producto =>
+      this.prepararProductoParaExcel(producto)
+    );
 
-//Back up 
-// async backupProductos() {
+    this.descargarExcel(
+      datosExcel,
+      'Productos_Busqueda_' + this.filtroActual
+    );
+  }
 
-//   const productos = await firstValueFrom(
-//     this.productosService.obtenerProductos()
-//   );
 
-//   const blob = new Blob(
-//     [JSON.stringify(productos, null, 2)],
-//     { type: 'application/json' }
-//   );
+  private prepararProductoParaExcel(producto: Producto): any {
 
-//   const url = URL.createObjectURL(blob);
+    return {
+      'Código de barras': producto.codigoBarras ?? '',
+      'Descripción': producto.descripcion ?? '',
+      'Rubro': producto.rubro ?? '',
+      'Subrubro': producto.subrubro ?? '',
+      'Marca': producto.marca ?? '',
 
-//   const a = document.createElement('a');
+      'URL de imagen': producto.imagen ?? '',
 
-//   a.href = url;
-//   a.download = 'productos-backup.json';
+      'Tipo de variante': this.getTipoProducto(producto),
 
-//   a.click();
+      'Stock sucursales': this.getStockTotal(producto),
 
-//   URL.revokeObjectURL(url);
+      'Stock mayorista': producto.stockMayorista ?? 0,
 
-// }
+      'Stock global':
+        this.getStockTotal(producto) +
+        (producto.stockMayorista ?? 0),
+
+      'Precio minorista': producto.precioMinorista ?? 0,
+      'Precio mayorista': producto.precioMayorista ?? 0,
+
+      'Venta minorista': producto.ventaMinorista ? 'Sí' : 'No',
+      'Venta mayorista': producto.ventaMayorista ? 'Sí' : 'No',
+
+      'Destacado': producto.destacado ? 'Sí' : 'No',
+      'Oferta': producto.oferta ? 'Sí' : 'No',
+
+      'Precio oferta': producto.precioOferta ?? 0,
+
+      'Moneda': producto.moneda ?? 'ARS'
+    };
+  }
+
+  private descargarExcel(
+    datos: any[],
+    nombreArchivo: string
+  ): void {
+
+    const worksheet: XLSX.WorkSheet =
+      XLSX.utils.json_to_sheet(datos);
+
+    // =====================================================
+    // 🔗 Convertir URL de imagen en "Ver imagen"
+    // =====================================================
+
+    const indiceColumnaImagen =
+      Object.keys(datos[0]).indexOf('URL de imagen');
+
+    if (indiceColumnaImagen !== -1) {
+
+      const columnaImagen =
+        XLSX.utils.encode_col(indiceColumnaImagen);
+
+      for (let i = 0; i < datos.length; i++) {
+
+        const fila = i + 2;
+
+        const referenciaCelda =
+          `${columnaImagen}${fila}`;
+
+        const celda =
+          worksheet[referenciaCelda];
+
+        if (celda?.v) {
+
+          const url = celda.v;
+
+          // Texto visible
+          celda.v = 'Ver imagen';
+
+          // Tipo texto
+          celda.t = 's';
+
+          // Hipervínculo
+          celda.l = {
+            Target: url,
+            Tooltip: 'Abrir imagen'
+          };
+        }
+      }
+    }
+
+    const workbook: XLSX.WorkBook =
+      XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(
+      workbook,
+      worksheet,
+      'Productos'
+    );
+
+    XLSX.writeFile(
+      workbook,
+      `${nombreArchivo}.xlsx`
+    );
+  }
 
 }
