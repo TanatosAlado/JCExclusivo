@@ -1,1 +1,10 @@
-<p>ver-marquesina works!</p>
+<mat-dialog-content class="contenido-modal">
+    <div class="imagen-central">
+        <img src="../../../../../../../assets/logo.png" alt="Login" />
+    </div>
+    <p><strong>Mensaje:</strong>{{marquesina.mensaje}}</p>
+    <p><strong>Tipo Mensaje:</strong> {{ marquesina.tipoCliente }}</p>
+</mat-dialog-content>
+<mat-dialog-actions class="botones">
+    <button mat-button mat-dialog-close class="btn-cancelar">Cerrar</button>
+</mat-dialog-actions>

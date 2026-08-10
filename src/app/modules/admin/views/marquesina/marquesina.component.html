@@ -19,15 +19,15 @@
     <div class="tabla-scroll">
       <table mat-table [dataSource]="datasourceMarquesina" class="mat-elevation-z8" style="width: 100%;">
 
-        <!-- Descripción Column -->
-        <ng-container matColumnDef="descripcion">
-          <th mat-header-cell *matHeaderCellDef class="cabecera"> Descripción </th>
-          <td mat-cell *matCellDef="let element"> {{element.descripcion}} </td>
+        <!-- Mensaje Column -->
+        <ng-container matColumnDef="mensaje">
+          <th mat-header-cell *matHeaderCellDef class="cabecera"> Mensaje </th>
+          <td mat-cell *matCellDef="let element"> {{element.mensaje}} </td>
         </ng-container>
 
         <!-- Rubro/Subrubro Column -->
         <ng-container matColumnDef="tipoCliente">
-          <th mat-header-cell *matHeaderCellDef class="cabecera"> Tipo Cliente </th>
+          <th mat-header-cell *matHeaderCellDef class="cabecera"> Tipo Mensaje </th>
           <td mat-cell *matCellDef="let element"> {{element.tipoCliente}} </td>
         </ng-container>
 
@@ -35,15 +35,15 @@
         <ng-container matColumnDef="acciones">
           <th mat-header-cell *matHeaderCellDef class="cabecera"> Acciones </th>
           <td mat-cell *matCellDef="let element">
-            <!-- <a class="pointer" title="Ver Producto" (click)="verProducto(element)">
+            <a class="pointer" title="Ver Marquesina" (click)="verMarquesina(element)">
               <i class="fa-solid fa-eye"></i>
             </a>
-            <a class="pointer" title="Editar Producto" (click)="editarProducto(element)">
+            <a class="pointer" title="Editar Marquesina" (click)="editarMarquesina(element)">
               <i class="fa-solid fa-pen"></i>
             </a>
-            <a class="pointer" title="Eliminar Producto" (click)="openConfirmDialog(element)">
+            <a class="pointer" title="Eliminar Marquesina" (click)="openConfirmDialog(element)">
               <i class="fa-solid fa-trash"></i>
-            </a> -->
+            </a>
           </td>
         </ng-container>
 

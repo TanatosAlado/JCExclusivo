@@ -4,10 +4,10 @@
 
 <mat-dialog-content [formGroup]="formAltaMarquesina" class="form-grid">
   <mat-form-field appearance="outline">
-    <mat-label>Descripción</mat-label>
-    <input matInput formControlName="descripcion">
-    <mat-error *ngIf="formAltaMarquesina.get('descripcion')?.hasError('required')">
-      La descripción es obligatoria
+    <mat-label>Mensaje</mat-label>
+    <input matInput formControlName="mensaje">
+    <mat-error *ngIf="formAltaMarquesina.get('mensaje')?.hasError('required')">
+      El mensaje es obligatorio
     </mat-error>
   </mat-form-field>
 

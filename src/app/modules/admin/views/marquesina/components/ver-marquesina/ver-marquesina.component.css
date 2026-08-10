@@ -1,0 +1,25 @@
+.imagen-central {
+    display: flex;
+    justify-content: center; 
+    align-items: center; 
+  }
+.imagen-central img {
+  width: 100px;
+  height: auto;
+  border-radius: 20%;
+  object-fit: cover;
+  align-items: center;
+}
+
+.botones {
+  display: flex !important;
+  justify-content: center !important; 
+  gap: 16px !important; 
+  margin-top: 20px !important; 
+}
+
+ .btn-cancelar {
+  background-color:#034f70;
+  color: white;
+  font-weight: bold;
+}
