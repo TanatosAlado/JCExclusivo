@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Firestore, collection, deleteDoc, doc,getDocs,setDoc } from '@angular/fire/firestore';
+import { Firestore, collection, deleteDoc, doc,getDocs,query,setDoc, where } from '@angular/fire/firestore';
 import { Marquesina } from '../models/marquesina.model';
 
 @Injectable({
@@ -36,6 +36,28 @@ async agregarMarquesina(marquesina: Marquesina) {
       return { id: doc.id, ...rest };
     });
   }
+
+  // TRAER MARQUESINAS SEGÚN TIPO DE CLIENTE
+async getMarquesinasPorTipo(tipoCliente: string): Promise<Marquesina[]> {
+
+  const ref = collection(this.firestore, 'Marquesina');
+
+  const q = query(
+    ref,
+    where('tipoCliente', '==', tipoCliente)
+  );
+
+  const snap = await getDocs(q);
+
+  return snap.docs.map(doc => {
+    const { id, ...rest } = doc.data() as Marquesina;
+
+    return {
+      id: doc.id,
+      ...rest
+    };
+  });
+}
 
 
   async actualizarMarquesina(marquesina: Marquesina) {

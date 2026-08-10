@@ -1,6 +1,10 @@
 <marquee class="marquesina">
-  <span class="message">ENVIOS GRATIS A PARTIR DE LOS $ 70000</span>
-  <span class="message">ACEPTAMOS TODOS LOS MEDIOS DE PAGOS</span>
-  <span class="message">OFERTAS EXCLUSIVAS TODO EL MES</span>
-</marquee>
 
+  <span
+    class="message"
+    *ngFor="let marquesina of marquesinas"
+  >
+    {{ marquesina.mensaje }}
+  </span>
+
+</marquee>
