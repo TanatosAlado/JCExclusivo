@@ -34,6 +34,7 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { MatSelectModule } from '@angular/material/select';
 import { MatListModule } from '@angular/material/list';
 import { EstiloMarquesinaComponent } from './components/estilo-marquesina/estilo-marquesina.component';
+import { CardCategoriasComponent } from './components/card-categorias/card-categorias.component';
 
 
 
@@ -46,7 +47,8 @@ import { EstiloMarquesinaComponent } from './components/estilo-marquesina/estilo
     CarritoComponent,
     ConfirmDialogComponent,
     WhatsappComponent,
-    EstiloMarquesinaComponent
+    EstiloMarquesinaComponent,
+    CardCategoriasComponent
   ],
   imports: [
     CommonModule,
@@ -113,7 +115,8 @@ import { EstiloMarquesinaComponent } from './components/estilo-marquesina/estilo
     BrowserAnimationsModule,
     MatSelectModule,
     MatListModule,
-    EstiloMarquesinaComponent
+    EstiloMarquesinaComponent,
+    CardCategoriasComponent
     
  ],
   providers: [

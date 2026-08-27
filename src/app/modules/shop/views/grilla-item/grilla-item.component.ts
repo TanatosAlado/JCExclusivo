@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { Producto } from '../../models/producto.model';
 import { ProductosService } from '../../services/productos.service';
 import { AuthService } from 'src/app/modules/auth/services/auth.service';
+import { ActivatedRoute } from '@angular/router';
 
 @Component({
   selector: 'app-grilla-item',
@@ -40,9 +41,23 @@ export class GrillaItemComponent {
   scrollActual: number = 0;
   //public productos: Producto[] = [];
 
-  constructor(private productosService: ProductosService, private authService: AuthService) { }
+  constructor(private productosService: ProductosService, private authService: AuthService, private route: ActivatedRoute) { }
 
   ngOnInit(): void {
+
+     this.route.queryParams.subscribe(params => {
+
+    const rubro = params['rubro'];
+
+    if (rubro) {
+
+      this.filtroRubro = rubro;
+
+      this.filtrarProductos();
+
+    }
+
+  });
 
     const estado = history.state.filtrosRestaurar;
 
