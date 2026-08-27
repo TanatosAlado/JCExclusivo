@@ -49,6 +49,28 @@
     <!-- 📍 Columna izquierda: búsqueda y catálogo -->
     <div class="col-md-6 p-3 border-end">
 
+      <div class="d-flex align-items-center gap-2 mb-3">
+
+  <span class="fw-bold">Lista de precios:</span>
+
+  <button
+    class="btn"
+    [class.btn-primary]="tipoPrecio === 'minorista'"
+    [class.btn-outline-primary]="tipoPrecio !== 'minorista'"
+    (click)="forzarTipoPrecio('minorista')">
+    Minorista
+  </button>
+
+  <button
+    class="btn"
+    [class.btn-primary]="tipoPrecio === 'mayorista'"
+    [class.btn-outline-primary]="tipoPrecio !== 'mayorista'"
+    (click)="forzarTipoPrecio('mayorista')">
+    Mayorista
+  </button>
+
+</div>
+
       <!-- Buscar cliente (opcional) -->
        <div class="mb-3">
         <label class="form-label">Buscar cliente por DNI (opcional)</label>

@@ -102,37 +102,6 @@ export class GeneralService {
     return this.clienteSubject.value;
   }
 
-  //FUNCION PARA OBTENER LA CANTIDAD TOTAL A PAGAR DEL CARRITO DEL CLIENTE
-  // getTotalPrecio(cliente: any, usarPuntos: boolean = false, valorMonetarioPorPunto: number = 50, cuponAplicado: any = null): number {
-  //   let total = cliente.carrito.reduce(
-  //     (sum: number, prod: any) => sum + (prod.precioFinal * prod.cantidad),
-  //     0
-  //   );
-
-  //   // Aplicar cupón si está disponible
-  //   if (cuponAplicado && cuponAplicado.activo) {
-  //     if (cuponAplicado.tipo === 'porcentaje') {
-  //       const descuento = (cuponAplicado.valor / 100) * total;
-  //       total -= descuento;
-  //     } else if (cuponAplicado.tipo === 'monto') {
-  //       total -= cuponAplicado.valor;
-  //     }
-
-  //     // Asegurarse de que el total no sea negativo
-  //     total = Math.max(total, 0);
-  //   }
-
-  //   // Aplicar puntos si corresponde
-  //   if (usarPuntos && cliente.puntos > 0) {
-  //     const maxPuntosPorMonto = Math.floor(total / valorMonetarioPorPunto);
-  //     const puntosUsables = Math.min(cliente.puntos, maxPuntosPorMonto);
-  //     const descuento = puntosUsables * valorMonetarioPorPunto;
-  //     total = Math.max(total - descuento, 0);
-  //   }
-
-  //   return total;
-  // }
-
   getTotalPrecio(
     cliente: any,
     usarPuntos: boolean = false,
@@ -201,22 +170,6 @@ export class GeneralService {
   }
 
 
-
-
-
-
-
-
-  //SERVICE PARA TRAER CLIENTE POR ID
-  // async getProductoById(id: string) {
-  //   const productoRef = doc(this.firestore, `productos/${id}`);
-  //   const productoSnap = await getDoc(productoRef);
-  //   if (productoSnap.exists()) {
-  //     return [{ id: productoSnap.id, ...productoSnap.data() }];
-  //   }
-  //   return [];
-  // }
-
 async getProductoById(id: string) {
   const productoRef = doc(this.firestore, `productos/${id}`);
   const productoSnap = await getDoc(productoRef);
@@ -268,133 +221,391 @@ async getProductoById(id: string) {
 
 
   //SERVICIO PARA CARGAR EN EL CARRITO EL PRODUCTO
-cargarProductoCarrito(producto: Producto, cantidad: number = 1): Promise<boolean> {    // ACA ESTA EL QUILOMBO CON EL STOCK EN EL CARRITO, HAY QUE VER BIEN COMO CALCULARLO PARA QUE NO DE PROBLEMAS CON LAS VARIANTES
+  cargarProductoCarrito(producto: Producto, cantidad: number = 1): Promise<boolean> {
 
-  const calcularStockSegunCliente = (p: any, cliente: Cliente) => {
+    const calcularStockSegunCliente = (p: any, cliente: Cliente) => {
 
-  const calcularMinorista = () => {
-      if (!p.stockSucursales) return 0;
+      const calcularMinorista = () => {
 
-      if (typeof p.stockSucursales === 'object' && !Array.isArray(p.stockSucursales)) {
-        return Object.values(p.stockSucursales)
-          .reduce((acc: number, cant: any) => acc + (Number(cant) || 0), 0);
+        if (!p.stockSucursales) return 0;
+
+        if (
+          typeof p.stockSucursales === 'object' &&
+          !Array.isArray(p.stockSucursales)
+        ) {
+          return Object.values(p.stockSucursales)
+            .reduce(
+              (acc: number, cant: any) =>
+                acc + (Number(cant) || 0),
+              0
+            );
+        }
+
+        return (p.stockSucursales || [])
+          .reduce(
+            (acc: number, s: any) =>
+              acc + (Number(s?.cantidad) || 0),
+            0
+          );
+      };
+
+      if (cliente.esMayorista) {
+        return Number(p.stockMayorista) || 0;
       }
 
-      return (p.stockSucursales || [])
-        .reduce((acc: number, s: any) => acc + (s?.cantidad || 0), 0);
+      return calcularMinorista();
     };
 
-    // 🔥 CLAVE
-    if (cliente.esMayorista) {
-      return p.stockMayorista ?? 0;
-    } else {
-      return calcularMinorista();
-    }
-  };
+    return new Promise(async (resolve, reject) => {
 
-  return new Promise(async (resolve, reject) => {
-    try {
-      const clienteEncontrado = await firstValueFrom(this.getCliente());
-      if (!clienteEncontrado) {
-        reject('No se encontró el cliente');
-        return;
-      }
+      try {
 
-      // 🔹 Caso invitado: guardamos en localStorage
-      if (clienteEncontrado.id === 'invitado') {
-        const carritoRaw = localStorage.getItem('carritoInvitado');
-        let carrito = carritoRaw ? JSON.parse(carritoRaw) : [];
+        const clienteEncontrado =
+          await firstValueFrom(this.getCliente());
 
-        const obtenerPrecio = (p: Producto, cliente: Cliente) => {
-          if (p.oferta && p.precioOferta) return p.precioOferta;
+        if (!clienteEncontrado) {
+          reject('No se encontró el cliente');
+          return;
+        }
 
-          return cliente.esMayorista
-            ? p.precioMayorista
-            : p.precioMinorista;
-        };
+        // ============================================================
+        // VALIDACIÓN BÁSICA
+        // ============================================================
 
-        const index = carrito.findIndex(item => item.codigoBarras === producto.codigoBarras);
+        if (cantidad <= 0) {
+          reject('La cantidad debe ser mayor a cero');
+          return;
+        }
+
+        const uidCarrito =
+          this.generarUidCarrito(producto);
+
+
+        // ============================================================
+        // CASO INVITADO
+        // ============================================================
+
+        if (clienteEncontrado.id === 'invitado') {
+
+          const carritoRaw =
+            localStorage.getItem('carritoInvitado');
+
+          let carrito =
+            carritoRaw ? JSON.parse(carritoRaw) : [];
+
+
+          const index =
+            carrito.findIndex(
+              (item: any) =>
+                item.uidCarrito === uidCarrito
+            );
+
+
+          // Stock REAL del producto
+          const stockDisponible =
+            calcularStockSegunCliente(
+              producto,
+              clienteEncontrado
+            );
+
+
+          // Cantidad que ya tenemos en carrito
+          const cantidadEnCarrito =
+            index > -1
+              ? Number(carrito[index].cantidad) || 0
+              : 0;
+
+
+          // Cantidad TOTAL después de agregar
+          const cantidadFinal =
+            cantidadEnCarrito + cantidad;
+
+          // ============================================================
+          // 🚨 CONTROL DE STOCK
+          // ============================================================
+
+          if (cantidadFinal > stockDisponible) {
+
+            reject({
+              tipo: 'STOCK_INSUFICIENTE',
+              stockDisponible,
+              cantidadEnCarrito,
+              cantidadSolicitada: cantidad,
+              cantidadFinal
+            });
+
+            return;
+
+            return;
+          }
+
+
+          const obtenerPrecio =
+            (p: Producto, cliente: Cliente) => {
+
+              if (p.oferta && p.precioOferta) {
+                return p.precioOferta;
+              }
+
+              return cliente.esMayorista
+                ? p.precioMayorista
+                : p.precioMinorista;
+            };
+
+
+          // ============================================================
+          // ACTUALIZAR CARRITO
+          // ============================================================
+
+          if (index > -1) {
+
+            carrito[index].cantidad =
+              cantidadFinal;
+
+          } else {
+
+            carrito.push({
+              uidCarrito,
+
+              id: producto.id,
+
+              codigoBarras:
+                producto.codigoBarras,
+
+              imagen:
+                producto.imagen,
+
+              nombre:
+                producto.descripcion,
+
+              cantidad,
+
+              oferta:
+                producto.oferta,
+
+              precioOferta:
+                producto.precioOferta ?? null,
+
+              precioFinal:
+                obtenerPrecio(
+                  producto,
+                  clienteEncontrado
+                ),
+
+              moneda:
+                producto.moneda || 'ARS',
+
+              stock:
+                stockDisponible,
+
+              color:
+                (producto as any).color || null,
+
+              modelo:
+                (producto as any).modelo || null
+            });
+          }
+
+
+          localStorage.setItem(
+            'carritoInvitado',
+            JSON.stringify(carrito)
+          );
+
+          this.carritoService
+            .actualizarCantidadProductosDesdeLocalStorage();
+
+
+          const clienteActualizado =
+            new Cliente(
+              false,
+              '',
+              carrito,
+              '',
+              '',
+              null,
+              false,
+              true,
+              [],
+              'invitado',
+              '',
+              'Invitado',
+              0,
+              '',
+              '',
+              'invitado'
+            );
+
+
+          this.clienteSubject.next(
+            clienteActualizado
+          );
+
+          resolve(true);
+          return;
+        }
+
+
+        // ============================================================
+        // CLIENTE LOGUEADO
+        // ============================================================
+
+        const index =
+          clienteEncontrado.carrito.findIndex(
+            (item: any) =>
+              item.uidCarrito === uidCarrito
+          );
+
+
+        // Stock REAL del producto
+        const stockDisponible =
+          calcularStockSegunCliente(
+            producto,
+            clienteEncontrado
+          );
+
+
+        // Cantidad existente en carrito
+        const cantidadEnCarrito =
+          index > -1
+            ? Number(
+                clienteEncontrado.carrito[index].cantidad
+              ) || 0
+            : 0;
+
+
+        // Cantidad final que tendría el carrito
+        const cantidadFinal =
+          cantidadEnCarrito + cantidad;
+
+        // ============================================================
+        // 🚨 CONTROL DE STOCK
+        // ============================================================
+
+        if (cantidadFinal > stockDisponible) {
+
+          reject({
+            tipo: 'STOCK_INSUFICIENTE',
+            stockDisponible,
+            cantidadEnCarrito,
+            cantidadSolicitada: cantidad,
+            cantidadFinal
+          });
+
+          return;
+        }
+
+
+        const obtenerPrecio =
+          (p: Producto, cliente: Cliente) => {
+
+            if (p.oferta && p.precioOferta) {
+              return p.precioOferta;
+            }
+
+            return cliente.esMayorista
+              ? p.precioMayorista
+              : p.precioMinorista;
+          };
+
+
+        // ============================================================
+        // ACTUALIZAR CARRITO
+        // ============================================================
+
         if (index > -1) {
-          carrito[index].cantidad += cantidad;
-        } else {
-          const uidCarrito = `${producto.id}-${(producto as any).modelo ?? ''}-${(producto as any).color ?? ''}`;
 
-          carrito.push({
+          clienteEncontrado
+            .carrito[index]
+            .cantidad = cantidadFinal;
+
+        } else {
+
+          clienteEncontrado.carrito.push({
+
             uidCarrito,
+
             id: producto.id,
-            codigoBarras: producto.codigoBarras,
-            imagen: producto.imagen,
-            nombre: producto.descripcion,
+
+            codigoBarras:
+              producto.codigoBarras,
+
+            imagen:
+              producto.imagen,
+
+            nombre:
+              producto.descripcion,
+
             cantidad,
-            oferta: producto.oferta,
-            precioOferta: producto.precioOferta ?? null,
-            precioFinal: obtenerPrecio(producto, clienteEncontrado),
-            moneda: producto.moneda || 'ARS',
-            stock: calcularStockSegunCliente(producto, clienteEncontrado),
-            color: (producto as any).color || null,
-            modelo: (producto as any).modelo || null
+
+            oferta:
+              producto.oferta,
+
+            precioOferta:
+              producto.precioOferta ?? null,
+
+            precioFinal:
+              obtenerPrecio(
+                producto,
+                clienteEncontrado
+              ),
+
+            moneda:
+              producto.moneda || 'ARS',
+
+            stock:
+              stockDisponible,
+
+            color:
+              (producto as any).color || null,
+
+            modelo:
+              (producto as any).modelo || null
           });
         }
 
-        localStorage.setItem('carritoInvitado', JSON.stringify(carrito));
-        this.carritoService.actualizarCantidadProductosDesdeLocalStorage();
+
+        // ============================================================
+        // GUARDAR CLIENTE
+        // ============================================================
+
+        const datosLimpios =
+          JSON.parse(
+            JSON.stringify(clienteEncontrado)
+          );
 
 
-        const clienteActualizado = new Cliente(
-          false, '', carrito, '', '', null, false,
-          true, [], 'invitado', '', 'Invitado',
-          0, '', '', 'invitado'
+        await this.clientesService
+          .actualizarCliente(
+            clienteEncontrado.id,
+            datosLimpios
+          );
+
+
+        this.carritoService
+          .actualizarCantidadProductos(
+            clienteEncontrado
+          );
+
+
+        this.clienteSubject.next(
+          clienteEncontrado
         );
-        this.clienteSubject.next(clienteActualizado);
+
+
         resolve(true);
-        return;
+
+      } catch (error) {
+
+        reject(
+          'Error general en cargarProductoCarrito: ' +
+          error
+        );
+
       }
 
-      // 🔹 Caso cliente logueado
-      const index = clienteEncontrado.carrito.findIndex(
-        item => item.codigoBarras === producto.codigoBarras
-      );
-
-      const obtenerPrecio = (p: Producto, cliente: Cliente) => {
-        if (p.oferta && p.precioOferta) return p.precioOferta;
-
-        return cliente.esMayorista
-          ? p.precioMayorista
-          : p.precioMinorista;
-      };
-
-      if (index > -1) {
-        clienteEncontrado.carrito[index].cantidad += cantidad;
-      } else {
-          const uidCarrito = `${producto.id}-${(producto as any).modelo ?? ''}-${(producto as any).color ?? ''}`;
-          clienteEncontrado.carrito.push({
-            uidCarrito,
-            id: producto.id,
-            codigoBarras: producto.codigoBarras,
-            imagen: producto.imagen,
-            nombre: producto.descripcion,
-            cantidad,
-            oferta: producto.oferta,
-            precioOferta: producto.precioOferta ?? null,
-            precioFinal: obtenerPrecio(producto, clienteEncontrado),
-            moneda: producto.moneda || 'ARS',
-            stock: calcularStockSegunCliente(producto, clienteEncontrado),
-            color: (producto as any).color || null,
-            modelo: (producto as any).modelo || null
-          });
-      }
-
-      const datosLimpios = JSON.parse(JSON.stringify(clienteEncontrado));
-      await this.clientesService.actualizarCliente(clienteEncontrado.id, datosLimpios);
-
-      this.carritoService.actualizarCantidadProductos(clienteEncontrado);
-      this.clienteSubject.next(clienteEncontrado);
-      resolve(true);
-    } catch (error) {
-      reject('Error general en cargarProductoCarrito: ' + error);
-    }
-  });
-}
+    });
+  }
 
 
 
@@ -410,6 +621,11 @@ cargarProductoCarrito(producto: Producto, cantidad: number = 1): Promise<boolean
 
     return `${dia}/${mes}/${anio} ${horas}:${minutos}`;
   }
+
+  private generarUidCarrito(producto: any): string {
+    return `${producto.id}-${producto.modelo ?? ''}-${producto.color ?? ''}`;
+  }
+
 }
 
 

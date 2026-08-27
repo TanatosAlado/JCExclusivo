@@ -320,9 +320,20 @@ export class CheckoutComponent {
 
     try {
 
+    this.buscarUndefined(unPedido);
+
+
     const docRef = await this.pedidoService.createPedido(unPedido);
 
-    await this.updateIdPedido(docRef.id, unPedido);
+    unPedido.id = docRef.id;
+
+    await this.pedidoService.updatePedido(
+      docRef.id,
+      {
+        id: docRef.id
+      }
+    );
+
 
     // =====================================================
     // CLIENTE LOGUEADO
@@ -393,6 +404,16 @@ export class CheckoutComponent {
       try {
 
         let productDocId = item.id;
+
+        let stockDescontado: any = {
+          tipo: esMayorista ? 'mayorista' : 'minorista'
+        };
+
+        if (esMayorista) {
+          stockDescontado.cantidad = 0;
+        } else {
+          stockDescontado.sucursales = [];
+        }
 
         if (!productDocId && item.productoPadre) {
           productDocId = item.productoPadre;
@@ -526,6 +547,11 @@ export class CheckoutComponent {
 
               s.cantidad = available - take;
 
+              stockDescontado.sucursales.push({
+                sucursalId: s.sucursalId,
+                cantidad: take
+              });
+
               remaining -= take;
             }
           };
@@ -559,8 +585,13 @@ export class CheckoutComponent {
                   );
                 }
 
+                const cantidadDescontada = remaining;
+
                 varianteObj.stockMayorista =
-                  stockActual - remaining;
+                  stockActual - cantidadDescontada;
+
+                stockDescontado.cantidad =
+                  cantidadDescontada;
 
                 remaining = 0;
 
@@ -580,8 +611,13 @@ export class CheckoutComponent {
                   );
                 }
 
+                const cantidadDescontada = remaining;
+
                 productoData.stockMayorista =
-                  stockPadre - remaining;
+                  stockPadre - cantidadDescontada;
+
+                stockDescontado.cantidad =
+                  cantidadDescontada;
 
                 remaining = 0;
               }
@@ -634,8 +670,13 @@ export class CheckoutComponent {
                 );
               }
 
+              const cantidadDescontada = remaining;
+
               productoData.stockMayorista =
-                stockActual - remaining;
+                stockActual - cantidadDescontada;
+
+              stockDescontado.cantidad =
+                cantidadDescontada;
 
               remaining = 0;
 
@@ -667,6 +708,9 @@ export class CheckoutComponent {
 
         });
 
+        // 🔥 Guardamos en el item del carrito
+        item.stockDescontado = stockDescontado;
+
       } catch (err) {
 
         console.error(
@@ -677,7 +721,18 @@ export class CheckoutComponent {
 
         throw err;
       }
+
     }
+
+    await this.pedidoService.updatePedido(
+      docRef.id,
+      {
+        carrito: carritoCliente
+      }
+    );
+
+    
+  
 
 
 
@@ -855,5 +910,36 @@ export class CheckoutComponent {
     return total;
   }
 
+  buscarUndefined(obj: any, ruta = ''): void {
+
+  if (obj === undefined) {
+    console.error('❌ UNDEFINED EN:', ruta);
+    return;
+  }
+
+  if (Array.isArray(obj)) {
+
+    obj.forEach((item, index) => {
+      this.buscarUndefined(
+        item,
+        `${ruta}[${index}]`
+      );
+    });
+
+    return;
+  }
+
+  if (obj !== null && typeof obj === 'object') {
+
+    Object.entries(obj).forEach(([key, value]) => {
+
+      this.buscarUndefined(
+        value,
+        ruta ? `${ruta}.${key}` : key
+      );
+
+    });
+  }
+}
 
 }

@@ -1,3 +1,5 @@
+import { StockDescontado } from "./pedido.model";
+
 export class Carrito {
     id:string;
     nombre:string;
@@ -6,6 +8,7 @@ export class Carrito {
     precioOferta?:number;
     porcentajeOferta?:number;
     precioFinal:number; 
+    stockDescontado?: StockDescontado;
     
 
     constructor(id:string,imagen:string,nombre:string,cantidad:number,precioFinal:number, precioOferta:number, porcentajeOferta:number){
@@ -14,7 +17,7 @@ export class Carrito {
         this.nombre=nombre
         this.cantidad=cantidad
         this.precioFinal=precioFinal,
-        precioOferta=precioOferta,
+        this.precioOferta=precioOferta,
         this.porcentajeOferta=porcentajeOferta
     }
 }

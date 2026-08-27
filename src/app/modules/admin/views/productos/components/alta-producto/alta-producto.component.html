@@ -86,13 +86,53 @@
       </div>
 
       <div class="col-md-3">
+        <div class="form-check mb-2">
+          <input
+            type="checkbox"
+            class="form-check-input"
+            id="ventaMinorista"
+            [(ngModel)]="producto.ventaMinorista">
+
+          <label
+            class="form-check-label fw-semibold"
+            for="ventaMinorista">
+            Venta minorista
+          </label>
+        </div>
+
         <label class="form-label">Precio minorista</label>
-        <input type="number" class="form-control" [(ngModel)]="producto.precioMinorista">
+
+        <input
+          type="number"
+          class="form-control"
+          [(ngModel)]="producto.precioMinorista"
+          [disabled]="!producto.ventaMinorista"
+          min="0">
       </div>
 
       <div class="col-md-3">
+        <div class="form-check mb-2">
+          <input
+            type="checkbox"
+            class="form-check-input"
+            id="ventaMayorista"
+            [(ngModel)]="producto.ventaMayorista">
+
+          <label
+            class="form-check-label fw-semibold"
+            for="ventaMayorista">
+            Venta mayorista
+          </label>
+        </div>
+
         <label class="form-label">Precio mayorista</label>
-        <input type="number" class="form-control" [(ngModel)]="producto.precioMayorista">
+
+        <input
+          type="number"
+          class="form-control"
+          [(ngModel)]="producto.precioMayorista"
+          [disabled]="!producto.ventaMayorista"
+          min="0">
       </div>
 
       <div class="col-md-3">
@@ -104,18 +144,146 @@
       </div>
 
       <div class="col-md-4">
+
         <label class="form-label">Rubro</label>
-        <input type="text" class="form-control" [(ngModel)]="producto.rubro">
+
+        <select
+          class="form-select"
+          [ngModel]="producto.rubro"
+          (ngModelChange)="seleccionarRubro($event)">
+
+          <option value="">Seleccionar rubro...</option>
+
+          <option
+            *ngFor="let rubro of rubros"
+            [value]="rubro">
+            {{ rubro }}
+          </option>
+
+          <option value="__nuevo__">
+            ➕ Agregar nuevo rubro
+          </option>
+
+        </select>
+        <div *ngIf="agregandoRubro" class="mt-2">
+
+          <div class="input-group">
+
+            <input
+              type="text"
+              class="form-control"
+              placeholder="Nuevo rubro"
+              [(ngModel)]="nuevoRubro">
+
+            <button
+              type="button"
+              class="btn btn-outline-success"
+              (click)="confirmarNuevoRubro()">
+
+              Agregar
+
+            </button>
+
+          </div>
+
+        </div>
+
       </div>
 
       <div class="col-md-4">
+
         <label class="form-label">Subrubro</label>
-        <input type="text" class="form-control" [(ngModel)]="producto.subrubro">
+
+        <select
+          class="form-select"
+          [ngModel]="producto.subrubro"
+          (ngModelChange)="seleccionarSubrubro($event)">
+
+          <option value="">Seleccionar subrubro...</option>
+
+          <option
+            *ngFor="let subrubro of subrubros"
+            [value]="subrubro">
+            {{ subrubro }}
+          </option>
+
+          <option value="__nuevo__">
+            ➕ Agregar nuevo subrubro
+          </option>
+
+        </select>
+
+        <div *ngIf="agregandoSubrubro" class="mt-2">
+
+          <div class="input-group">
+
+            <input
+              type="text"
+              class="form-control"
+              placeholder="Nuevo subrubro"
+              [(ngModel)]="nuevoSubrubro">
+
+            <button
+              type="button"
+              class="btn btn-outline-success"
+              (click)="confirmarNuevoSubrubro()">
+
+              Agregar
+
+            </button>
+
+          </div>
+
+        </div>
+
       </div>
 
       <div class="col-md-4">
+
         <label class="form-label">Marca</label>
-        <input type="text" class="form-control" [(ngModel)]="producto.marca">
+
+        <select
+          class="form-select"
+          [ngModel]="producto.marca"
+          (ngModelChange)="seleccionarMarca($event)">
+
+          <option value="">Seleccionar marca...</option>
+
+          <option
+            *ngFor="let marca of marcas"
+            [value]="marca">
+            {{ marca }}
+          </option>
+
+          <option value="__nuevo__">
+            ➕ Agregar nueva marca
+          </option>
+
+        </select>
+
+        <div *ngIf="agregandoMarca" class="mt-2">
+
+          <div class="input-group">
+
+            <input
+              type="text"
+              class="form-control"
+              placeholder="Nueva marca"
+              [(ngModel)]="nuevaMarca">
+
+            <button
+              type="button"
+              class="btn btn-outline-success"
+              (click)="confirmarNuevaMarca()">
+
+              Agregar
+
+            </button>
+
+          </div>
+
+        </div>
+
       </div>
 
       <div class="col-md-6 d-flex align-items-center">
@@ -230,13 +398,53 @@
       </div>
 
       <div class="col-md-3">
+
+        <div class="form-check mb-2">
+          <input
+            type="checkbox"
+            class="form-check-input"
+            id="ventaMinoristaModelo"
+            formControlName="ventaMinorista">
+
+          <label
+            class="form-check-label fw-semibold"
+            for="ventaMinoristaModelo">
+            Venta minorista
+          </label>
+        </div>
+
         <label class="form-label">Precio minorista</label>
-        <input type="number" class="form-control" formControlName="precioMinorista">
+        <input
+          type="number"
+          class="form-control"
+          formControlName="precioMinorista"
+          min="0">
+
       </div>
 
       <div class="col-md-3">
+
+        <div class="form-check mb-2">
+          <input
+            type="checkbox"
+            class="form-check-input"
+            id="ventaMayoristaModelo"
+            formControlName="ventaMayorista">
+
+          <label
+            class="form-check-label fw-semibold"
+            for="ventaMayoristaModelo">
+            Venta mayorista
+          </label>
+        </div>
+
         <label class="form-label">Precio mayorista</label>
-        <input type="number" class="form-control" formControlName="precioMayorista">
+        <input
+          type="number"
+          class="form-control"
+          formControlName="precioMayorista"
+          min="0">
+
       </div>
 
       <div class="col-md-3">
@@ -248,18 +456,150 @@
       </div>
 
       <div class="col-md-4">
+
         <label class="form-label">Rubro</label>
-        <input type="text" class="form-control" formControlName="rubro">
+
+        <select
+          class="form-select"
+          [value]="form.get('rubro')?.value || ''"
+          (change)="seleccionarRubroForm($any($event.target).value)">
+
+          <option value="">Seleccionar rubro...</option>
+
+          <option
+            *ngFor="let rubro of rubros"
+            [value]="rubro">
+            {{ rubro }}
+          </option>
+
+          <option value="__nuevo__">
+            ➕ Agregar nuevo rubro
+          </option>
+
+        </select>
+
+        <div *ngIf="agregandoRubro" class="mt-2">
+
+          <div class="input-group">
+
+            <input
+              type="text"
+              class="form-control"
+              placeholder="Nuevo rubro"
+              [(ngModel)]="nuevoRubro"
+              [ngModelOptions]="{standalone: true}">
+
+            <button
+              type="button"
+              class="btn btn-outline-success"
+              (click)="confirmarNuevoRubroForm()">
+
+              Agregar
+
+            </button>
+
+          </div>
+
+        </div>
+
       </div>
 
       <div class="col-md-4">
+
         <label class="form-label">Subrubro</label>
-        <input type="text" class="form-control" formControlName="subrubro">
+
+        <select
+          class="form-select"
+          [value]="form.get('subrubro')?.value || ''"
+          (change)="seleccionarSubrubroForm($any($event.target).value)">
+
+          <option value="">Seleccionar subrubro...</option>
+
+          <option
+            *ngFor="let subrubro of subrubros"
+            [value]="subrubro">
+            {{ subrubro }}
+          </option>
+
+          <option value="__nuevo__">
+            ➕ Agregar nuevo subrubro
+          </option>
+
+        </select>
+
+        <div *ngIf="agregandoSubrubro" class="mt-2">
+
+          <div class="input-group">
+
+            <input
+              type="text"
+              class="form-control"
+              placeholder="Nuevo subrubro"
+              [(ngModel)]="nuevoSubrubro"
+              [ngModelOptions]="{standalone: true}">
+
+            <button
+              type="button"
+              class="btn btn-outline-success"
+              (click)="confirmarNuevoSubrubroForm()">
+
+              Agregar
+
+            </button>
+
+          </div>
+
+        </div>
+
       </div>
 
       <div class="col-md-4">
+
         <label class="form-label">Marca</label>
-        <input type="text" class="form-control" formControlName="marca">
+
+        <select
+          class="form-select"
+          [value]="form.get('marca')?.value || ''"
+          (change)="seleccionarMarcaForm($any($event.target).value)">
+
+          <option value="">Seleccionar marca...</option>
+
+          <option
+            *ngFor="let marca of marcas"
+            [value]="marca">
+            {{ marca }}
+          </option>
+
+          <option value="__nuevo__">
+            ➕ Agregar nueva marca
+          </option>
+
+        </select>
+
+        <div *ngIf="agregandoMarca" class="mt-2">
+
+          <div class="input-group">
+
+            <input
+              type="text"
+              class="form-control"
+              placeholder="Nueva marca"
+              [(ngModel)]="nuevaMarca"
+              [ngModelOptions]="{standalone: true}">
+
+            <button
+              type="button"
+              class="btn btn-outline-success"
+              (click)="confirmarNuevaMarcaForm()">
+
+              Agregar
+
+            </button>
+
+          </div>
+
+        </div>
+
       </div>
 
       <div class="col-md-6 d-flex align-items-center">
@@ -403,13 +743,53 @@
       </div>
 
       <div class="col-md-3">
+
+        <div class="form-check mb-2">
+          <input
+            type="checkbox"
+            class="form-check-input"
+            id="ventaMinoristaModelo"
+            formControlName="ventaMinorista">
+
+          <label
+            class="form-check-label fw-semibold"
+            for="ventaMinoristaModelo">
+            Venta minorista
+          </label>
+        </div>
+
         <label class="form-label">Precio minorista</label>
-        <input type="number" class="form-control" formControlName="precioMinorista">
+        <input
+          type="number"
+          class="form-control"
+          formControlName="precioMinorista"
+          min="0">
+
       </div>
 
       <div class="col-md-3">
+
+        <div class="form-check mb-2">
+          <input
+            type="checkbox"
+            class="form-check-input"
+            id="ventaMayoristaModelo"
+            formControlName="ventaMayorista">
+
+          <label
+            class="form-check-label fw-semibold"
+            for="ventaMayoristaModelo">
+            Venta mayorista
+          </label>
+        </div>
+
         <label class="form-label">Precio mayorista</label>
-        <input type="number" class="form-control" formControlName="precioMayorista">
+        <input
+          type="number"
+          class="form-control"
+          formControlName="precioMayorista"
+          min="0">
+
       </div>
 
       <div class="col-md-3">
@@ -421,18 +801,150 @@
       </div>
 
       <div class="col-md-4">
+
         <label class="form-label">Rubro</label>
-        <input type="text" class="form-control" formControlName="rubro">
+
+        <select
+          class="form-select"
+          [value]="form.get('rubro')?.value || ''"
+          (change)="seleccionarRubroForm($any($event.target).value)">
+
+          <option value="">Seleccionar rubro...</option>
+
+          <option
+            *ngFor="let rubro of rubros"
+            [value]="rubro">
+            {{ rubro }}
+          </option>
+
+          <option value="__nuevo__">
+            ➕ Agregar nuevo rubro
+          </option>
+
+        </select>
+
+        <div *ngIf="agregandoRubro" class="mt-2">
+
+          <div class="input-group">
+
+            <input
+              type="text"
+              class="form-control"
+              placeholder="Nuevo rubro"
+              [(ngModel)]="nuevoRubro"
+              [ngModelOptions]="{standalone: true}">
+
+            <button
+              type="button"
+              class="btn btn-outline-success"
+              (click)="confirmarNuevoRubroForm()">
+
+              Agregar
+
+            </button>
+
+          </div>
+
+        </div>
+
       </div>
 
       <div class="col-md-4">
+
         <label class="form-label">Subrubro</label>
-        <input type="text" class="form-control" formControlName="subrubro">
+
+        <select
+          class="form-select"
+          [value]="form.get('subrubro')?.value || ''"
+          (change)="seleccionarSubrubroForm($any($event.target).value)">
+
+          <option value="">Seleccionar subrubro...</option>
+
+          <option
+            *ngFor="let subrubro of subrubros"
+            [value]="subrubro">
+            {{ subrubro }}
+          </option>
+
+          <option value="__nuevo__">
+            ➕ Agregar nuevo subrubro
+          </option>
+
+        </select>
+
+        <div *ngIf="agregandoSubrubro" class="mt-2">
+
+          <div class="input-group">
+
+            <input
+              type="text"
+              class="form-control"
+              placeholder="Nuevo subrubro"
+              [(ngModel)]="nuevoSubrubro"
+              [ngModelOptions]="{standalone: true}">
+
+            <button
+              type="button"
+              class="btn btn-outline-success"
+              (click)="confirmarNuevoSubrubroForm()">
+
+              Agregar
+
+            </button>
+
+          </div>
+
+        </div>
+
       </div>
 
       <div class="col-md-4">
+
         <label class="form-label">Marca</label>
-        <input type="text" class="form-control" formControlName="marca">
+
+        <select
+          class="form-select"
+          [value]="form.get('marca')?.value || ''"
+          (change)="seleccionarMarcaForm($any($event.target).value)">
+
+          <option value="">Seleccionar marca...</option>
+
+          <option
+            *ngFor="let marca of marcas"
+            [value]="marca">
+            {{ marca }}
+          </option>
+
+          <option value="__nuevo__">
+            ➕ Agregar nueva marca
+          </option>
+
+        </select>
+
+        <div *ngIf="agregandoMarca" class="mt-2">
+
+          <div class="input-group">
+
+            <input
+              type="text"
+              class="form-control"
+              placeholder="Nueva marca"
+              [(ngModel)]="nuevaMarca"
+              [ngModelOptions]="{standalone: true}">
+
+            <button
+              type="button"
+              class="btn btn-outline-success"
+              (click)="confirmarNuevaMarcaForm()">
+
+              Agregar
+
+            </button>
+
+          </div>
+
+        </div>
+
       </div>
 
       <div class="col-md-6 d-flex align-items-center">
@@ -582,13 +1094,53 @@
       </div>
 
       <div class="col-md-3">
+
+        <div class="form-check mb-2">
+          <input
+            type="checkbox"
+            class="form-check-input"
+            id="ventaMinoristaModelo"
+            formControlName="ventaMinorista">
+
+          <label
+            class="form-check-label fw-semibold"
+            for="ventaMinoristaModelo">
+            Venta minorista
+          </label>
+        </div>
+
         <label class="form-label">Precio minorista</label>
-        <input type="number" class="form-control" formControlName="precioMinorista">
+        <input
+          type="number"
+          class="form-control"
+          formControlName="precioMinorista"
+          min="0">
+
       </div>
 
       <div class="col-md-3">
+
+        <div class="form-check mb-2">
+          <input
+            type="checkbox"
+            class="form-check-input"
+            id="ventaMayoristaModelo"
+            formControlName="ventaMayorista">
+
+          <label
+            class="form-check-label fw-semibold"
+            for="ventaMayoristaModelo">
+            Venta mayorista
+          </label>
+        </div>
+
         <label class="form-label">Precio mayorista</label>
-        <input type="number" class="form-control" formControlName="precioMayorista">
+        <input
+          type="number"
+          class="form-control"
+          formControlName="precioMayorista"
+          min="0">
+
       </div>
 
       <div class="col-md-3">
@@ -600,18 +1152,150 @@
       </div>
 
       <div class="col-md-4">
+
         <label class="form-label">Rubro</label>
-        <input type="text" class="form-control" formControlName="rubro">
+
+        <select
+          class="form-select"
+          [value]="form.get('rubro')?.value || ''"
+          (change)="seleccionarRubroForm($any($event.target).value)">
+
+          <option value="">Seleccionar rubro...</option>
+
+          <option
+            *ngFor="let rubro of rubros"
+            [value]="rubro">
+            {{ rubro }}
+          </option>
+
+          <option value="__nuevo__">
+            ➕ Agregar nuevo rubro
+          </option>
+
+        </select>
+
+        <div *ngIf="agregandoRubro" class="mt-2">
+
+          <div class="input-group">
+
+            <input
+              type="text"
+              class="form-control"
+              placeholder="Nuevo rubro"
+              [(ngModel)]="nuevoRubro"
+              [ngModelOptions]="{standalone: true}">
+
+            <button
+              type="button"
+              class="btn btn-outline-success"
+              (click)="confirmarNuevoRubroForm()">
+
+              Agregar
+
+            </button>
+
+          </div>
+
+        </div>
+
       </div>
 
       <div class="col-md-4">
+
         <label class="form-label">Subrubro</label>
-        <input type="text" class="form-control" formControlName="subrubro">
+
+        <select
+          class="form-select"
+          [value]="form.get('subrubro')?.value || ''"
+          (change)="seleccionarSubrubroForm($any($event.target).value)">
+
+          <option value="">Seleccionar subrubro...</option>
+
+          <option
+            *ngFor="let subrubro of subrubros"
+            [value]="subrubro">
+            {{ subrubro }}
+          </option>
+
+          <option value="__nuevo__">
+            ➕ Agregar nuevo subrubro
+          </option>
+
+        </select>
+
+        <div *ngIf="agregandoSubrubro" class="mt-2">
+
+          <div class="input-group">
+
+            <input
+              type="text"
+              class="form-control"
+              placeholder="Nuevo subrubro"
+              [(ngModel)]="nuevoSubrubro"
+              [ngModelOptions]="{standalone: true}">
+
+            <button
+              type="button"
+              class="btn btn-outline-success"
+              (click)="confirmarNuevoSubrubroForm()">
+
+              Agregar
+
+            </button>
+
+          </div>
+
+        </div>
+
       </div>
 
       <div class="col-md-4">
+
         <label class="form-label">Marca</label>
-        <input type="text" class="form-control" formControlName="marca">
+
+        <select
+          class="form-select"
+          [value]="form.get('marca')?.value || ''"
+          (change)="seleccionarMarcaForm($any($event.target).value)">
+
+          <option value="">Seleccionar marca...</option>
+
+          <option
+            *ngFor="let marca of marcas"
+            [value]="marca">
+            {{ marca }}
+          </option>
+
+          <option value="__nuevo__">
+            ➕ Agregar nueva marca
+          </option>
+
+        </select>
+
+        <div *ngIf="agregandoMarca" class="mt-2">
+
+          <div class="input-group">
+
+            <input
+              type="text"
+              class="form-control"
+              placeholder="Nueva marca"
+              [(ngModel)]="nuevaMarca"
+              [ngModelOptions]="{standalone: true}">
+
+            <button
+              type="button"
+              class="btn btn-outline-success"
+              (click)="confirmarNuevaMarcaForm()">
+
+              Agregar
+
+            </button>
+
+          </div>
+
+        </div>
+
       </div>
 
       <div class="col-md-6 d-flex align-items-center">

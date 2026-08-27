@@ -27,22 +27,6 @@ export class CarritoService {
 
   }
 
-  // SERVICIO PARA ELIMINAR UN PRODUCTO DEL CARRITO ID
-  // async deleteProductoCarrito(clienteId: string, productoId: string): Promise<void> {
-  //   const clienteRef = doc(this.firestore, `Clientes/${clienteId}`);
-  //   try {
-  //     const clienteSnap = await getDoc(clienteRef);
-  //     if (clienteSnap.exists()) {
-  //       const clienteData = clienteSnap.data();
-  //       const carritoActual = clienteData['carrito'] || [];
-  //       const nuevoCarrito = carritoActual.filter((producto: any) => producto.id !== productoId);
-  //       await updateDoc(clienteRef, { carrito: nuevoCarrito });
-  //       this.carritoSubject.next(nuevoCarrito);
-
-  //     }
-  //   } catch (error) {
-  //   }
-  // }
   async deleteProductoCarrito(clienteId: string, uidCarrito: string): Promise<void> {
   if (clienteId === 'invitado') {
     // 🔹 Manejo local para el invitado

@@ -251,9 +251,30 @@ private procesarProductoEnCarrito(cliente: Cliente, producto: Producto) {
       this.toastService.toastMessage('Producto agregado al carrito', 'green', 2000);
     })
     .catch(err => {
-      this.toastService.toastMessage('El producto no pudo agregarse', 'red', 2000);
-      console.error(err);
-    });
+
+      console.error('Error al agregar producto:', err);
+
+      if (err?.tipo === 'STOCK_INSUFICIENTE') {
+
+        const disponiblesParaAgregar = err.stockDisponible - err.cantidadEnCarrito;
+
+        this.toastService.toastMessage(
+          `Stock insuficiente. 
+          Ya tenés ${err.cantidadEnCarrito} unidad(es) en el carrito.
+          Solo podés agregar ${disponiblesParaAgregar} unidad(es) más.`,
+          'orange',
+          4500
+        );
+
+        return;
+      }
+
+      this.toastService.toastMessage(
+        'No se pudo agregar el producto al carrito. Intentá nuevamente.',
+        'red',
+        3000
+      );
+    })
 }
 
 volverATienda() {

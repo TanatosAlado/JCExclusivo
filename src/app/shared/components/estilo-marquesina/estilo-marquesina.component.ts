@@ -1,8 +1,7 @@
 import { Component } from '@angular/core';
-import { collection, Firestore, getDocs } from 'firebase/firestore';
 import { Marquesina } from 'src/app/modules/admin/models/marquesina.model';
 import { MarquesinaService } from 'src/app/modules/admin/services/marquesina.service';
-
+import { AuthService } from 'src/app/modules/auth/services/auth.service';
 
 @Component({
   selector: 'app-estilo-marquesina',
@@ -11,34 +10,38 @@ import { MarquesinaService } from 'src/app/modules/admin/services/marquesina.ser
 })
 export class EstiloMarquesinaComponent {
 
+  marquesinas: Marquesina[] = [];
 
-   marquesinas: Marquesina[] = [];
+  constructor(
+    private marquesinaService: MarquesinaService,
+    private authService: AuthService
+  ) {}
 
-constructor(
-  private marquesinaService: MarquesinaService
-) {}
+  ngOnInit(): void {
 
-async ngOnInit() {
-  await this.getTipoUsuarioMarquesina();
-}
+    this.authService.getUsuarioActual().subscribe(async cliente => {
 
-async getTipoUsuarioMarquesina() {
+      // ==========================================
+      // MINORISTA POR DEFECTO
+      // ==========================================
 
-  const usuarioGuardado = localStorage.getItem('clienteActual');
-  
+      const esMayorista =
+        cliente?.esMayorista ?? false;
 
-  // POR DEFECTO: MINORISTA
-  let tipoCliente = 'Minorista';
+      const tipoCliente =
+        esMayorista
+          ? 'Mayorista'
+          : 'Minorista';
 
-  if (usuarioGuardado) {
-    const usuario = JSON.parse(usuarioGuardado);
+      // ==========================================
+      // CARGAR MARQUESINAS
+      // ==========================================
 
-    if (usuario.esMayorista === true) {
-      tipoCliente = 'Mayorista';
-    }
+      this.marquesinas =
+        await this.marquesinaService
+          .getMarquesinasPorTipo(tipoCliente);
+
+    });
+
   }
-  this.marquesinas =
-    await this.marquesinaService.getMarquesinasPorTipo(tipoCliente);
-
-}
 }

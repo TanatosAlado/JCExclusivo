@@ -2,7 +2,7 @@ import { Component, Inject, OnInit } from '@angular/core';
 import { Firestore } from '@angular/fire/firestore';
 import { FormBuilder, FormGroup, Validators, ValidatorFn, AbstractControl, ValidationErrors, FormArray, FormControl } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { addDoc, collection, updateDoc } from 'firebase/firestore';
+import { addDoc, collection, getDocs, updateDoc } from 'firebase/firestore';
 import { Sucursal } from 'src/app/modules/admin/models/sucursal.model';
 import { SucursalesService } from 'src/app/modules/admin/services/sucursales.service';
 import { Producto, VarianteProducto } from 'src/app/modules/shop/models/producto.model';
@@ -62,6 +62,18 @@ export class AltaProductoComponent implements OnInit {
   imagenPreview: string | null = null;
   subiendoImagen = false;
 
+  rubros: string[] = [];
+  agregandoRubro = false;
+  nuevoRubro = '';
+
+  subrubros: string[] = [];
+  agregandoSubrubro = false;
+  nuevoSubrubro = '';
+
+  marcas: string[] = [];
+  agregandoMarca = false;
+  nuevaMarca = '';
+
   constructor(private fb: FormBuilder, private sucursalService: SucursalesService, private firestore: Firestore, private dialogRef: MatDialogRef<AltaProductoComponent>, private storage: Storage) { }
 
   ngOnInit(): void {
@@ -99,6 +111,11 @@ export class AltaProductoComponent implements OnInit {
 
       // codigoBarras: ['']
     });
+
+    this.configurarPreciosPorTipoVenta();
+    this.cargarRubros();
+    this.cargarSubrubros();
+    this.cargarMarcas();
 
     // 2) Cargamos sucursales (esto inicializa también el stock por sucursal)
     this.cargarSucursales();
@@ -360,7 +377,9 @@ async guardarProducto() {
         codigoBarras: this.producto.codigoBarras || '',
         precioCosto: Number(this.producto.precioCosto || 0),
         precioSinImpuestos: Number(this.producto.precioSinImpuestos || 0),
+        ventaMinorista: Boolean(this.producto.ventaMinorista),
         precioMinorista: Number(this.producto.precioMinorista || 0),
+        ventaMayorista: Boolean(this.producto.ventaMayorista),
         precioMayorista: Number(this.producto.precioMayorista || 0),
         moneda: this.producto.moneda || 'ARS',
         oferta: Boolean(this.producto.oferta),
@@ -404,8 +423,14 @@ async guardarProducto() {
           codigoBarras: v.codigoBarras || '',
           precioCosto: Number(base.precioCosto || 0),
           precioSinImpuestos: Number(base.precioSinImpuestos || 0),
-          precioMinorista: Number(v.precioMinorista ?? base.precioMinorista ?? 0),
-          precioMayorista: Number(v.precioMayorista ?? base.precioMayorista ?? 0),
+          ventaMinorista: Boolean(base.ventaMinorista),
+          precioMinorista: Number(
+            v.precioMinorista ?? base.precioMinorista ?? 0
+          ),
+          ventaMayorista: Boolean(base.ventaMayorista),
+          precioMayorista: Number(
+            v.precioMayorista ?? base.precioMayorista ?? 0
+          ),
           moneda: base.moneda || 'ARS',
           oferta: Boolean(base.oferta),
           precioOferta: base.oferta ? Number(base.precioOferta || 0) : null,
@@ -446,7 +471,9 @@ async guardarProducto() {
           codigoBarras: v.codigoBarras || '',
           precioCosto: Number(base.precioCosto || 0),
           precioSinImpuestos: Number(base.precioSinImpuestos || 0),
+          ventaMinorista: Boolean(base.ventaMinorista),
           precioMinorista: Number(base.precioMinorista || 0),
+          ventaMayorista: Boolean(base.ventaMayorista),
           precioMayorista: Number(base.precioMayorista || 0),
           moneda: base.moneda || 'ARS',
           oferta: Boolean(base.oferta),
@@ -492,8 +519,14 @@ async guardarProducto() {
             codigoBarras: color.codigoBarras || '',
             precioCosto: Number(base.precioCosto || 0),
             precioSinImpuestos: Number(base.precioSinImpuestos || 0),
-            precioMinorista: Number(color.precioMinorista ?? base.precioMinorista ?? 0),
-            precioMayorista: Number(color.precioMayorista ?? base.precioMayorista ?? 0),
+            ventaMinorista: Boolean(base.ventaMinorista),
+            precioMinorista: Number(
+              color.precioMinorista ?? base.precioMinorista ?? 0
+            ),
+            ventaMayorista: Boolean(base.ventaMayorista),
+            precioMayorista: Number(
+              color.precioMayorista ?? base.precioMayorista ?? 0
+            ),
             moneda: base.moneda || 'ARS',
             oferta: Boolean(base.oferta),
             precioOferta: base.oferta ? Number(base.precioOferta || 0) : null,
@@ -687,6 +720,416 @@ async subirImagenProducto(): Promise<string | null> {
 
   getStockSucursalesModelo(modelo: AbstractControl): FormArray {
     return modelo.get('stockSucursales') as FormArray;
+  }
+
+
+  configurarPreciosPorTipoVenta(): void {
+
+    const ventaMinorista = this.form.get('ventaMinorista');
+    const precioMinorista = this.form.get('precioMinorista');
+
+    const ventaMayorista = this.form.get('ventaMayorista');
+    const precioMayorista = this.form.get('precioMayorista');
+
+    ventaMinorista?.valueChanges.subscribe((habilitado: boolean) => {
+
+      if (habilitado) {
+        precioMinorista?.enable();
+        precioMinorista?.setValidators([
+          Validators.required,
+          Validators.min(0.01)
+        ]);
+      } else {
+        precioMinorista?.disable();
+        precioMinorista?.clearValidators();
+        precioMinorista?.setValue(0);
+      }
+
+      precioMinorista?.updateValueAndValidity();
+    });
+
+
+    ventaMayorista?.valueChanges.subscribe((habilitado: boolean) => {
+
+      if (habilitado) {
+        precioMayorista?.enable();
+        precioMayorista?.setValidators([
+          Validators.required,
+          Validators.min(0.01)
+        ]);
+      } else {
+        precioMayorista?.disable();
+        precioMayorista?.clearValidators();
+        precioMayorista?.setValue(0);
+      }
+
+      precioMayorista?.updateValueAndValidity();
+    });
+
+
+    // Estado inicial
+    if (!ventaMinorista?.value) {
+      precioMinorista?.disable();
+    }
+
+    if (!ventaMayorista?.value) {
+      precioMayorista?.disable();
+    }
+  }
+
+  async cargarRubros(): Promise<void> {
+
+    try {
+
+      const productosRef = collection(this.firestore, 'productos');
+      const snap = await getDocs(productosRef);
+
+      const rubrosNormalizados = snap.docs
+        .map(doc => {
+          const data = doc.data() as any;
+          return this.normalizarTexto(data.rubro);
+        })
+        .filter(rubro => rubro !== '');
+
+      this.rubros = [...new Set(rubrosNormalizados)]
+        .sort((a, b) => a.localeCompare(b));
+
+    } catch (error) {
+
+      console.error('Error cargando rubros:', error);
+
+    }
+
+    
+  }
+
+  normalizarTexto(valor: string): string {
+
+    if (!valor) {
+      return '';
+    }
+
+    return valor
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, ' ')
+      .replace(/\b\w/g, letra => letra.toUpperCase());
+  }
+
+
+  seleccionarRubro(valor: string): void {
+
+    if (valor === '__nuevo__') {
+
+      this.agregandoRubro = true;
+      this.nuevoRubro = '';
+
+      this.producto.rubro = '';
+
+    } else {
+
+      this.agregandoRubro = false;
+      this.producto.rubro = valor;
+
+    }
+  }
+
+  confirmarNuevoRubro(): void {
+
+    const rubro = this.normalizarTexto(this.nuevoRubro);
+
+    if (!rubro) {
+      return;
+    }
+
+    const existe = this.rubros.some(
+      r => r.toLowerCase() === rubro.toLowerCase()
+    );
+
+    if (!existe) {
+      this.rubros.push(rubro);
+
+      this.rubros.sort((a, b) =>
+        a.localeCompare(b)
+      );
+    }
+
+    this.producto.rubro = rubro;
+
+    this.nuevoRubro = '';
+    this.agregandoRubro = false;
+  }
+
+
+  async cargarSubrubros(): Promise<void> {
+
+    try {
+
+      const productosRef = collection(this.firestore, 'productos');
+      const snap = await getDocs(productosRef);
+
+      const subrubrosNormalizados = snap.docs
+        .map(doc => {
+          const data = doc.data() as any;
+          return this.normalizarTexto(data.subrubro);
+        })
+        .filter(subrubro => subrubro !== '');
+
+      this.subrubros = [...new Set(subrubrosNormalizados)]
+        .sort((a, b) => a.localeCompare(b));
+
+    } catch (error) {
+
+      console.error('Error cargando subrubros:', error);
+
+    }
+
+  }
+
+  seleccionarSubrubro(valor: string): void {
+
+    if (valor === '__nuevo__') {
+
+      this.agregandoSubrubro = true;
+      this.nuevoSubrubro = '';
+
+      this.producto.subrubro = '';
+
+    } else {
+
+      this.agregandoSubrubro = false;
+      this.producto.subrubro = valor;
+
+    }
+  }
+
+  confirmarNuevoSubrubro(): void {
+
+    const subrubro = this.normalizarTexto(this.nuevoSubrubro);
+
+    if (!subrubro) {
+      return;
+    }
+
+    const existe = this.subrubros.some(
+      s => s.toLowerCase() === subrubro.toLowerCase()
+    );
+
+    if (!existe) {
+
+      this.subrubros.push(subrubro);
+
+      this.subrubros.sort((a, b) =>
+        a.localeCompare(b)
+      );
+    }
+
+    this.producto.subrubro = subrubro;
+
+    this.nuevoSubrubro = '';
+    this.agregandoSubrubro = false;
+  }
+
+  async cargarMarcas(): Promise<void> {
+
+    try {
+
+      const productosRef = collection(this.firestore, 'productos');
+      const snap = await getDocs(productosRef);
+
+      const marcasNormalizadas = snap.docs
+        .map(doc => {
+          const data = doc.data() as any;
+          return this.normalizarTexto(data.marca);
+        })
+        .filter(marca => marca !== '');
+
+      this.marcas = [...new Set(marcasNormalizadas)]
+        .sort((a, b) => a.localeCompare(b));
+
+    } catch (error) {
+
+      console.error('Error cargando marcas:', error);
+
+    }
+
+  }
+
+  seleccionarMarca(valor: string): void {
+
+    if (valor === '__nuevo__') {
+
+      this.agregandoMarca = true;
+      this.nuevaMarca = '';
+
+      this.producto.marca = '';
+
+    } else {
+
+      this.agregandoMarca = false;
+      this.producto.marca = valor;
+
+    }
+  }
+
+  confirmarNuevaMarca(): void {
+
+    const marca = this.normalizarTexto(this.nuevaMarca);
+
+    if (!marca) {
+      return;
+    }
+
+    const existe = this.marcas.some(
+      m => m.toLowerCase() === marca.toLowerCase()
+    );
+
+    if (!existe) {
+
+      this.marcas.push(marca);
+
+      this.marcas.sort((a, b) =>
+        a.localeCompare(b)
+      );
+    }
+
+    this.producto.marca = marca;
+
+    this.nuevaMarca = '';
+    this.agregandoMarca = false;
+  }
+
+
+  seleccionarRubroForm(valor: string): void {
+
+    if (valor === '__nuevo__') {
+
+      this.agregandoRubro = true;
+      this.nuevoRubro = '';
+
+      this.form.get('rubro')?.setValue('');
+
+    } else {
+
+      this.agregandoRubro = false;
+      this.form.get('rubro')?.setValue(valor);
+
+    }
+  }
+
+  confirmarNuevoRubroForm(): void {
+
+    const rubro = this.normalizarTexto(this.nuevoRubro);
+
+    if (!rubro) {
+      return;
+    }
+
+    const existe = this.rubros.some(
+      r => r.toLowerCase() === rubro.toLowerCase()
+    );
+
+    if (!existe) {
+
+      this.rubros.push(rubro);
+
+      this.rubros.sort((a, b) =>
+        a.localeCompare(b)
+      );
+    }
+
+    this.form.get('rubro')?.setValue(rubro);
+
+    this.nuevoRubro = '';
+    this.agregandoRubro = false;
+  }
+
+  seleccionarSubrubroForm(valor: string): void {
+
+    if (valor === '__nuevo__') {
+
+      this.agregandoSubrubro = true;
+      this.nuevoSubrubro = '';
+
+      this.form.get('subrubro')?.setValue('');
+
+    } else {
+
+      this.agregandoSubrubro = false;
+      this.form.get('subrubro')?.setValue(valor);
+
+    }
+  }
+
+  confirmarNuevoSubrubroForm(): void {
+
+    const subrubro = this.normalizarTexto(this.nuevoSubrubro);
+
+    if (!subrubro) {
+      return;
+    }
+
+    const existe = this.subrubros.some(
+      s => s.toLowerCase() === subrubro.toLowerCase()
+    );
+
+    if (!existe) {
+
+      this.subrubros.push(subrubro);
+
+      this.subrubros.sort((a, b) =>
+        a.localeCompare(b)
+      );
+    }
+
+    this.form.get('subrubro')?.setValue(subrubro);
+
+    this.nuevoSubrubro = '';
+    this.agregandoSubrubro = false;
+  }
+
+  seleccionarMarcaForm(valor: string): void {
+
+    if (valor === '__nuevo__') {
+
+      this.agregandoMarca = true;
+      this.nuevaMarca = '';
+
+      this.form.get('marca')?.setValue('');
+
+    } else {
+
+      this.agregandoMarca = false;
+      this.form.get('marca')?.setValue(valor);
+
+    }
+  }
+
+  confirmarNuevaMarcaForm(): void {
+
+    const marca = this.normalizarTexto(this.nuevaMarca);
+
+    if (!marca) {
+      return;
+    }
+
+    const existe = this.marcas.some(
+      m => m.toLowerCase() === marca.toLowerCase()
+    );
+
+    if (!existe) {
+
+      this.marcas.push(marca);
+
+      this.marcas.sort((a, b) =>
+        a.localeCompare(b)
+      );
+    }
+
+    this.form.get('marca')?.setValue(marca);
+
+    this.nuevaMarca = '';
+    this.agregandoMarca = false;
   }
 
 }

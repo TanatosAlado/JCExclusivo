@@ -58,6 +58,7 @@ export class LayoutDespachoComponent implements OnInit, OnDestroy {
   // Cliente
   clienteActual: ClientePOS | null = null;
   tipoPrecio: 'minorista' | 'mayorista' = 'minorista';
+  precioForzadoManualmente = false;
   buscandoCliente = false;
   busquedaRealizada = false;
 
@@ -93,6 +94,7 @@ export class LayoutDespachoComponent implements OnInit, OnDestroy {
   descuentoTransferencia: number = 0;
   descuentoAplicado: number = 0;
 
+  dolar: number = 1;
   
 
   constructor(
@@ -135,6 +137,7 @@ async ngOnInit() {
       if (info) {
         this.descuentoEfectivo = info.descuentoEnEfectivo || 0;
         this.descuentoTransferencia = info.descuentoEnTransferencia || 0;
+        this.dolar = info.dolar;
       }
     });  
     
@@ -331,7 +334,6 @@ abrirCaja(sucursalIdExistente?: string) {
       this.clienteActual = {
         dni: data.dni,
         nombre: data.nombre,
-        // tipo: data.tipoCliente || 'minorista',
         tipo: catCliente,
         puntos: data.puntos || 0
       };
@@ -362,24 +364,52 @@ abrirCaja(sucursalIdExistente?: string) {
     }
   }
 
-  agregarAlCarrito(producto: ProductoPOS, desdeBusquedaManual: boolean = false) {
+  agregarAlCarrito(
+    // producto: ProductoPOS,
+    producto: any,
+    desdeBusquedaManual: boolean = false
+  ) {
+
+    console.log('llego al metodo')
+    console.log('prod tocado', producto)
+
     const precioBase = this.tipoPrecio === 'minorista'
       ? producto.precioMinorista
       : producto.precioMayorista;
 
-    const index = this.carrito.findIndex(item => item.productoId === producto.id);
+    // 💵 Convertimos a ARS si el producto está en USD
+    let precioEnPesos = Number(precioBase) || 0;
+
+    if (producto.moneda === 'USD') {
+      precioEnPesos *= this.dolar;
+    }
+
+    const index = this.carrito.findIndex(
+      item => item.productoId === producto.id
+    );
+
     if (index >= 0) {
+
       this.carrito[index].cantidad++;
-      this.carrito[index].subtotal = this.carrito[index].cantidad * this.carrito[index].precioUnitario;
+
+      this.carrito[index].subtotal =
+        this.carrito[index].cantidad *
+        this.carrito[index].precioUnitario;
+
     } else {
+
       this.carrito.push({
         productoId: producto.id,
         nombre: producto.descripcion,
         cantidad: 1,
-        precioUnitario: precioBase,
-        subtotal: precioBase
+
+        // 🔥 Siempre guardamos el precio en ARS
+        precioUnitario: precioEnPesos,
+
+        subtotal: precioEnPesos
       });
     }
+
     this.calcularTotal();
 
     if (desdeBusquedaManual) {
@@ -761,5 +791,11 @@ abrirCaja(sucursalIdExistente?: string) {
     return totalFinal < totalBase;
   }
 
+forzarTipoPrecio(tipo: 'minorista' | 'mayorista') {
+
+  this.tipoPrecio = tipo;
+  this.precioForzadoManualmente = true;
+
+}
 
 }

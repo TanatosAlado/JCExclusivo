@@ -32,8 +32,11 @@ export class ListaProductosComponent {
   datasourceProductos: MatTableDataSource<Producto>
   paginator!: MatPaginator;
   public productoAEliminar: string = '';
-  // filtroActual = '';
+
   filtroActual: string = '';
+  filtroRubro: string = '';
+  filtroSubrubro: string = '';
+  filtroMarca: string = '';
 
   constructor(public dialog: MatDialog, private productosService: ProductosService, private toastService: ToastService, private infoEmpresaService: InfoEmpresaService) {
 
@@ -105,17 +108,12 @@ getDescripcionVariantes(p: any): string {
     datasource: MatTableDataSource<any>
   ): void {
 
-    this.filtroActual = (event.target as HTMLInputElement).value
-      .trim()
-      .toLowerCase();
+    this.filtroActual =
+      (event.target as HTMLInputElement).value
+        .trim()
+        .toLowerCase();
 
-    datasource.filter = this.filtroActual;
-
-    // Cada vez que cambia la búsqueda,
-    // volvemos a la primera página.
-    if (this.paginator) {
-      this.paginator.firstPage();
-    }
+    this.aplicarFiltros();
   }
 
   obtenerProductos(): void {
@@ -135,23 +133,43 @@ getDescripcionVariantes(p: any): string {
           stockGlobal: p.stockGlobal ?? 0
         }));
 
+        // 🔤 Ordenar alfabéticamente por descripción
+        this.productos.sort((a, b) =>
+          (a.descripcion || '').localeCompare(
+            b.descripcion || '',
+            'es',
+            { sensitivity: 'base' }
+          )
+        );
+
         this.rubrosUnicos = [
           ...new Set(
-            this.productos.map(p => p.rubro?.toUpperCase())
+            this.productos
+              .map(p => p.rubro?.trim())
+              .filter(Boolean)
+              .map(rubro => rubro!.toUpperCase())
           )
-        ];
+        ].sort((a, b) => a.localeCompare(b));
 
         this.subrubrosUnicos = [
           ...new Set(
-            this.productos.map(p => p.subrubro?.toUpperCase())
+            this.productos
+              .map(p => p.subrubro?.trim())
+              .filter(Boolean)
+              .map(subrubro => subrubro!.toUpperCase())
           )
-        ];
+        ].sort((a, b) => a.localeCompare(b));
 
         this.marcasUnicas = [
           ...new Set(
-            this.productos.map(p => p.marca?.toUpperCase())
+            this.productos
+              .map(p => p.marca?.trim())
+              .filter(Boolean)
+              .map(marca => marca!.toUpperCase())
           )
-        ];
+        ].sort((a, b) => a.localeCompare(b));
+
+
 
         // 🧱 Creamos nuevamente el datasource
         this.datasourceProductos =
@@ -168,7 +186,6 @@ getDescripcionVariantes(p: any): string {
               producto.rubro,
               producto.subrubro,
               producto.marca,
-              producto.codigoBarras,
 
               // Por si algún producto tiene estos campos
               (producto as any).modelo,
@@ -427,14 +444,16 @@ normalizarStock(producto: any) {
 
   exportarExcelFiltrado(): void {
 
-    if (!this.filtroActual) {
-      this.toastService.toastMessage(
-        'No hay una búsqueda activa',
-        'orange',
-        2000
-      );
-      return;
-    }
+  if (!this.hayFiltrosActivos()) {
+
+    this.toastService.toastMessage(
+      'No hay una búsqueda o filtro activo',
+      'orange',
+      2000
+    );
+
+    return;
+  }
 
     const productosFiltrados = this.datasourceProductos.filteredData;
 
@@ -451,10 +470,13 @@ normalizarStock(producto: any) {
       this.prepararProductoParaExcel(producto)
     );
 
+    const nombreFiltro = this.generarNombreFiltroExcel();
+
     this.descargarExcel(
       datosExcel,
-      'Productos_Busqueda_' + this.filtroActual
+      `Productos_Filtrados_${nombreFiltro}`
     );
+
   }
 
 
@@ -556,6 +578,154 @@ normalizarStock(producto: any) {
       workbook,
       `${nombreArchivo}.xlsx`
     );
+  }
+
+
+  aplicarFiltros(): void {
+
+    if (!this.datasourceProductos) {
+      return;
+    }
+
+    this.datasourceProductos.filterPredicate =
+      (producto: Producto, filtro: string): boolean => {
+
+        // ==============================
+        // 🔎 BUSCADOR
+        // ==============================
+
+        const textoProducto = [
+
+          producto.descripcion,
+          producto.rubro,
+          producto.subrubro,
+          producto.marca,
+
+          (producto as any).modelo,
+          (producto as any).color
+
+        ]
+        .filter(valor =>
+          valor !== null &&
+          valor !== undefined &&
+          valor !== ''
+        )
+        .join(' ');
+
+
+        const coincideTexto =
+          !this.filtroActual ||
+          this.coincideBusqueda(
+            textoProducto,
+            this.filtroActual
+          );
+
+
+        // ==============================
+        // 🏷️ RUBRO
+        // ==============================
+
+        const coincideRubro =
+          !this.filtroRubro ||
+          this.normalizarTexto(producto.rubro) ===
+          this.normalizarTexto(this.filtroRubro);
+
+
+        // ==============================
+        // 📂 SUBRUBRO
+        // ==============================
+
+        const coincideSubrubro =
+          !this.filtroSubrubro ||
+          this.normalizarTexto(producto.subrubro) ===
+          this.normalizarTexto(this.filtroSubrubro);
+
+
+        // ==============================
+        // 🏷️ MARCA
+        // ==============================
+
+        const coincideMarca =
+          !this.filtroMarca ||
+          this.normalizarTexto(producto.marca) ===
+          this.normalizarTexto(this.filtroMarca);
+
+
+        // ==============================
+        // ✅ RESULTADO FINAL
+        // ==============================
+
+        return (
+          coincideTexto &&
+          coincideRubro &&
+          coincideSubrubro &&
+          coincideMarca
+        );
+      };
+
+
+    // 🔄 Ejecutamos nuevamente el filtro
+    this.datasourceProductos.filter =
+      Date.now().toString();
+
+
+    // 📄 Volver a la primera página
+    if (this.paginator) {
+      this.paginator.firstPage();
+    }
+  }
+
+  limpiarFiltros(): void {
+
+    this.filtroActual = '';
+    this.filtroRubro = '';
+    this.filtroSubrubro = '';
+    this.filtroMarca = '';
+
+    if (this.datasourceProductos) {
+      this.datasourceProductos.filter = '';
+    }
+
+    if (this.paginator) {
+      this.paginator.firstPage();
+    }
+  }
+
+
+  hayFiltrosActivos(): boolean {
+
+    return !!(
+      this.filtroActual ||
+      this.filtroRubro ||
+      this.filtroSubrubro ||
+      this.filtroMarca
+    );
+
+  }
+
+  private generarNombreFiltroExcel(): string {
+
+    const filtros: string[] = [];
+
+    if (this.filtroActual) {
+      filtros.push(`Busqueda-${this.filtroActual}`);
+    }
+
+    if (this.filtroRubro) {
+      filtros.push(`Rubro-${this.filtroRubro}`);
+    }
+
+    if (this.filtroSubrubro) {
+      filtros.push(`Subrubro-${this.filtroSubrubro}`);
+    }
+
+    if (this.filtroMarca) {
+      filtros.push(`Marca-${this.filtroMarca}`);
+    }
+
+    return filtros
+      .join('_')
+      .replace(/[\\/:*?"<>|]/g, '-');
   }
 
 }

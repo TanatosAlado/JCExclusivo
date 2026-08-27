@@ -40,10 +40,10 @@
           mat-raised-button
           class="boton-excel boton-excel-filtrado"
           (click)="exportarExcelFiltrado()"
-          [disabled]="!filtroActual">
+          [disabled]="!hayFiltrosActivos()">
 
           <mat-icon>filter_alt</mat-icon>
-          Búsqueda
+          Búsqueda / Filtros
 
         </button>
 
@@ -51,7 +51,139 @@
 
     </div>
 
-    <input class="search-input" [value]="filtroActual" (keyup)="applyFilter($event,datasourceProductos)" placeholder="Búsqueda Productos" #input>
+    <div class="filtros-container">
+
+      <!-- ========================= -->
+      <!-- BUSCADOR -->
+      <!-- ========================= -->
+
+      <div class="buscador-container">
+
+        <label class="filtro-label">
+          Búsqueda Productos
+        </label>
+
+        <input
+          class="search-input"
+          [value]="filtroActual"
+          (keyup)="applyFilter($event, datasourceProductos)"
+          placeholder="Buscar producto..."
+          #input>
+
+      </div>
+
+
+      <!-- ========================= -->
+      <!-- FILTROS -->
+      <!-- ========================= -->
+
+      <div class="filtros-row">
+
+        <!-- Rubro -->
+        <div class="filtro-item">
+
+          <label class="filtro-label">
+            Rubro
+          </label>
+
+          <select
+            class="form-select"
+            [(ngModel)]="filtroRubro"
+            (change)="aplicarFiltros()">
+
+            <option value="">
+              Todos los rubros
+            </option>
+
+            <option
+              *ngFor="let rubro of rubrosUnicos"
+              [value]="rubro">
+
+              {{ rubro }}
+
+            </option>
+
+          </select>
+
+        </div>
+
+
+        <!-- Subrubro -->
+        <div class="filtro-item">
+
+          <label class="filtro-label">
+            Subrubro
+          </label>
+
+          <select
+            class="form-select"
+            [(ngModel)]="filtroSubrubro"
+            (change)="aplicarFiltros()">
+
+            <option value="">
+              Todos los subrubros
+            </option>
+
+            <option
+              *ngFor="let subrubro of subrubrosUnicos"
+              [value]="subrubro">
+
+              {{ subrubro }}
+
+            </option>
+
+          </select>
+
+        </div>
+
+
+        <!-- Marca -->
+        <div class="filtro-item">
+
+          <label class="filtro-label">
+            Marca
+          </label>
+
+          <select
+            class="form-select"
+            [(ngModel)]="filtroMarca"
+            (change)="aplicarFiltros()">
+
+            <option value="">
+              Todas las marcas
+            </option>
+
+            <option
+              *ngFor="let marca of marcasUnicas"
+              [value]="marca">
+
+              {{ marca }}
+
+            </option>
+
+          </select>
+
+        </div>
+
+
+        <!-- Limpiar -->
+        <div class="filtro-item filtro-boton">
+
+          <button
+            type="button"
+            class="btn btn-outline-secondary btn-limpiar-filtros"
+            (click)="limpiarFiltros()">
+
+            <i class="fa-solid fa-filter-circle-xmark"></i>
+            Limpiar filtros
+
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
 
     <div class="tabla-scroll">
       <table mat-table [dataSource]="datasourceProductos" class="mat-elevation-z8" style="width: 100%;">

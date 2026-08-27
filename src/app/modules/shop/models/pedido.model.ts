@@ -33,3 +33,14 @@ export class Pedido {
       this.apellidoCliente = apellido;
     }
   }
+
+  export interface StockDescontado {
+  tipo: 'mayorista' | 'minorista';
+
+  cantidad?: number;
+
+  sucursales?: {
+    sucursalId: string;
+    cantidad: number;
+  }[];
+}
