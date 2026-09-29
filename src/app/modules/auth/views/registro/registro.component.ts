@@ -59,7 +59,12 @@ export class RegistroComponent {
 
   async crearCliente() {
     this.error = null;
-    const form = this.formRegistroCliente.value;
+    const form = {
+      ...this.formRegistroCliente.value,
+      usuario: this.formRegistroCliente.value.usuario
+        ?.trim()
+        .toUpperCase()
+    };
 
     // 1. Validar que el nombre de usuario no exista
     const clientesRef = collection(this.firestore, 'Clientes');

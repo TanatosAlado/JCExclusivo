@@ -4,7 +4,7 @@ import { RegistroComponent } from '../views/registro/registro.component';
 import { MatDialog } from '@angular/material/dialog';
 import { Cliente } from '../models/cliente.model';
 import { Auth, signInWithEmailAndPassword, sendPasswordResetEmail  } from '@angular/fire/auth';
-import { collection, doc, Firestore, getDoc, getDocs, query, where } from '@angular/fire/firestore';
+import { collection, doc, Firestore, getDoc, getDocs, query, setDoc, where } from '@angular/fire/firestore';
 import { GeneralService } from 'src/app/shared/services/general.service';
 
 @Injectable({
@@ -32,25 +32,56 @@ export class AuthService {
   }
 
   async login(username: string, clave: string): Promise<Cliente | null> {
-    
-    const usuariosRef = collection(this.firestore, 'Clientes');
-    const q = query(usuariosRef, where('usuario', '==', username));
+
+    const usuarioNormalizado = username
+      .trim()
+      .toUpperCase();
+
+    const usuariosRef = collection(
+      this.firestore,
+      'Clientes'
+    );
+
+    const q = query(
+      usuariosRef,
+      where('usuario', '==', usuarioNormalizado)
+    );
+
     const snapshot = await getDocs(q);
 
     if (!snapshot.empty) {
+
       const data = snapshot.docs[0].data() as Cliente;
-      const email = data.mail; // email registrado
 
-      const cred = await signInWithEmailAndPassword(this.auth, email, clave);
+      const email = data.mail;
 
-      const ref = doc(this.firestore, 'Clientes', cred.user.uid);
+      const cred = await signInWithEmailAndPassword(
+        this.auth,
+        email,
+        clave
+      );
+
+      const ref = doc(
+        this.firestore,
+        'Clientes',
+        cred.user.uid
+      );
+
       const userDoc = await getDoc(ref);
 
-      return userDoc.exists() ? userDoc.data() as Cliente : null;
+      return userDoc.exists()
+        ? userDoc.data() as Cliente
+        : null;
+
     } else {
-      throw new Error('Nombre de usuario no encontrado');
+
+      throw new Error(
+        'Nombre de usuario no encontrado'
+      );
+
     }
   }
+
 
 setUsuarioActual(cliente: Cliente): void {
   this.clienteActualSubject.next(cliente);
@@ -80,5 +111,68 @@ setUsuarioActual(cliente: Cliente): void {
   async recuperarPassword(email: string): Promise<void> {
     return await sendPasswordResetEmail(this.auth, email);
   }
+
+
+async normalizarUsuariosClientes(): Promise<void> {
+
+  try {
+
+    const clientesRef = collection(this.firestore, 'Clientes');
+
+    const snapshot = await getDocs(clientesRef);
+
+    console.log(`Clientes encontrados: ${snapshot.size}`);
+
+    let cantidadCambios = 0;
+
+    for (const clienteDoc of snapshot.docs) {
+
+      const data = clienteDoc.data() as any;
+
+      const usuarioOriginal = data.usuario;
+
+      if (!usuarioOriginal) {
+        continue;
+      }
+
+      const usuarioNormalizado = usuarioOriginal
+        .toString()
+        .trim()
+        .toUpperCase();
+
+      // Si ya está normalizado, no hacemos nada
+      if (usuarioOriginal === usuarioNormalizado) {
+        continue;
+      }
+
+      console.log(
+        `Usuario: "${usuarioOriginal}" → "${usuarioNormalizado}"`
+      );
+
+      cantidadCambios++;
+
+      // 🔥 Actualizar Firestore
+      await setDoc(
+        doc(this.firestore, 'Clientes', clienteDoc.id),
+        {
+          usuario: usuarioNormalizado
+        },
+        { merge: true }
+      );
+    }
+
+    console.log(
+      `✅ Normalización terminada. Usuarios modificados: ${cantidadCambios}`
+    );
+
+  } catch (error) {
+
+    console.error(
+      '❌ Error normalizando usuarios:',
+      error
+    );
+
+  }
+}
 
 }

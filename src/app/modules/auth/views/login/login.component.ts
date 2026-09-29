@@ -41,7 +41,14 @@ export class LoginComponent {
    
   async login() {
     try {
-      const loginRequest = new LoginRequest(this.usuario, this.contrasena);
+      const usuarioNormalizado = this.usuario
+      .trim()
+      .toUpperCase();
+
+    const loginRequest = new LoginRequest(
+      usuarioNormalizado,
+      this.contrasena
+    );
 
       const cliente = await this.authService.login(loginRequest.user, loginRequest.password);
 
