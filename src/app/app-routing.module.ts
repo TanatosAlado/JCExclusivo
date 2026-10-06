@@ -19,6 +19,7 @@ import { ConsultaOrdenComponent } from './shared/components/consulta-orden/consu
 import { CajaComponent } from './modules/admin/views/caja/caja.component';
 import { SucursalesComponent } from './modules/admin/views/sucursales/sucursales.component';
 import { MarquesinaComponent } from './modules/admin/views/marquesina/marquesina.component';
+import { AdminGuard } from './core/admin.guard';
 
 const routes: Routes = [
     { path: '', redirectTo: 'inicio', pathMatch: 'prefix' },
@@ -28,7 +29,7 @@ const routes: Routes = [
   {
     path: 'gestiones',
     component: AdminLayoutComponent,
-    // canActivate: [AdminGuard],
+    canActivate: [AdminGuard],
     children: [
       { path: '', component: GestionesComponent }, 
       { path: 'clientes', component: ClientesComponent },

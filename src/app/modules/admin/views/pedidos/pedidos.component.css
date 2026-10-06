@@ -423,7 +423,19 @@ a{
   border-radius: 8px;
   width: 80%;
   max-width: 600px;
+
+  /* 🔥 NUEVO */
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+
   box-shadow: 0 8px 20px rgba(236, 19, 62, 0.25);
+}
+
+.contenido-imprimir {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 /* Título - reutilizamos clase dialog-title */
@@ -520,3 +532,21 @@ a{
     display: none !important;
   }
 }
+
+
+.contenedor-imagen-pedido {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+.color-producto {
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    border-radius: 50%;
+    border: 2px solid #ffffff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+

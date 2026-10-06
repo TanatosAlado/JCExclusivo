@@ -46,8 +46,21 @@ private firestore = inject(Firestore);
   }
 
   actualizarCliente(id: string, datosParciales: Partial<Cliente>): Promise<void> {
+
     const clienteDocRef = doc(this.firestore, 'Clientes', id);
-    const datosPlano = JSON.parse(JSON.stringify(datosParciales)); // 🔧 conversión segura
+
+    const datosPlano = JSON.parse(
+      JSON.stringify(datosParciales)
+    );
+
+    if (
+      datosPlano.dni !== undefined &&
+      datosPlano.dni !== null &&
+      datosPlano.dni !== ''
+    ) {
+      datosPlano.dni = Number(datosPlano.dni);
+    }
+
     return updateDoc(clienteDocRef, datosPlano);
   }
 
@@ -110,5 +123,8 @@ private firestore = inject(Firestore);
 
     return null;
   }
+
+
+
 
 }

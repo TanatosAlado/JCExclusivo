@@ -249,7 +249,7 @@ export class CheckoutComponent {
 
         } catch (error) {
           
-        throw error;
+        console.error('❌ No se pudo completar el pedido:', error);
         }
   
     }
@@ -739,11 +739,12 @@ export class CheckoutComponent {
     } catch (error) {
 
 
-    console.error(
-      'Error al crear pedido:',
-      error
-    );
+      console.error(
+        'Error al crear pedido:',
+        error
+      );
 
+      throw error;
 
     }
   }

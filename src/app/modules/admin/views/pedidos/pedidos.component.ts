@@ -8,6 +8,7 @@ import { ConfirmDialogComponent } from 'src/app/shared/components/confirm-dialog
 import { PedidosService } from 'src/app/shared/services/pedidos.service';
 import { ToastService } from 'src/app/shared/services/toast.service';
 import { MatTabChangeEvent } from '@angular/material/tabs';
+import { InfoEmpresaService } from 'src/app/shared/services/info-empresa.service';
 
 @Component({
   selector: 'app-pedidos',
@@ -38,6 +39,7 @@ showTablaPedido: boolean = true;
   showTablaVerProducto: boolean = false
   showFormAgregarCliente: boolean = false
   showTablaVerCliente: boolean = false
+  dolar: number = 1;
 
   @ViewChild('paginatorPendientes') paginatorPendientes!: MatPaginator;
   @ViewChild('paginatorFinalizados') paginatorFinalizados!: MatPaginator;
@@ -45,7 +47,7 @@ showTablaPedido: boolean = true;
 
 
 
-  constructor(private pedidosService: PedidosService, private toastService: ToastService, private cdRef: ChangeDetectorRef, private dialog: MatDialog, private firestore: Firestore) {
+  constructor(private pedidosService: PedidosService, private toastService: ToastService, private cdRef: ChangeDetectorRef, private dialog: MatDialog, private firestore: Firestore, private infoEmpresaService: InfoEmpresaService) {
 
     this.datasourcePedidosPendientes = new MatTableDataSource(this.pedidosPendientes);
     this.datasourcePedidosFinalizados = new MatTableDataSource(this.pedidosFinalizados);
@@ -56,6 +58,11 @@ showTablaPedido: boolean = true;
   
   ngOnInit() {
     this.getPedidos()
+    this.infoEmpresaService.obtenerInfoGeneral().subscribe(info => {
+      if (info?.dolar) {
+        this.dolar = info.dolar;
+      }
+    });
   }
 
 
@@ -99,6 +106,7 @@ showTablaPedido: boolean = true;
   //FUNCION PARA MOSTRAR LA TABLA CON EL PEDIDO DEL CLIENTE
   showCarritoPedidoPendiente(id: any) {
     this.pedidoEncontrado = this.pedidosPendientes.find(p => p.id === id);
+    console.log('Pedido encontrado:', this.pedidoEncontrado);
     this.showTablaPedido = false
     this.showCarroPedido = true
     this.showFormPedido = true
@@ -317,4 +325,17 @@ showTablaPedido: boolean = true;
       this.cerrarModalImpresion();
     }
   }
+
+  getPrecioProducto(producto: any): number {
+
+    let precio = producto.precioFinal || 0;
+
+    if (producto.moneda === 'USD') {
+      precio = precio * this.dolar;
+    }
+
+    return precio;
+  }
+
+
 }

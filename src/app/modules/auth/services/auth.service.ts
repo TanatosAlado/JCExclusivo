@@ -16,9 +16,23 @@ export class AuthService {
   private readonly STORAGE_KEY = 'clienteActual';
   private clienteActualSubject = new BehaviorSubject<Cliente | null>(null);
 
-  constructor(private dialog: MatDialog, private auth: Auth, private firestore: Firestore, private generalService: GeneralService) {
+  constructor(
+    private dialog: MatDialog,
+    private auth: Auth,
+    private firestore: Firestore,
+    private generalService: GeneralService
+  ) {
+
     const data = localStorage.getItem(this.STORAGE_KEY);
-    if (data) this.clienteActualSubject.next(JSON.parse(data));
+
+    if (data) {
+
+      const cliente = JSON.parse(data) as Cliente;
+
+      this.clienteActual = cliente;
+
+      this.clienteActualSubject.next(cliente);
+    }
   }
 
   openRegistroModal(): Observable<any> {
@@ -83,10 +97,17 @@ export class AuthService {
   }
 
 
-setUsuarioActual(cliente: Cliente): void {
-  this.clienteActualSubject.next(cliente);
-  localStorage.setItem(this.STORAGE_KEY, JSON.stringify(cliente));
-}
+  setUsuarioActual(cliente: Cliente): void {
+
+    this.clienteActual = cliente;
+
+    this.clienteActualSubject.next(cliente);
+
+    localStorage.setItem(
+      this.STORAGE_KEY,
+      JSON.stringify(cliente)
+    );
+  }
 
   getUsuarioActual(): Observable<Cliente | null> {
     return this.clienteActualSubject.asObservable();
@@ -102,6 +123,7 @@ setUsuarioActual(cliente: Cliente): void {
 
   logout(): void {
     this.generalService.setCliente(null);
+    this.clienteActual = null;
     this.clienteActualSubject.next(null);
     localStorage.removeItem(this.STORAGE_KEY);
     localStorage.removeItem('cliente');

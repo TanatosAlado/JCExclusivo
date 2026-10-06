@@ -287,7 +287,17 @@
                         <div *ngFor="let carro of pedidoEncontrado.carrito" class="producto">
                             <div class="contenedor-imagen-pedido">
                                 <img [src]="carro.imagen" alt="Producto" class="imagen-pedido">
+
+                          
+
                             </div>
+
+                                  <!-- COLOR DEL PRODUCTO --> 
+                                <div *ngIf="carro.color" 
+                                class="color-producto" 
+                                [style.background-color]="carro.color" 
+                                [title]="'Color: ' + carro.color"> 
+                                </div>
 
                             <div class="detalle">
                                 <p>{{carro.nombre}}</p>
@@ -304,7 +314,7 @@
                             </div>
                             <div class="precio"
                                 style="font-weight: bold; margin-left: 15px; display: flex; align-items: center; gap: 10px;">
-                                ${{carro.precioFinal * carro.cantidad}}
+                                {{ getPrecioProducto(carro) * carro.cantidad | currency:'ARS' }}
                                 <i *ngIf="showDeleteCarro" class="fas fa-trash-alt"
                                     style="color:var( --color-primario); cursor: pointer;" (click)="eliminarProductoCarro(carro)"></i>
                             </div>

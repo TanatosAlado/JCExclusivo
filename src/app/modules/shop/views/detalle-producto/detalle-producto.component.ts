@@ -242,9 +242,17 @@ seleccionarVariante(variante: VarianteProducto) {
   }
 
 private procesarProductoEnCarrito(cliente: Cliente, producto: Producto) {
+  console.log('Producto a agregar al carrito desde detalle:', producto);
 
   // 👉 Si hay variante, ESA variante es el producto real.
-  const productoFinal: any = this.selectedVariante ?? producto;
+  // const productoFinal: any = this.selectedVariante ?? producto;
+
+    const productoFinal: any = {
+    ...producto,
+    ...(this.selectedVariante ?? {})
+  };
+
+  console.log('Producto final a agregar al carrito:', productoFinal);
 
   this.generalService.cargarProductoCarrito(productoFinal, this.cantidad)
     .then(() => {

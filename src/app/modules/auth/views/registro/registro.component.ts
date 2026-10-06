@@ -63,7 +63,9 @@ export class RegistroComponent {
       ...this.formRegistroCliente.value,
       usuario: this.formRegistroCliente.value.usuario
         ?.trim()
-        .toUpperCase()
+        .toUpperCase(),
+
+      dni: Number(this.formRegistroCliente.value.dni)  
     };
 
     // 1. Validar que el nombre de usuario no exista

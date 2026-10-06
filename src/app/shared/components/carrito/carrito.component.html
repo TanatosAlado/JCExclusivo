@@ -60,6 +60,9 @@
       </span>
     </div>
     <div class="resumen-linea">
+      <button class="btn-vaciar" (click)="verCarrito(carrito)">
+        Ver Carrito
+      </button>
       <span>Total a pagar:</span>
       <span>{{ getTotalPrecio() | currency }}</span>
     </div>

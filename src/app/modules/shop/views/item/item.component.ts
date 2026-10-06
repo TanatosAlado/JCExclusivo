@@ -179,6 +179,7 @@ export class ItemComponent implements OnInit {
       return;
     }
 
+    console.log('Producto a agregar al carrito:', producto);
     this.procesarProductoEnCarrito(cliente, producto, finalizar);
   }
 

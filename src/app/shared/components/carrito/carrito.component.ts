@@ -211,5 +211,8 @@ export class CarritoComponent {
     return precio;
   }
 
+  verCarrito(carrito: any) {
+    console.log('Carrito:', carrito);
+  }
 
 }
