@@ -4,6 +4,7 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { InfoEmpresa } from 'src/app/shared/models/infoEmpresa.model'; 
 import { InfoEmpresaService } from 'src/app/shared/services/info-empresa.service';
+import { AuditoriaService } from 'src/app/shared/services/auditoria.service';
 
 @Component({
   selector: 'app-empresa',
@@ -18,6 +19,7 @@ export class EmpresaComponent {
   constructor(
     private fb: FormBuilder,
     private infoService: InfoEmpresaService,
+    private auditoria: AuditoriaService,
     private firestore: Firestore,
     private snackBar: MatSnackBar
   ) {
@@ -52,7 +54,17 @@ export class EmpresaComponent {
     const docRef = doc(this.firestore, 'InfoEmpresa/general');
 
     try {
+      const antes = await this.auditoria.capturar('InfoEmpresa', 'general');
       await setDoc(docRef, data, { merge: true });
+      const { dolarActualizado, ...datosAuditables } = data as any;
+      this.auditoria.registrar({
+        accion: 'modificar',
+        entidad: 'InfoEmpresa',
+        entidadId: 'general',
+        descripcion: 'Modificó la información de la empresa (dólar, descuentos, datos de pago)',
+        antes,
+        despues: datosAuditables
+      });
       this.snackBar.open('Información actualizada con éxito', 'Cerrar', { duration: 3000 });
     } catch (error) {
       console.error('Error al guardar', error);

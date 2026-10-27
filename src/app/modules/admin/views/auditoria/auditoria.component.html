@@ -1,0 +1,154 @@
+<app-encabezado>
+  Auditoría
+</app-encabezado>
+
+<div class="container mt-4">
+  <mat-card>
+    <mat-card-title>🕵️ Registro de acciones</mat-card-title>
+    <mat-card-subtitle>
+      Todo lo que hacen los administradores queda registrado acá. Los registros no se pueden modificar ni borrar.
+    </mat-card-subtitle>
+
+    <mat-card-content>
+      <!-- Rango de fechas -->
+      <div class="d-flex flex-wrap align-items-center gap-3 mt-3">
+        <mat-form-field appearance="outline">
+          <mat-label>Desde</mat-label>
+          <input matInput [matDatepicker]="pDesde" [(ngModel)]="desde">
+          <mat-datepicker-toggle matSuffix [for]="pDesde"></mat-datepicker-toggle>
+          <mat-datepicker #pDesde></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Hasta</mat-label>
+          <input matInput [matDatepicker]="pHasta" [(ngModel)]="hasta">
+          <mat-datepicker-toggle matSuffix [for]="pHasta"></mat-datepicker-toggle>
+          <mat-datepicker #pHasta></mat-datepicker>
+        </mat-form-field>
+
+        <button mat-raised-button color="primary" type="button" (click)="buscar()" [disabled]="cargando">
+          {{ cargando ? 'Buscando...' : 'Buscar' }}
+        </button>
+      </div>
+
+      <!-- Filtros -->
+      <div class="d-flex flex-wrap align-items-center gap-3">
+        <mat-form-field appearance="outline" class="filtro">
+          <mat-label>Usuario</mat-label>
+          <mat-select [(ngModel)]="filtroUsuario" (selectionChange)="aplicarFiltros()">
+            <mat-option value="">Todos</mat-option>
+            <mat-option *ngFor="let u of usuarios" [value]="u">{{ u }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="filtro">
+          <mat-label>Acción</mat-label>
+          <mat-select [(ngModel)]="filtroAccion" (selectionChange)="aplicarFiltros()">
+            <mat-option value="">Todas</mat-option>
+            <mat-option *ngFor="let a of acciones" [value]="a">{{ a | titlecase }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="filtro">
+          <mat-label>Sección</mat-label>
+          <mat-select [(ngModel)]="filtroEntidad" (selectionChange)="aplicarFiltros()">
+            <mat-option value="">Todas</mat-option>
+            <mat-option *ngFor="let e of entidades" [value]="e">{{ e }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="filtro-texto">
+          <mat-label>Buscar en la descripción</mat-label>
+          <input matInput [(ngModel)]="filtroTexto" (ngModelChange)="aplicarFiltros()" placeholder="Ej: Funda, pedido #120">
+        </mat-form-field>
+
+        <button mat-stroked-button type="button" (click)="limpiarFiltros()"
+          *ngIf="filtroUsuario || filtroAccion || filtroEntidad || filtroTexto">Limpiar filtros</button>
+      </div>
+
+      <div *ngIf="error" class="alert alert-danger">{{ error }}</div>
+      <div *ngIf="limiteAlcanzado" class="alert alert-warning small">
+        Se muestran los {{ MAXIMO }} registros más recientes del período. Acotá las fechas para ver el resto.
+      </div>
+
+      <p class="small text-muted mb-2" *ngIf="!cargando">
+        {{ filtrados.length }} de {{ registros.length }} registros
+      </p>
+
+      <!-- Tabla -->
+      <div class="table-responsive">
+        <table class="table table-sm align-middle tabla-auditoria">
+          <thead>
+            <tr>
+              <th>Fecha y hora</th>
+              <th>Usuario</th>
+              <th>Acción</th>
+              <th>Sección</th>
+              <th>Descripción</th>
+              <th>IP</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <ng-container *ngFor="let r of filtrados">
+              <tr [class.fila-expandida]="expandido === r.id">
+                <td class="text-nowrap">{{ r.fecha | date:'dd/MM/yyyy HH:mm:ss' }}</td>
+                <td>
+                  <strong>{{ r.usuario }}</strong>
+                  <div class="small text-muted" *ngIf="r.nombre && r.nombre !== r.usuario">{{ r.nombre }}</div>
+                </td>
+                <td><span class="badge" [ngClass]="claseAccion(r.accion)">{{ r.accion | titlecase }}</span></td>
+                <td>{{ r.entidad }}</td>
+                <td>{{ r.descripcion }}</td>
+                <td class="small text-muted">{{ r.ip || '—' }}</td>
+                <td>
+                  <button *ngIf="tieneDetalle(r)" mat-icon-button type="button" (click)="alternar(r)"
+                    [matTooltip]="expandido === r.id ? 'Ocultar detalle' : 'Ver detalle'">
+                    <mat-icon>{{ expandido === r.id ? 'expand_less' : 'expand_more' }}</mat-icon>
+                  </button>
+                </td>
+              </tr>
+
+              <!-- Detalle -->
+              <tr *ngIf="expandido === r.id" class="detalle">
+                <td colspan="7">
+                  <div *ngIf="r.cambios">
+                    <strong>Cambios:</strong>
+                    <table class="table table-sm table-bordered mt-2 mb-3 tabla-cambios">
+                      <thead><tr><th>Campo</th><th>Antes</th><th>Después</th></tr></thead>
+                      <tbody>
+                        <tr *ngFor="let c of listaCambios(r)">
+                          <td>{{ c.campo }}</td>
+                          <td class="valor antes">{{ c.antes }}</td>
+                          <td class="valor despues">{{ c.despues }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div *ngIf="r.datosEliminados">
+                    <strong>Datos al momento de eliminar:</strong>
+                    <pre class="valor">{{ mostrar(r.datosEliminados) }}</pre>
+                  </div>
+
+                  <div *ngIf="r.extra">
+                    <strong>Información adicional:</strong>
+                    <pre class="valor">{{ mostrar(r.extra) }}</pre>
+                  </div>
+
+                  <div class="small text-muted">
+                    ID: {{ r.entidadId || '—' }} · Navegador: {{ r.navegador || '—' }}
+                  </div>
+                </td>
+              </tr>
+            </ng-container>
+
+            <tr *ngIf="!cargando && filtrados.length === 0">
+              <td colspan="7" class="text-muted text-center py-4">No hay registros para mostrar.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

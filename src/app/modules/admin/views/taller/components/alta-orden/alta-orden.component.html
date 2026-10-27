@@ -6,6 +6,27 @@
   <mat-card-content>
     <form [formGroup]="ordenForm" (ngSubmit)="onSubmit()">
 
+      <!-- Buscar cliente por nombre / apellido -->
+      <div class="form-grid fadeIn first">
+        <mat-form-field appearance="outline" class="form-field buscador-cliente">
+          <mat-label>Buscar cliente por apellido o nombre</mat-label>
+          <input matInput [(ngModel)]="textoCliente" [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="alEscribirCliente($event)" [matAutocomplete]="autoCliente" autocomplete="off"
+            placeholder="Ej: perez juan">
+          <mat-icon matSuffix>person_search</mat-icon>
+          <mat-autocomplete #autoCliente="matAutocomplete" [displayWith]="mostrarCliente"
+            (optionSelected)="elegirCliente($event.option.value)">
+            <mat-option *ngFor="let c of sugerenciasClientes" [value]="c">
+              {{ etiquetaCliente(c) }}
+              <small *ngIf="c.telefono" class="text-muted"> · {{ c.telefono }}</small>
+            </mat-option>
+            <mat-option *ngIf="sinCoincidencias" disabled>
+              No hay clientes que coincidan
+            </mat-option>
+          </mat-autocomplete>
+        </mat-form-field>
+      </div>
+
       <!-- Datos del cliente -->
       <div class="form-grid fadeIn first">
         <mat-form-field appearance="outline" class="form-field">
@@ -146,4 +167,4 @@
     </div>
 
   </mat-card-content>
-</mat-card>
+</mat-card>

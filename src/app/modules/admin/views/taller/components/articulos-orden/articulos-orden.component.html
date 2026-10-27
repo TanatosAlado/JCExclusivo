@@ -1,0 +1,99 @@
+<h2 mat-dialog-title class="titulo">
+  🔩 Artículos usados · Orden #{{ orden.numeroOrden }}
+  <small>{{ orden.equipo }} · {{ orden.apellidoCliente }}, {{ orden.nombreCliente }}</small>
+</h2>
+
+<mat-dialog-content class="contenido">
+
+  <!-- ===== Agregar ===== -->
+  <div class="agregar">
+    <div class="fila-filtros">
+      <mat-form-field appearance="outline" class="campo-sucursal">
+        <mat-label>Sale del stock de</mat-label>
+        <mat-select [(ngModel)]="sucursalId" (selectionChange)="cambiarSucursal()">
+          <mat-option *ngFor="let s of sucursales" [value]="s.id">{{ s.nombre }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="campo-busqueda">
+        <mat-label>Buscar artículo (nombre, código, marca, modelo)</mat-label>
+        <input matInput [(ngModel)]="busqueda" (ngModelChange)="filtrar()" autocomplete="off"
+          [disabled]="cargandoProductos" placeholder="Ej: pantalla a12">
+        <mat-icon matSuffix>search</mat-icon>
+      </mat-form-field>
+    </div>
+
+    <div class="cargando" *ngIf="cargandoProductos">Cargando productos…</div>
+
+    <div class="resultados" *ngIf="resultados.length && !seleccionado">
+      <button type="button" class="resultado" *ngFor="let p of resultados" (click)="elegir(p)" [disabled]="stock(p) <= 0">
+        <span class="nombre">{{ p.descripcion }}<small *ngIf="p.codigoBarras" class="text-muted"> · {{ p.codigoBarras }}</small></span>
+        <span class="stock" [class.sin-stock]="stock(p) <= 0">
+          <i class="fas" [ngClass]="stock(p) > 0 ? 'fa-box' : 'fa-times-circle'"></i>
+          {{ stock(p) > 0 ? 'Stock: ' + stock(p) : 'Sin stock' }}
+        </span>
+      </button>
+    </div>
+    <div class="sin-resultados" *ngIf="busqueda.trim() && !resultados.length && !cargandoProductos">
+      No hay artículos que coincidan.
+    </div>
+
+    <div class="seleccionado" *ngIf="seleccionado">
+      <div class="flex-grow-1">
+        <strong>{{ seleccionado.descripcion }}</strong>
+        <div class="small text-muted">Stock en {{ nombreSucursal(sucursalId) }}: {{ stock(seleccionado) }}</div>
+      </div>
+      <mat-form-field appearance="outline" class="campo-cantidad">
+        <mat-label>Cantidad</mat-label>
+        <input matInput type="number" min="1" [max]="stock(seleccionado)" [(ngModel)]="cantidad">
+      </mat-form-field>
+      <button mat-raised-button color="primary" type="button" (click)="agregar()"
+        [disabled]="guardando || !(cantidad > 0) || cantidad > stock(seleccionado)">
+        {{ guardando ? 'Guardando…' : 'Agregar y descontar' }}
+      </button>
+      <button mat-button type="button" (click)="seleccionado = null" [disabled]="guardando">Cancelar</button>
+    </div>
+    <div class="text-danger small" *ngIf="seleccionado && cantidad > stock(seleccionado)">
+      No hay stock suficiente en {{ nombreSucursal(sucursalId) }}.
+    </div>
+  </div>
+
+  <!-- ===== Usados en esta orden ===== -->
+  <div class="encabezado-lista">
+    <h3>Usados en esta orden ({{ activos.length }})</h3>
+    <mat-checkbox *ngIf="cantidadDevueltos" [(ngModel)]="mostrarDevueltos">
+      Ver devueltos ({{ cantidadDevueltos }})
+    </mat-checkbox>
+  </div>
+
+  <table class="tabla" *ngIf="visibles.length; else vacio">
+    <thead>
+      <tr><th>Artículo</th><th class="num">Cant.</th><th>Stock de</th><th>Cargó</th><th></th></tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let a of visibles" [class.devuelto]="a.devuelto">
+        <td>
+          {{ a.nombre }}
+          <div class="small text-muted" *ngIf="a.devuelto">Devuelto: {{ a.motivoDevolucion }}</div>
+        </td>
+        <td class="num">{{ a.cantidad }}</td>
+        <td>{{ nombreSucursal(a.sucursalId) }}</td>
+        <td class="small">{{ a.usuario?.nombre || a.usuario?.usuario }}<br><span class="text-muted">{{ a.fecha | date:'dd/MM/yy HH:mm' }}</span></td>
+        <td class="text-end">
+          <button *ngIf="!a.devuelto" mat-stroked-button type="button" (click)="devolver(a)" [disabled]="guardando"
+            title="Devolver al stock">
+            <i class="fas fa-undo"></i> Devolver
+          </button>
+          <span *ngIf="a.devuelto" class="badge bg-secondary">Devuelto</span>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  <ng-template #vacio><p class="text-muted">Todavía no se cargaron artículos en esta orden.</p></ng-template>
+
+  <p class="nota">Los artículos se descuentan del stock al agregarlos. No modifican el presupuesto de la orden.</p>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close>Cerrar</button>
+</mat-dialog-actions>

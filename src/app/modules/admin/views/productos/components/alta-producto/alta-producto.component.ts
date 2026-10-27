@@ -9,6 +9,7 @@ import { Producto, VarianteProducto } from 'src/app/modules/shop/models/producto
 import { ProductosService } from 'src/app/modules/shop/services/productos.service';
 import { v4 as uuidv4 } from 'uuid';
 import { Storage, ref, uploadBytes, getDownloadURL } from '@angular/fire/storage';
+import { AuditoriaService } from 'src/app/shared/services/auditoria.service';
 
 
 @Component({
@@ -74,7 +75,18 @@ export class AltaProductoComponent implements OnInit {
   agregandoMarca = false;
   nuevaMarca = '';
 
-  constructor(private fb: FormBuilder, private sucursalService: SucursalesService, private firestore: Firestore, private dialogRef: MatDialogRef<AltaProductoComponent>, private storage: Storage) { }
+  constructor(private fb: FormBuilder, private sucursalService: SucursalesService, private firestore: Firestore, private dialogRef: MatDialogRef<AltaProductoComponent>, private storage: Storage, private auditoria: AuditoriaService) { }
+
+  /** Registra en auditoría el alta de un producto (o de cada variante) */
+  private auditarAlta(id: string, datos: any, detalle: string = '') {
+    this.auditoria.registrar({
+      accion: 'crear',
+      entidad: 'productos',
+      entidadId: id,
+      descripcion: `Creó el producto "${datos?.descripcion || datos?.nombre || ''}"${detalle ? ' (' + detalle + ')' : ''}`,
+      despues: datos
+    });
+  }
 
   ngOnInit(): void {
     // 1) Primero creamos el form (siempre primero)
@@ -402,6 +414,7 @@ async guardarProducto() {
 
       // 🔥 IMPORTANTE: asignar ID interno
       await updateDoc(docRef, { id: docRef.id });
+      this.auditarAlta(docRef.id, payloadUnico);
 
       this.dialogRef.close(true);
       return;
@@ -450,6 +463,7 @@ async guardarProducto() {
 
         // 🔥 guardar ID dentro del documento
         await updateDoc(docRef, { id: docRef.id });
+        this.auditarAlta(docRef.id, doc, `variante color ${colorHex}`);
       }
 
       this.dialogRef.close(true);
@@ -491,6 +505,7 @@ async guardarProducto() {
 
         const docRef = await addDoc(productosRef, doc);
         await updateDoc(docRef, { id: docRef.id });
+        this.auditarAlta(docRef.id, doc, `variante modelo ${v.modelo}`);
       }
 
       this.dialogRef.close(true);
@@ -545,6 +560,7 @@ async guardarProducto() {
 
           // 🔥 guardar ID interno
           await updateDoc(docRef, { id: docRef.id });
+          this.auditarAlta(docRef.id, doc, `variante ${modeloNombre} / ${colorHex}`);
         }
       }
 

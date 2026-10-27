@@ -198,3 +198,29 @@ color:var(--color-primario)
 .sin-garantia {
   color: #757575;
 }
+
+/* Columna de pago */
+.estado-pago {
+  font-size: 0.75rem;
+  margin-bottom: 2px;
+}
+
+/* Artículos de stock usados */
+.articulos {
+  position: relative;
+}
+
+.articulos .contador {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: #2a78d6;
+  color: #fff;
+  font-size: 10px;
+  line-height: 16px;
+  text-align: center;
+}

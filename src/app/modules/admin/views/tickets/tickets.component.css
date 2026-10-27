@@ -1,0 +1,26 @@
+.campo-numero {
+  width: 150px;
+}
+
+.campo-texto {
+  min-width: 280px;
+  flex: 1;
+}
+
+.filtro {
+  min-width: 170px;
+}
+
+.separador {
+  color: #888;
+  font-style: italic;
+}
+
+.ticket-anulado td {
+  opacity: 0.6;
+}
+
+.ticket-anulado td:first-child,
+.ticket-anulado td:nth-child(7) {
+  text-decoration: line-through;
+}

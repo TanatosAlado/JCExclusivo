@@ -9,6 +9,7 @@ import { PedidosService } from 'src/app/shared/services/pedidos.service';
 import { ToastService } from 'src/app/shared/services/toast.service';
 import { MatTabChangeEvent } from '@angular/material/tabs';
 import { InfoEmpresaService } from 'src/app/shared/services/info-empresa.service';
+import { AuditoriaService } from 'src/app/shared/services/auditoria.service';
 
 @Component({
   selector: 'app-pedidos',
@@ -47,7 +48,7 @@ showTablaPedido: boolean = true;
 
 
 
-  constructor(private pedidosService: PedidosService, private toastService: ToastService, private cdRef: ChangeDetectorRef, private dialog: MatDialog, private firestore: Firestore, private infoEmpresaService: InfoEmpresaService) {
+  constructor(private pedidosService: PedidosService, private toastService: ToastService, private cdRef: ChangeDetectorRef, private dialog: MatDialog, private firestore: Firestore, private infoEmpresaService: InfoEmpresaService, private auditoria: AuditoriaService) {
 
     this.datasourcePedidosPendientes = new MatTableDataSource(this.pedidosPendientes);
     this.datasourcePedidosFinalizados = new MatTableDataSource(this.pedidosFinalizados);
@@ -313,6 +314,14 @@ showTablaPedido: boolean = true;
 
       updateDoc(ref, { estado: 'En preparación' })
         .then(() => {
+          this.auditoria.registrar({
+            accion: 'modificar',
+            entidad: 'Pedidos Pendientes',
+            entidadId: pedidoId,
+            descripcion: `Imprimió el pedido #${this.pedidoEncontrado?.nroPedido ?? '?'} (pasa a "En preparación")`,
+            antes: { estado: this.pedidoEncontrado?.estado ?? null },
+            despues: { estado: 'En preparación' }
+          });
           window.print();
           this.cerrarModalImpresion();
         })

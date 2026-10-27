@@ -3,6 +3,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { addDoc, collection, collectionData, deleteDoc, Firestore, getDocs, query, setDoc, updateDoc, where } from '@angular/fire/firestore';
 import { Cupon } from 'src/app/modules/admin/models/cupones.model';
 import { Observable } from 'rxjs';
+import { AuditoriaService } from 'src/app/shared/services/auditoria.service';
 
 @Injectable({
   providedIn: 'root'
@@ -14,7 +15,7 @@ export class VouchersPuntosService {
   private puntosDocRef = doc(this.firestore, 'configuracion/puntosMembresia');
   private montosRef = doc(this.firestore, 'configuracion/montosMayorista');
 
-  constructor(private firestore: Firestore) { }
+  constructor(private firestore: Firestore, private auditoria: AuditoriaService) { }
 
   // Opcional: Forzar recarga si editás la config desde otro lado
   resetearCache() {
@@ -25,18 +26,43 @@ export class VouchersPuntosService {
     return collectionData(this.cuponesRef, { idField: 'id' }) as Observable<CuponConId[]>;
   }
 
-  crearCupon(cupon: Cupon) {
-    return addDoc(this.cuponesRef, cupon);
+  async crearCupon(cupon: Cupon) {
+    const docRef = await addDoc(this.cuponesRef, cupon);
+    this.auditoria.registrar({
+      accion: 'crear',
+      entidad: 'Cupones',
+      entidadId: docRef.id,
+      descripcion: `Creó el cupón ${cupon.codigo} (${cupon.tipo === 'porcentaje' ? cupon.valor + '%' : '$' + cupon.valor})`,
+      despues: cupon
+    });
+    return docRef;
   }
 
-  actualizarCupon(cuponId: string, cambios: Partial<Cupon>) {
+  async actualizarCupon(cuponId: string, cambios: Partial<Cupon>) {
+    const antes = await this.auditoria.capturar('Cupones', cuponId);
     const docRef = doc(this.firestore, 'Cupones', cuponId);
-    return updateDoc(docRef, cambios);
+    await updateDoc(docRef, cambios);
+    this.auditoria.registrar({
+      accion: 'modificar',
+      entidad: 'Cupones',
+      entidadId: cuponId,
+      descripcion: `Modificó el cupón ${antes?.codigo || cuponId}`,
+      antes,
+      despues: cambios
+    });
   }
 
-  eliminarCupon(cuponId: string) {
+  async eliminarCupon(cuponId: string) {
+    const antes = await this.auditoria.capturar('Cupones', cuponId);
     const docRef = doc(this.firestore, 'Cupones', cuponId);
-    return deleteDoc(docRef);
+    await deleteDoc(docRef);
+    this.auditoria.registrar({
+      accion: 'eliminar',
+      entidad: 'Cupones',
+      entidadId: cuponId,
+      descripcion: `Eliminó el cupón ${antes?.codigo || cuponId}`,
+      antes
+    });
   }
 
   async buscarCuponPorCodigo(codigo: string): Promise<CuponConId | null> {
@@ -53,8 +79,17 @@ export class VouchersPuntosService {
     });
   }
 
-  guardarValoresPuntos(valores: any): Promise<void> {
-    return setDoc(this.puntosDocRef, valores, { merge: true });
+  async guardarValoresPuntos(valores: any): Promise<void> {
+    const antes = await this.auditoria.capturar('configuracion', 'puntosMembresia');
+    await setDoc(this.puntosDocRef, valores, { merge: true });
+    this.auditoria.registrar({
+      accion: 'modificar',
+      entidad: 'configuracion',
+      entidadId: 'puntosMembresia',
+      descripcion: 'Modificó la configuración de puntos',
+      antes,
+      despues: valores
+    });
   }
 
   obtenerMontosMayoristas(): Promise<any> {
@@ -63,8 +98,17 @@ export class VouchersPuntosService {
     });
   }
 
-  guardarMontosMayorista(valores: any): Promise<void> {
-    return setDoc(this.montosRef, valores, { merge: true });
+  async guardarMontosMayorista(valores: any): Promise<void> {
+    const antes = await this.auditoria.capturar('configuracion', 'montosMayorista');
+    await setDoc(this.montosRef, valores, { merge: true });
+    this.auditoria.registrar({
+      accion: 'modificar',
+      entidad: 'configuracion',
+      entidadId: 'montosMayorista',
+      descripcion: 'Modificó los montos mínimos mayoristas',
+      antes,
+      despues: valores
+    });
   }
 
 
@@ -108,4 +152,4 @@ export class VouchersPuntosService {
 
 export interface CuponConId extends Cupon {
   id: string;
-}
+}

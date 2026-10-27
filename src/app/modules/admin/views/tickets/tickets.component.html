@@ -1,0 +1,136 @@
+<app-encabezado *ngIf="!embebido">
+  Tickets
+</app-encabezado>
+
+<div [class.container]="!embebido" [class.mt-4]="!embebido">
+  <mat-card [class.mat-elevation-z0]="embebido">
+    <mat-card-title *ngIf="!embebido">🧾 Tickets de venta del local</mat-card-title>
+    <mat-card-subtitle>Buscá por número, fecha o cliente. Desde acá podés ver, reimprimir o anular un ticket.</mat-card-subtitle>
+
+    <mat-card-content>
+      <div class="d-flex flex-wrap align-items-center gap-3 mt-3">
+        <!-- Por número -->
+        <mat-form-field appearance="outline" class="campo-numero">
+          <mat-label>Nº de ticket</mat-label>
+          <input matInput type="number" min="1" [(ngModel)]="numeroBuscado" (keyup.enter)="buscarPorNumero()">
+        </mat-form-field>
+        <button mat-raised-button color="primary" type="button" (click)="buscarPorNumero()" [disabled]="cargando || !numeroBuscado">
+          Buscar Nº
+        </button>
+
+        <span class="separador">o</span>
+
+        <!-- Por fecha -->
+        <mat-form-field appearance="outline">
+          <mat-label>Desde</mat-label>
+          <input matInput [matDatepicker]="pDesde" [(ngModel)]="desde">
+          <mat-datepicker-toggle matSuffix [for]="pDesde"></mat-datepicker-toggle>
+          <mat-datepicker #pDesde></mat-datepicker>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Hasta</mat-label>
+          <input matInput [matDatepicker]="pHasta" [(ngModel)]="hasta">
+          <mat-datepicker-toggle matSuffix [for]="pHasta"></mat-datepicker-toggle>
+          <mat-datepicker #pHasta></mat-datepicker>
+        </mat-form-field>
+        <button mat-raised-button color="primary" type="button" (click)="buscarPorFecha()" [disabled]="cargando">
+          {{ cargando ? 'Buscando...' : 'Buscar por fecha' }}
+        </button>
+      </div>
+
+      <!-- Filtros -->
+      <div class="d-flex flex-wrap align-items-center gap-3">
+        <mat-form-field appearance="outline" class="campo-texto">
+          <mat-label>Cliente, DNI, vendedor o producto</mat-label>
+          <input matInput [(ngModel)]="filtroTexto" (ngModelChange)="aplicarFiltros()" placeholder="Ej: Pérez, 30123456, funda">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="filtro">
+          <mat-label>Sucursal</mat-label>
+          <mat-select [(ngModel)]="filtroSucursal" (selectionChange)="aplicarFiltros()">
+            <mat-option value="">Todas</mat-option>
+            <mat-option *ngFor="let s of sucursales" [value]="s.id">{{ s.nombre }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="filtro">
+          <mat-label>Estado</mat-label>
+          <mat-select [(ngModel)]="filtroEstado" (selectionChange)="aplicarFiltros()">
+            <mat-option value="">Todos</mat-option>
+            <mat-option value="vigentes">Vigentes</mat-option>
+            <mat-option value="anulados">Anulados</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <button mat-stroked-button type="button" *ngIf="filtroTexto || filtroSucursal || filtroEstado" (click)="limpiarFiltros()">
+          Limpiar filtros
+        </button>
+      </div>
+
+      <div *ngIf="error" class="alert alert-warning">{{ error }}</div>
+
+      <p class="small text-muted mb-2" *ngIf="!cargando">
+        <ng-container *ngIf="busquedaPorNumero">Resultado de la búsqueda por número · </ng-container>
+        {{ filtrados.length }} ticket{{ filtrados.length === 1 ? '' : 's' }}
+        · Total vigente: <strong>{{ totalVigente | currency:'ARS' }}</strong>
+        <span *ngIf="cantidadAnulados"> · {{ cantidadAnulados }} anulado{{ cantidadAnulados === 1 ? '' : 's' }}</span>
+      </p>
+
+      <div class="table-responsive">
+        <table class="table table-sm align-middle">
+          <thead>
+            <tr>
+              <th>Nº</th>
+              <th>Fecha</th>
+              <th>Sucursal</th>
+              <th>Cliente</th>
+              <th>Atendió</th>
+              <th>Pago</th>
+              <th class="text-end">Total</th>
+              <th>Estado</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let t of filtrados" [class.ticket-anulado]="t.anulada">
+              <td class="fw-bold text-nowrap">
+                {{ ticketsService.numeroFormateado(t) }}
+                <div *ngIf="t.tipoVenta === 'reparacion'" class="badge bg-info text-dark">🔧 Reparación #{{ t.orden?.numeroOrden }}</div>
+              </td>
+              <td class="text-nowrap">{{ t.fecha | date:'dd/MM/yyyy HH:mm' }}</td>
+              <td>{{ nombresSucursales[t.sucursalId] || '-' }}</td>
+              <td>
+                {{ t.cliente?.nombre || 'Consumidor final' }}
+                <div class="small text-muted" *ngIf="t.cliente?.dni">DNI {{ t.cliente.dni }}</div>
+              </td>
+              <td>{{ t.usuario?.nombre || t.usuario?.usuario || '-' }}</td>
+              <td>{{ pagos(t) }}</td>
+              <td class="text-end text-nowrap">{{ t.total | currency:'ARS' }}</td>
+              <td>
+                <span *ngIf="!t.anulada" class="badge bg-success">Vigente</span>
+                <ng-container *ngIf="t.anulada">
+                  <span class="badge bg-danger">Anulado</span>
+                  <div class="small text-muted">{{ t.motivoAnulacion }}</div>
+                </ng-container>
+              </td>
+              <td class="text-nowrap">
+                <button mat-icon-button type="button" (click)="ver(t)" matTooltip="Vista previa">
+                  <mat-icon>visibility</mat-icon>
+                </button>
+                <button mat-icon-button type="button" (click)="imprimir(t)" matTooltip="Reimprimir">
+                  <mat-icon>print</mat-icon>
+                </button>
+                <button *ngIf="!t.anulada" mat-icon-button color="warn" type="button" (click)="anular(t)" matTooltip="Anular ticket">
+                  <mat-icon>block</mat-icon>
+                </button>
+              </td>
+            </tr>
+            <tr *ngIf="!cargando && filtrados.length === 0">
+              <td colspan="9" class="text-center text-muted py-4">No hay tickets para mostrar.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

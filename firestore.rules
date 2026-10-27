@@ -1,0 +1,185 @@
+rules_version = '2';
+
+// =====================================================================
+// Reglas de Firestore - JC Exclusivo
+//
+// Quién puede hacer qué:
+//   • Administrador (Clientes/{uid}.administrador == true y habilitado): todo,
+//     salvo modificar/borrar la auditoría, borrar ventas, gastos o cajas,
+//     modificar una caja ya cerrada, modificar/borrar movimientos de caja,
+//     y modificar un ticket (solo se puede anular, una vez).
+//   • Cliente logueado: su propio documento de cliente (sin poder darse
+//     permisos de admin / mayorista / habilitado).
+//   • Cualquiera (visitante o cliente): ver catálogo y configuración pública,
+//     y lo mínimo que necesita el checkout (crear pedido, descontar stock,
+//     usar un cupón, avanzar el contador de pedidos).
+//   • Todo lo que no está acá abajo: DENEGADO.
+// =====================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- Funciones ----------
+
+    function logueado() {
+      return request.auth != null;
+    }
+
+    function docClienteActual() {
+      return get(/databases/$(database)/documents/Clientes/$(request.auth.uid));
+    }
+
+    function esAdmin() {
+      return logueado()
+        && exists(/databases/$(database)/documents/Clientes/$(request.auth.uid))
+        && docClienteActual().data.get('administrador', false) == true
+        && docClienteActual().data.get('estado', true) != false;
+    }
+
+    // Campos que cambian en un update
+    function cambios() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    // El campo no cambia (considerando el valor por defecto si no existe)
+    function sinCambio(campo, porDefecto) {
+      return request.resource.data.get(campo, porDefecto) == resource.data.get(campo, porDefecto);
+    }
+
+    // ---------- Administrador ----------
+    // Acceso total, con excepciones de trazabilidad:
+    //   • Auditoria: solo se puede CREAR (ver más abajo), nunca modificar ni borrar.
+    //   • Ventas, gastos y Cajas: no se pueden borrar (se anulan).
+    //   • Cajas: una vez CERRADA no se puede modificar (ver más abajo).
+
+    match /{coleccion}/{document=**} {
+      allow read: if esAdmin();
+      allow create, update: if esAdmin() && !(coleccion in ['Auditoria', 'Cajas', 'MovimientosCaja', 'Ventas']);
+      allow delete: if esAdmin() && !(coleccion in ['Auditoria', 'Ventas', 'gastos', 'Cajas', 'MovimientosCaja']);
+    }
+
+    // ---------- Cajas ----------
+    // Se pueden crear y actualizar mientras están abiertas (ventas, cierre).
+    // Después del cierre quedan congeladas.
+    match /Cajas/{id} {
+      allow create: if esAdmin();
+      allow update: if esAdmin() && resource.data.get('abierta', true) == true;
+    }
+
+    // ---------- Ventas del local (tickets) ----------
+    // Se crean con la venta; después solo se pueden ANULAR, una sola vez.
+    match /Ventas/{id} {
+      allow create: if esAdmin();
+      allow update: if esAdmin()
+        && resource.data.get('anulada', false) == false
+        && request.resource.data.anulada == true
+        && cambios().hasOnly(['anulada', 'motivoAnulacion', 'anuladaPor', 'anuladaEn']);
+    }
+
+    // ---------- Movimientos de caja ----------
+    // Se crean y se anulan solo con la caja ABIERTA, nunca se modifican ni se borran.
+    function cajaAbierta(cajaId) {
+      return get(/databases/$(database)/documents/Cajas/$(cajaId)).data.get('abierta', true) == true;
+    }
+
+    match /MovimientosCaja/{id} {
+      allow create: if esAdmin()
+        && request.resource.data.usuario.uid == request.auth.uid
+        && request.resource.data.importe > 0
+        && request.resource.data.anulado == false
+        && cajaAbierta(request.resource.data.cajaId);
+
+      // Anular (una sola vez) o marcar la corrección que lo reemplaza
+      allow update: if esAdmin()
+        && cajaAbierta(resource.data.cajaId)
+        && (
+          (cambios().hasOnly(['anulado', 'motivoAnulacion', 'anuladoPor', 'anuladoEn'])
+            && resource.data.get('anulado', false) == false
+            && request.resource.data.anulado == true)
+          ||
+          (cambios().hasOnly(['corregidoPor'])
+            && resource.data.get('corregidoPor', null) == null)
+        );
+    }
+
+    // ---------- Auditoría ----------
+    // Cada registro debe ser del usuario que está logueado y con la hora del servidor.
+    match /Auditoria/{id} {
+      allow create: if esAdmin()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.fecha == request.time;
+    }
+
+    // ---------- Catálogo y configuración pública ----------
+
+    match /productos/{id} {
+      allow read: if true;
+      // Checkout (visitantes y clientes): solo pueden modificar el stock
+      allow update: if cambios().hasOnly(['stockSucursales', 'stockMayorista', 'variantes']);
+    }
+
+    match /Sucursales/{id}    { allow read: if true; }
+    match /Marquesina/{id}    { allow read: if true; }
+    match /InfoEmpresa/{id}   { allow read: if true; }
+    match /infoEmpresa/{id}   { allow read: if true; }
+    match /configuracion/{id} { allow read: if true; }
+
+    // ---------- Clientes ----------
+
+    match /Clientes/{uid} {
+      // Cada cliente lee solo su propio documento
+      allow get: if logueado() && request.auth.uid == uid;
+
+      // Registro: solo su propio documento y sin privilegios
+      allow create: if logueado() && request.auth.uid == uid
+        && request.resource.data.get('administrador', false) == false
+        && request.resource.data.get('estado', true) == true
+        && request.resource.data.get('puntos', 0) == 0
+        && request.resource.data.get('mayoristaActivado', false) == false;
+
+      // Carrito, historial, puntos, datos de contacto... pero NO permisos
+      allow update: if logueado() && request.auth.uid == uid
+        && sinCambio('administrador', false)
+        && sinCambio('esMayorista', false)
+        && sinCambio('estado', true)
+        && sinCambio('usuario', '');
+    }
+
+    // Índice nombre de usuario → mail (lo usa el login)
+    match /Usuarios/{usuario} {
+      allow get: if true;
+      allow create: if logueado()
+        && request.resource.data.keys().hasOnly(['uid', 'mail'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.mail == request.auth.token.email;
+    }
+
+    // ---------- Cupones ----------
+
+    match /Cupones/{id} {
+      // Se buscan por código desde el checkout
+      allow read: if true;
+      // Checkout: solo descontar un uso (y desactivarlo si se agotó)
+      allow update: if cambios().hasOnly(['cantidadDisponible', 'activo'])
+        && request.resource.data.cantidadDisponible == resource.data.get('cantidadDisponible', 1) - 1
+        && (!('activo' in cambios()) || request.resource.data.activo == false);
+    }
+
+    // ---------- Colecciones con espacios en el nombre ----------
+
+    match /{coleccion}/{id} {
+      // Consulta pública del estado de una reparación (link/QR con el id de la orden)
+      allow get: if coleccion in ['Ordenes Pendientes', 'Ordenes Finalizadas'];
+
+      // Número de pedido: se lee y se avanza de a 1
+      allow read: if coleccion == 'Contador Pedidos';
+      allow update: if coleccion == 'Contador Pedidos'
+        && cambios().hasOnly(['contador'])
+        && request.resource.data.contador == resource.data.contador + 1;
+
+      // Checkout: crear el pedido
+      allow create: if coleccion == 'Pedidos Pendientes'
+        && request.resource.data.estado == 'pendiente';
+    }
+  }
+}

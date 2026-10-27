@@ -1,0 +1,120 @@
+.titulo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.titulo small {
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: #777;
+}
+
+.contenido {
+  min-width: min(720px, 80vw);
+}
+
+.fila-filtros {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.campo-sucursal { width: 200px; }
+.campo-busqueda { flex: 1; min-width: 240px; }
+.campo-cantidad { width: 110px; margin-bottom: -1.25em; }
+
+.cargando, .sin-resultados {
+  color: #888;
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+}
+
+.resultados {
+  border: 1px solid #e3e3e3;
+  border-radius: 6px;
+  max-height: 260px;
+  overflow-y: auto;
+  margin-bottom: 12px;
+}
+
+.resultado {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fff;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.resultado:hover:not(:disabled) { background: #eef4fc; }
+.resultado:disabled { cursor: not-allowed; opacity: 0.6; }
+
+.stock {
+  white-space: nowrap;
+  font-size: 0.85rem;
+  color: #333;
+}
+
+.stock i { color: #0ca30c; margin-right: 4px; }
+.stock.sin-stock i { color: #d03b3b; }
+
+.seleccionado {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: #f6f8fb;
+  border: 1px solid #e1e6ee;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+
+.encabezado-lista {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+}
+
+.encabezado-lista h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.tabla {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+  font-size: 0.9rem;
+}
+
+.tabla th {
+  text-align: left;
+  color: #555;
+  font-weight: 600;
+  border-bottom: 1px solid #ccc;
+  padding: 6px;
+}
+
+.tabla td {
+  border-bottom: 1px solid #eee;
+  padding: 6px;
+  vertical-align: middle;
+}
+
+.tabla .num { text-align: right; }
+.tabla tr.devuelto td { color: #999; }
+.tabla tr.devuelto td:first-child { text-decoration: line-through; }
+
+.nota {
+  margin-top: 12px;
+  font-size: 0.82rem;
+  color: #888;
+}

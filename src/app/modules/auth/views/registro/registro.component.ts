@@ -68,12 +68,13 @@ export class RegistroComponent {
       dni: Number(this.formRegistroCliente.value.dni)  
     };
 
-    // 1. Validar que el nombre de usuario no exista
-    const clientesRef = collection(this.firestore, 'Clientes');
-    const q = query(clientesRef, where('usuario', '==', form.usuario));
-    const existing = await getDocs(q);
+    // 1. Validar que el nombre de usuario no exista (índice 'Usuarios', sin leer Clientes)
+    if (!form.usuario || form.usuario.includes('/')) {
+      this.error = 'El nombre de usuario no es válido.';
+      return;
+    }
 
-    if (!existing.empty) {
+    if (await this.authService.existeUsuario(form.usuario)) {
       this.error = 'El nombre de usuario ya está registrado.';
       return;
     }
@@ -107,6 +108,9 @@ export class RegistroComponent {
       // 4. Guardar en Firestore
       await setDoc(doc(this.firestore, 'Clientes', uid), { ...nuevoCliente });
 
+      // 4.b Índice de usuario → mail (para poder iniciar sesión con el nombre de usuario)
+      await this.authService.registrarEnIndice(form.usuario, uid, cred.user.email || form.mail);
+
       // 5. Login automático
       const clienteLogueado = await this.authService.login(form.usuario, form.contrasena);
 
@@ -131,4 +135,4 @@ export class RegistroComponent {
   cerrar() {
     this.dialogRef.close();
   }
-}
+}

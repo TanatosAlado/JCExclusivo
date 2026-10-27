@@ -1,0 +1,38 @@
+.filtro {
+  min-width: 170px;
+}
+
+.filtro-texto {
+  min-width: 260px;
+  flex: 1;
+}
+
+.tabla-auditoria td {
+  vertical-align: top;
+}
+
+.fila-expandida {
+  background: #f5f8fb;
+}
+
+.detalle td {
+  background: #fafafa;
+}
+
+.valor {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: monospace;
+  font-size: 0.8rem;
+  max-height: 240px;
+  overflow: auto;
+  margin: 0;
+}
+
+.tabla-cambios .antes {
+  color: #b02a37;
+}
+
+.tabla-cambios .despues {
+  color: #146c43;
+}

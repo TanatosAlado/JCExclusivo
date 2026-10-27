@@ -12,6 +12,11 @@ export class VerOrdenComponent {
   qrLink: string;
   @ViewChild('qrCode', { read: ElementRef }) qrCodeRef!: ElementRef;
 
+  /** Artículos de stock usados en la reparación (los devueltos no se muestran) */
+  get articulosUsados(): any[] {
+    return (this.orden?.articulos || []).filter((a: any) => !a.devuelto);
+  }
+
   constructor(@Inject(MAT_DIALOG_DATA) public orden: any) {
     this.qrLink = `https://storejcexclusivo.web.app/consulta/${orden.id}`;
   }

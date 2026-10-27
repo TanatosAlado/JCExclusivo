@@ -1,0 +1,318 @@
+<app-encabezado>
+  Dashboard
+</app-encabezado>
+
+<div class="container-fluid tablero py-3">
+
+  <!-- ===================== FILTROS (una sola fila) ===================== -->
+  <div class="filtros">
+    <mat-button-toggle-group [value]="periodo" (change)="elegirPeriodo($event.value)" aria-label="Período">
+      <mat-button-toggle *ngFor="let p of periodos" [value]="p.valor">{{ p.nombre }}</mat-button-toggle>
+    </mat-button-toggle-group>
+
+    <ng-container *ngIf="periodo === 'custom'">
+      <mat-form-field appearance="outline" class="campo-fecha">
+        <mat-label>Desde</mat-label>
+        <input matInput [matDatepicker]="pDesde" [(ngModel)]="desde">
+        <mat-datepicker-toggle matSuffix [for]="pDesde"></mat-datepicker-toggle>
+        <mat-datepicker #pDesde></mat-datepicker>
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="campo-fecha">
+        <mat-label>Hasta</mat-label>
+        <input matInput [matDatepicker]="pHasta" [(ngModel)]="hasta">
+        <mat-datepicker-toggle matSuffix [for]="pHasta"></mat-datepicker-toggle>
+        <mat-datepicker #pHasta></mat-datepicker>
+      </mat-form-field>
+      <button mat-raised-button color="primary" type="button" (click)="aplicarFechas()" [disabled]="cargando">Ver</button>
+    </ng-container>
+
+    <mat-form-field appearance="outline" class="campo-sucursal">
+      <mat-label>Sucursal</mat-label>
+      <mat-select [(ngModel)]="sucursalId" (selectionChange)="cambiarSucursal()">
+        <mat-option value="">Todas</mat-option>
+        <mat-option *ngFor="let s of sucursales" [value]="s.id">{{ s.nombre }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <span class="espacio"></span>
+
+    <button mat-stroked-button type="button" (click)="cargar()" [disabled]="cargando" matTooltip="Volver a leer los datos">
+      <i class="fas fa-sync-alt" [class.fa-spin]="cargando"></i> Actualizar
+    </button>
+    <button mat-raised-button color="primary" type="button" (click)="exportarExcel()" [disabled]="cargando || !ind">
+      <i class="fas fa-file-excel"></i> Reporte Excel
+    </button>
+  </div>
+
+  <div class="subtexto mb-2" *ngIf="rango">
+    {{ textoRango }}<span *ngIf="sucursalId"> · {{ nombreSucursal(sucursalId) }}</span>
+    <span *ngIf="actualizado"> · actualizado {{ actualizado | date:'HH:mm' }}</span>
+  </div>
+
+  <div class="alert alert-danger" *ngIf="error">{{ error }}</div>
+
+  <div class="cargando" *ngIf="cargando && !ind">
+    <mat-spinner diameter="40"></mat-spinner>
+    <span>Cargando datos…</span>
+  </div>
+
+  <ng-container *ngIf="ind">
+    <div [class.atenuado]="cargando">
+
+      <!-- ===================== HERO + KPIs ===================== -->
+      <div class="fila-hero">
+        <div class="tarjeta hero">
+          <div class="etiqueta">Total vendido</div>
+          <div class="hero-valor">{{ moneda(ind.totalVendido) }}</div>
+          <div class="delta" *ngIf="ind.variacion !== null"
+               [class.sube]="ind.variacion > 0" [class.baja]="ind.variacion < 0">
+            <i class="fas" [class.fa-arrow-up]="ind.variacion > 0" [class.fa-arrow-down]="ind.variacion < 0"
+               [class.fa-equals]="ind.variacion === 0"></i>
+            {{ ind.variacion > 0 ? '+' : '' }}{{ ind.variacion | number:'1.0-1' }}%
+            <span class="subtexto">vs. período anterior ({{ moneda(ind.totalVendidoAnterior) }})</span>
+          </div>
+          <div class="subtexto" *ngIf="ind.variacion === null">Sin ventas en el período anterior para comparar</div>
+          <div class="hero-partes">
+            <span><i class="marca serie-1"></i>Local {{ moneda(ind.ventasLocal) }}</span>
+            <span><i class="marca serie-2"></i>Web {{ moneda(ind.ventasWeb) }}</span>
+            <span><i class="marca serie-3"></i>Reparaciones {{ moneda(ind.reparacionesCobradas) }}</span>
+          </div>
+          <div class="subtexto mt-1" *ngIf="sucursalId">Los pedidos web no tienen sucursal: se suman siempre.</div>
+        </div>
+
+        <div class="kpis">
+          <div class="tarjeta kpi">
+            <div class="etiqueta">Ventas del local</div>
+            <div class="kpi-valor">{{ moneda(ind.ventasLocal) }}</div>
+            <div class="subtexto">{{ ind.ticketsLocal }} tickets · promedio {{ moneda(ind.ticketPromedio) }}</div>
+            <div class="subtexto" *ngIf="ind.anuladosLocal">{{ ind.anuladosLocal }} anulado(s)</div>
+          </div>
+          <div class="tarjeta kpi">
+            <div class="etiqueta">Pedidos web finalizados</div>
+            <div class="kpi-valor">{{ moneda(ind.ventasWeb) }}</div>
+            <div class="subtexto">{{ ind.pedidosWeb }} pedido(s)</div>
+          </div>
+          <div class="tarjeta kpi">
+            <div class="etiqueta">Cobros de reparaciones</div>
+            <div class="kpi-valor">{{ moneda(ind.reparacionesCobradas) }}</div>
+            <div class="subtexto">{{ ind.cobrosReparacion }} cobro(s)</div>
+          </div>
+          <div class="tarjeta kpi">
+            <div class="etiqueta">Egresos</div>
+            <div class="kpi-valor">{{ moneda(ind.egresos) }}</div>
+            <div class="subtexto">{{ sucursalId ? 'Gastos y proveedores de caja' : 'Gastos generales + gastos de caja' }}</div>
+          </div>
+          <div class="tarjeta kpi">
+            <div class="etiqueta">Resultado</div>
+            <div class="kpi-valor" [class.texto-critico]="ind.resultado < 0">{{ moneda(ind.resultado) }}</div>
+            <div class="subtexto">Vendido − egresos (no incluye costo de mercadería)</div>
+          </div>
+          <div class="tarjeta kpi">
+            <div class="etiqueta">Diferencias de caja</div>
+            <div class="kpi-valor">
+              <span class="estado" [ngClass]="ind.cierresConDiferencia ? (ind.diferenciasCaja < 0 ? 'critico' : 'alerta') : 'bien'">
+                <i class="fas" [ngClass]="ind.cierresConDiferencia ? 'fa-exclamation-triangle' : 'fa-check-circle'"></i>
+              </span>
+              {{ moneda(ind.diferenciasCaja) }}
+            </div>
+            <div class="subtexto">
+              {{ ind.cierresConDiferencia ? ind.cierresConDiferencia + ' cierre(s) con diferencia' : 'Todos los cierres exactos' }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================== VENTAS EN EL TIEMPO ===================== -->
+      <div class="tarjeta mt-3">
+        <div class="tarjeta-titulo">
+          <h3>{{ tituloSerie }}</h3>
+          <div class="leyenda">
+            <span *ngFor="let s of series"><i class="marca" [ngClass]="s.clase"></i>{{ s.nombre }}</span>
+          </div>
+          <button mat-button type="button" class="ms-auto" (click)="verTablaVentas = !verTablaVentas">
+            <i class="fas" [ngClass]="verTablaVentas ? 'fa-chart-bar' : 'fa-table'"></i>
+            {{ verTablaVentas ? 'Ver gráfico' : 'Ver tabla' }}
+          </button>
+        </div>
+
+        <!-- Gráfico de columnas apiladas -->
+        <div class="grafico" *ngIf="!verTablaVentas" (mouseleave)="hover = null">
+          <div class="eje-y">
+            <span *ngFor="let t of ticks" [style.bottom.%]="alto(t)">{{ monedaCorta(t) }}</span>
+          </div>
+          <div class="area">
+            <div class="grilla" *ngFor="let t of ticks" [style.bottom.%]="alto(t)" [class.base]="t === 0"></div>
+            <div class="columnas">
+              <div class="columna" *ngFor="let b of ind.porDia; let i = index"
+                   (mouseenter)="hover = b; hoverIdx = i" [class.activa]="hover === b">
+                <div class="pila">
+                  <ng-container *ngFor="let s of series">
+                    <div class="segmento" *ngIf="b[s.clave] > 0" [ngClass]="s.clase"
+                         [class.tope]="ultimaSerie(b) === s.clave"
+                         [style.height.%]="alto(b[s.clave])"></div>
+                  </ng-container>
+                </div>
+                <div class="etiqueta-x" [class.oculta]="!mostrarEtiqueta(i)">{{ b.etiqueta }}</div>
+              </div>
+            </div>
+
+            <div class="tooltip-grafico" *ngIf="hover" [style.left.%]="posTooltip().left" [style.transform]="posTooltip().transform">
+              <div class="tt-titulo">{{ hover.etiqueta }}</div>
+              <div class="tt-fila" *ngFor="let s of series">
+                <i class="marca" [ngClass]="s.clase"></i><span>{{ s.nombre }}</span><b>{{ moneda(hover[s.clave]) }}</b>
+              </div>
+              <div class="tt-fila tt-total"><span>Total</span><b>{{ moneda(hover.total) }}</b></div>
+            </div>
+          </div>
+          <div class="vacio" *ngIf="ind.totalVendido === 0">Sin ventas en el período</div>
+        </div>
+
+        <!-- Vista tabla (accesible) -->
+        <div class="tabla-scroll" *ngIf="verTablaVentas">
+          <table class="table table-sm tabla-datos">
+            <thead><tr><th>{{ ind.granularidad === 'hora' ? 'Hora' : 'Fecha' }}</th><th class="num">Local</th><th class="num">Web</th><th class="num">Reparaciones</th><th class="num">Total</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let b of ind.porDia">
+                <td>{{ b.etiqueta }}</td>
+                <td class="num">{{ moneda(b.local) }}</td>
+                <td class="num">{{ moneda(b.web) }}</td>
+                <td class="num">{{ moneda(b.reparaciones) }}</td>
+                <td class="num"><b>{{ moneda(b.total) }}</b></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ===================== MEDIOS DE PAGO / VENDEDORES / TOP ===================== -->
+      <div class="grilla-3 mt-3">
+        <div class="tarjeta">
+          <div class="tarjeta-titulo"><h3>Medios de pago</h3></div>
+          <div class="barras" *ngIf="ind.porMetodo.length; else sinDatos">
+            <div class="barra-fila" *ngFor="let m of ind.porMetodo">
+              <div class="barra-nombre">{{ m.metodo }}</div>
+              <div class="barra-pista" [matTooltip]="m.cantidad + ' operación(es) · ' + moneda(m.monto)">
+                <div class="barra" [style.width.%]="ancho(m.monto, ind.porMetodo)"></div>
+              </div>
+              <div class="barra-valor">{{ monedaCorta(m.monto) }} <span class="subtexto">{{ porcentaje(m.monto, totalMetodos) }}</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tarjeta">
+          <div class="tarjeta-titulo"><h3>Ventas por vendedor</h3><span class="subtexto">local</span></div>
+          <div class="barras" *ngIf="ind.porVendedor.length; else sinDatos">
+            <div class="barra-fila" *ngFor="let v of ind.porVendedor">
+              <div class="barra-nombre" [title]="v.vendedor">{{ v.vendedor }}</div>
+              <div class="barra-pista" [matTooltip]="v.tickets + ' ticket(s) · ' + moneda(v.monto)">
+                <div class="barra" [style.width.%]="ancho(v.monto, ind.porVendedor)"></div>
+              </div>
+              <div class="barra-valor">{{ monedaCorta(v.monto) }} <span class="subtexto">{{ v.tickets }} tk</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tarjeta">
+          <div class="tarjeta-titulo"><h3>Productos más vendidos</h3><span class="subtexto">local + web</span></div>
+          <table class="table table-sm tabla-datos mb-0" *ngIf="ind.topProductos.length; else sinDatos">
+            <thead><tr><th>Producto</th><th class="num">Unid.</th><th class="num">Monto</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let p of ind.topProductos">
+                <td class="recorte" [title]="p.nombre">{{ p.nombre }}</td>
+                <td class="num">{{ p.cantidad }}</td>
+                <td class="num">{{ monedaCorta(p.monto) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ===================== ESTADO ACTUAL ===================== -->
+      <h2 class="seccion">Ahora</h2>
+      <div class="grilla-4">
+
+        <!-- Cajas -->
+        <div class="tarjeta">
+          <div class="tarjeta-titulo"><h3><i class="fas fa-cash-register"></i> Cajas abiertas</h3></div>
+          <div class="kpi-valor">{{ ind.cajasAbiertas.length }}</div>
+          <ul class="lista" *ngIf="ind.cajasAbiertas.length; else ningunaCaja">
+            <li *ngFor="let c of ind.cajasAbiertas">
+              <span class="estado" [ngClass]="c.vieja ? 'critico' : 'bien'">
+                <i class="fas" [ngClass]="c.vieja ? 'fa-exclamation-circle' : 'fa-check-circle'"></i>
+                {{ c.vieja ? 'Sin cerrar' : 'Abierta' }}
+              </span>
+              <b>{{ nombreSucursal(c.sucursalId) }}</b>
+              <span class="subtexto">· {{ c.abrio }} · {{ c.desde | date:'dd/MM HH:mm' }} · {{ c.ventas }} venta(s)</span>
+            </li>
+          </ul>
+          <ng-template #ningunaCaja><div class="subtexto">No hay cajas abiertas.</div></ng-template>
+        </div>
+
+        <!-- Stock -->
+        <div class="tarjeta">
+          <div class="tarjeta-titulo"><h3><i class="fas fa-boxes"></i> Stock</h3></div>
+          <div class="dos-cifras">
+            <div>
+              <div class="kpi-valor">{{ ind.sinStock }}</div>
+              <span class="estado critico"><i class="fas fa-times-circle"></i> Sin stock</span>
+            </div>
+            <div>
+              <div class="kpi-valor">{{ ind.bajoMinimo }}</div>
+              <span class="estado alerta"><i class="fas fa-exclamation-triangle"></i> Bajo mínimo</span>
+            </div>
+          </div>
+          <div class="subtexto mt-2">
+            Valor al costo: <b>{{ moneda(ind.valorStockCosto) }}</b> ({{ ind.productosConStock }} productos con stock)
+          </div>
+          <details class="mt-2" *ngIf="ind.alertasStock.length">
+            <summary>Ver productos</summary>
+            <table class="table table-sm tabla-datos mb-0">
+              <tbody>
+                <tr *ngFor="let a of ind.alertasStock">
+                  <td class="recorte" [title]="a.nombre">{{ a.nombre }}</td>
+                  <td class="num">{{ a.stock }}<span class="subtexto" *ngIf="a.minimo"> / mín {{ a.minimo }}</span></td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="subtexto" *ngIf="ind.sinStock + ind.bajoMinimo > ind.alertasStock.length">
+              Lista completa en el reporte Excel.
+            </div>
+          </details>
+        </div>
+
+        <!-- Taller -->
+        <div class="tarjeta">
+          <div class="tarjeta-titulo"><h3><i class="fas fa-microchip"></i> Taller</h3></div>
+          <div class="dos-cifras">
+            <div>
+              <div class="kpi-valor">{{ ind.ordenesEnTaller }}</div>
+              <span class="subtexto">En reparación</span>
+            </div>
+            <div>
+              <div class="kpi-valor">{{ ind.ordenesListas }}</div>
+              <span class="estado bien"><i class="fas fa-check-circle"></i> Listas para retirar</span>
+            </div>
+          </div>
+          <div class="subtexto mt-2">Saldo por cobrar: <b>{{ moneda(ind.saldoReparaciones) }}</b></div>
+          <div class="chips mt-2">
+            <span class="chip" *ngFor="let e of ind.ordenesPorEstado">{{ e.estado }}: <b>{{ e.cantidad }}</b></span>
+          </div>
+        </div>
+
+        <!-- Pedidos web -->
+        <div class="tarjeta">
+          <div class="tarjeta-titulo"><h3><i class="fas fa-shopping-cart"></i> Pedidos web pendientes</h3></div>
+          <div class="kpi-valor">
+            <span class="estado" *ngIf="ind.pedidosWebPendientes" [ngClass]="'alerta'"><i class="fas fa-clock"></i></span>
+            {{ ind.pedidosWebPendientes }}
+          </div>
+          <div class="subtexto">Por {{ moneda(ind.totalPedidosWebPendientes) }}</div>
+          <a mat-stroked-button routerLink="/gestiones/pedidos" class="mt-2">Ir a pedidos</a>
+        </div>
+      </div>
+
+    </div>
+  </ng-container>
+
+  <ng-template #sinDatos><div class="subtexto py-3">Sin datos en el período.</div></ng-template>
+</div>

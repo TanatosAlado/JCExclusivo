@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Firestore, collection, deleteDoc, doc,getDocs,query,setDoc, where } from '@angular/fire/firestore';
 import { Marquesina } from '../models/marquesina.model';
+import { AuditoriaService } from 'src/app/shared/services/auditoria.service';
 
 @Injectable({
   providedIn: 'root'
@@ -9,7 +10,7 @@ export class MarquesinaService {
 
   marquesinasCache: Marquesina[] = [];
 
-  constructor(private firestore: Firestore) {}
+  constructor(private firestore: Firestore, private auditoria: AuditoriaService) {}
 
 async agregarMarquesina(marquesina: Marquesina) {
 
@@ -22,6 +23,11 @@ async agregarMarquesina(marquesina: Marquesina) {
   await setDoc(docRef, marquesina);
 
   this.marquesinasCache.push(marquesina);
+
+  this.auditoria.registrar({
+    accion: 'crear', entidad: 'Marquesina', entidadId: docRef.id,
+    descripcion: `Creó un mensaje de marquesina: "${marquesina.mensaje}"`, despues: marquesina
+  });
 
   return docRef;
 }
@@ -63,13 +69,23 @@ async getMarquesinasPorTipo(tipoCliente: string): Promise<Marquesina[]> {
   async actualizarMarquesina(marquesina: Marquesina) {
     if (!marquesina.id) throw new Error('La marquesina debe tener un ID');
 
+    const antes = await this.auditoria.capturar('Marquesina', marquesina.id);
     const ref = doc(this.firestore, `Marquesina/${marquesina.id}`);
-    return setDoc(ref, marquesina, { merge: true });
+    await setDoc(ref, marquesina, { merge: true });
+    this.auditoria.registrar({
+      accion: 'modificar', entidad: 'Marquesina', entidadId: marquesina.id,
+      descripcion: 'Modificó un mensaje de marquesina', antes, despues: marquesina
+    });
   }
 
     //SERVICE PARA ELIMINAR UNA MARQUESINA
-  eliminarMarquesina(id: string): Promise<void> {
+  async eliminarMarquesina(id: string): Promise<void> {
+    const antes = await this.auditoria.capturar('Marquesina', id);
     const docRef = doc(this.firestore, 'Marquesina', id);
-    return deleteDoc(docRef);
+    await deleteDoc(docRef);
+    this.auditoria.registrar({
+      accion: 'eliminar', entidad: 'Marquesina', entidadId: id,
+      descripcion: `Eliminó un mensaje de marquesina: "${antes?.mensaje || ''}"`, antes
+    });
   }
-}
+}

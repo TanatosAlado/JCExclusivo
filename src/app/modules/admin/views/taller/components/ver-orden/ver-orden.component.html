@@ -73,6 +73,14 @@
       </div>
     </div>
 
+    <!-- 🔩 Artículos de stock usados (uso interno) -->
+    <div class="bloque" *ngIf="articulosUsados.length">
+      <h2>🔩 Artículos usados</h2>
+      <ul>
+        <li *ngFor="let a of articulosUsados">{{ a.cantidad }} x {{ a.nombre }}</li>
+      </ul>
+    </div>
+
     <qrcode #qrCode [qrdata]="qrLink" [width]="200"></qrcode>
   </div>
 
@@ -83,4 +91,4 @@
 <mat-dialog-actions align="end" class="acciones">
   <button mat-button mat-dialog-close>Cerrar</button>
   <button mat-raised-button color="primary" (click)="imprimir()">🖨️ Reimprimir</button>
-</mat-dialog-actions>
+</mat-dialog-actions>

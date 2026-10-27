@@ -21,7 +21,8 @@ export class AbrirCajaDialogComponent implements OnInit {
 
   ngOnInit(): void {
     this.form = this.fb.group({
-      sucursalId: [null, Validators.required],
+      // Si se abre desde una sucursal ya elegida, viene preseleccionada
+      sucursalId: [this.data?.sucursalId ?? null, Validators.required],
       montoInicial: [null, [Validators.required, Validators.min(0)]]
     });
 
@@ -39,4 +40,4 @@ export class AbrirCajaDialogComponent implements OnInit {
   cancelar() {
     this.dialogRef.close();
   }
-}
+}

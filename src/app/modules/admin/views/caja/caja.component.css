@@ -32,3 +32,26 @@
 .mat-datepicker-toggle-default-icon {
   fill: #034f70 !important;
 }
+.form-gasto {
+  border: 1px solid #e0e0e0;
+  border-left: 4px solid #d33;
+  border-radius: 8px;
+  padding: 16px;
+  background: #fafafa;
+}
+
+.anulado {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+.filtros-caja .filtro {
+  min-width: 180px;
+}
+
+.cajas-dia {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px 16px;
+  background: #fcfcfc;
+}

@@ -2,13 +2,14 @@ import { Injectable } from '@angular/core';
 import { addDoc, collection, collectionData, deleteDoc, doc, Firestore, getDoc, runTransaction, setDoc, updateDoc } from '@angular/fire/firestore';
 import { Observable } from 'rxjs';
 import { Pedido } from 'src/app/modules/shop/models/pedido.model';
+import { AuditoriaService } from 'src/app/shared/services/auditoria.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class PedidosService {
 
-  constructor(private firestore: Firestore) { }
+  constructor(private firestore: Firestore, private auditoria: AuditoriaService) { }
 
   //SERVICE PARA CREAR PEDIDO
   createPedido(pedido: Pedido): Promise<any> {
@@ -26,7 +27,15 @@ export class PedidosService {
   async deletePedidoById(id: string, tabla: string): Promise<void> {
     const productoRef = doc(this.firestore, `${tabla}/${id}`);
     try {
+      const antes = await this.auditoria.capturar(tabla, id);
       await deleteDoc(productoRef);
+      this.auditoria.registrar({
+        accion: 'eliminar',
+        entidad: tabla,
+        entidadId: id,
+        descripcion: `Eliminó definitivamente el pedido #${antes?.nroPedido ?? '?'} de ${tabla}`,
+        antes
+      });
      // this.getPedidos(tabla);
     } catch (error) {
       console.error('Error al eliminar el producto:', error);
@@ -38,13 +47,27 @@ export class PedidosService {
   }
 
     //SERVICIO PARA ACTUALIZAR LA CANTIDAD DE PRODUCTOS Y TOTAL EN PEDIDOS PENDIENTES
-  updateCarroEnPedido(idPedido: string, nuevoCarro: any[]) {
+  async updateCarroEnPedido(idPedido: string, nuevoCarro: any[]) {
     const nuevoTotal = nuevoCarro.reduce((acc, item) => acc + item.precioFinal * item.cantidad, 0);
+    const antes = await this.auditoria.capturar('Pedidos Pendientes', idPedido);
     const pedidoRef = doc(this.firestore, 'Pedidos Pendientes', idPedido);
-    return updateDoc(pedidoRef, {
+    await updateDoc(pedidoRef, {
       carrito: nuevoCarro,
       total: nuevoTotal
     });
+    this.auditoria.registrar({
+      accion: 'modificar',
+      entidad: 'Pedidos Pendientes',
+      entidadId: idPedido,
+      descripcion: `Modificó los productos del pedido #${antes?.nroPedido ?? '?'}`,
+      antes: { total: antes?.total, productos: this.resumenCarrito(antes?.carrito) },
+      despues: { total: nuevoTotal, productos: this.resumenCarrito(nuevoCarro) }
+    });
+  }
+
+  /** "2 x Funda, 1 x Cargador" para la auditoría */
+  private resumenCarrito(carrito: any[] | undefined): string {
+    return (carrito || []).map(i => `${i.cantidad} x ${i.nombre}`).join(', ');
   }
 
     deleteProductoDelCarrito(idPedido: string, idProducto: string) {
@@ -55,6 +78,13 @@ export class PedidosService {
         throw new Error('Pedido no encontrado');
       }
       const pedidoData = docSnap.data();
+      const quitado = (pedidoData['carrito'] || []).find((p: any) => p.id === idProducto);
+      this.auditoria.registrar({
+        accion: 'modificar',
+        entidad: 'Pedidos Pendientes',
+        entidadId: idPedido,
+        descripcion: `Quitó "${quitado?.nombre || idProducto}" del pedido #${pedidoData['nroPedido'] ?? '?'}`
+      });
       const carritoActual = pedidoData['carrito'] || [];
       const carritoActualizado = carritoActual.filter((producto: any) => producto.id !== idProducto);
       if (carritoActualizado.length === 0) {
@@ -166,6 +196,16 @@ export class PedidosService {
       // =====================================================
 
       await deleteDoc(refOrigen);
+
+      this.auditoria.registrar({
+        accion: 'mover',
+        entidad: origen,
+        entidadId: id,
+        descripcion: `Pasó el pedido #${data.nroPedido ?? '?'} de "${origen}" a "${destino}"` +
+          (data.stockDevuelto === true && destino === 'Pedidos Eliminados' ? ' (stock devuelto)' : ''),
+        extra: { origen, destino, total: data.total ?? null, cliente: data.nombreCliente ?? null }
+      });
+
 
     } catch (err) {
 

@@ -292,12 +292,18 @@
 
                             </div>
 
-                                  <!-- COLOR DEL PRODUCTO --> 
-                                <div *ngIf="carro.color" 
+                                <!-- COLOR DEL PRODUCTO --> 
+                            <div *ngIf="carro.color" 
                                 class="color-producto" 
                                 [style.background-color]="carro.color" 
                                 [title]="'Color: ' + carro.color"> 
-                                </div>
+                            </div>
+
+                            <!-- MODELO DEL PRODUCTO --> 
+                             <div *ngIf="carro.modelo" 
+                                class="modelo-producto"> 
+                                Modelo: {{ carro.modelo }} 
+                            </div>
 
                             <div class="detalle">
                                 <p>{{carro.nombre}}</p>

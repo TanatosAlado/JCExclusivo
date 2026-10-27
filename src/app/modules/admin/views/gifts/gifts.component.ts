@@ -67,8 +67,8 @@ export class GiftsComponent implements OnInit {
 
   crearCupon(): void {
     const cupon = this.cuponForm.value as Cupon;
-    const cuponesRef = collection(this.firestore, 'Cupones');
-    addDoc(cuponesRef, cupon).then(() => {
+    // Pasa por el servicio para que quede registrado en auditoría
+    this.puntosService.crearCupon(cupon).then(() => {
       this.cuponForm.reset({
         tipo: 'monto',
         activo: true,
@@ -103,8 +103,8 @@ export class GiftsComponent implements OnInit {
 
   eliminarCupon(cupon: Cupon): void {
     if (!cupon.id) return;
-    const cuponDocRef = doc(this.firestore, 'Cupones', cupon.id);
-    deleteDoc(cuponDocRef);
+    // Pasa por el servicio para que quede registrado en auditoría
+    this.puntosService.eliminarCupon(cupon.id);
   }
 
   guardarMayorista(): void {
@@ -115,4 +115,4 @@ export class GiftsComponent implements OnInit {
   }
 
 
-}
+}

@@ -16,13 +16,14 @@ import {
 } from '@angular/fire/firestore';
 import { Orden } from '../models/orden.model';
 import { Observable } from 'rxjs';
+import { AuditoriaService } from 'src/app/shared/services/auditoria.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class OrdenesService {
 
-  constructor(private firestore: Firestore) { }
+  constructor(private firestore: Firestore, private auditoria: AuditoriaService) { }
 
   async generarNumeroOrden(): Promise<number> {
     const ref = collection(this.firestore, 'Contador Ordenes');
@@ -53,6 +54,15 @@ export class OrdenesService {
     const docRef = await addDoc(ordenesRef, orden);
     const ordenCompleta: Orden = { ...orden, id: docRef.id };
     await updateDoc(docRef, { id: docRef.id });
+
+    this.auditoria.registrar({
+      accion: 'crear',
+      entidad: 'Ordenes Pendientes',
+      entidadId: docRef.id,
+      descripcion: `Creó la orden de taller #${orden.numeroOrden} (${orden.equipo || ''} - ${orden.nombreCliente || ''} ${orden.apellidoCliente || ''})`,
+      despues: orden
+    });
+
     return ordenCompleta;
   }
 
@@ -160,15 +170,33 @@ export class OrdenesService {
 
         // Eliminar del origen
         await deleteDoc(refOrigen);
+
+        this.auditoria.registrar({
+          accion: 'mover',
+          entidad: origen,
+          entidadId: id,
+          descripcion: `Pasó la orden #${(data as any)['numeroOrden'] ?? '?'} de "${origen}" a "${destino}"`,
+          extra: { origen, destino }
+        });
       } else {
       }
     } catch (err) {
     }
   }
 
-  actualizarOrden(id: string, datosParciales: Partial<Orden>): Promise<void> {
+  async actualizarOrden(id: string, datosParciales: Partial<Orden>): Promise<void> {
+    const antes = await this.auditoria.capturar('Ordenes Pendientes', id);
     const clienteDocRef = doc(this.firestore, 'Ordenes Pendientes', id);
     const datosPlano = JSON.parse(JSON.stringify(datosParciales)); // 🔧 conversión segura
-    return updateDoc(clienteDocRef, datosPlano);
+    await updateDoc(clienteDocRef, datosPlano);
+
+    this.auditoria.registrar({
+      accion: 'modificar',
+      entidad: 'Ordenes Pendientes',
+      entidadId: id,
+      descripcion: `Modificó la orden de taller #${antes?.numeroOrden ?? datosPlano.numeroOrden ?? '?'}`,
+      antes,
+      despues: datosPlano
+    });
   }
 }

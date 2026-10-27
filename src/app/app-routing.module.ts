@@ -20,6 +20,9 @@ import { CajaComponent } from './modules/admin/views/caja/caja.component';
 import { SucursalesComponent } from './modules/admin/views/sucursales/sucursales.component';
 import { MarquesinaComponent } from './modules/admin/views/marquesina/marquesina.component';
 import { AdminGuard } from './core/admin.guard';
+import { AuditoriaComponent } from './modules/admin/views/auditoria/auditoria.component';
+import { TableroComponent } from './modules/admin/views/tablero/tablero.component';
+import { TicketsComponent } from './modules/admin/views/tickets/tickets.component';
 
 const routes: Routes = [
     { path: '', redirectTo: 'inicio', pathMatch: 'prefix' },
@@ -42,12 +45,15 @@ const routes: Routes = [
       { path: 'caja', component: CajaComponent },
       { path: 'sucursales', component: SucursalesComponent },
       { path: 'marquesina', component: MarquesinaComponent },
+      { path: 'auditoria', component: AuditoriaComponent },
+      { path: 'tickets', component: TicketsComponent },
+      { path: 'dashboard', component: TableroComponent },
     ]
   },
   {path:'productos',component: GrillaItemComponent},
   {path:'producto/:id',component:DetalleProductoComponent},
   {path: 'checkout',component: CheckoutComponent},
-  {path: 'despacho',component: LayoutDespachoComponent},
+  {path: 'despacho',component: LayoutDespachoComponent, canActivate: [AdminGuard]},
   {path: 'consulta/:id',component: ConsultaOrdenComponent},
 ];
 

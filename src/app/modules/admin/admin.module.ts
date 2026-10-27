@@ -36,6 +36,10 @@ import { AltaMarquesinaComponent } from './views/marquesina/components/alta-marq
 import { EditarMarquesinaComponent } from './views/marquesina/components/editar-marquesina/editar-marquesina.component';
 import { VerMarquesinaComponent } from './views/marquesina/components/ver-marquesina/ver-marquesina.component';
 import { MatRadioModule } from '@angular/material/radio';
+import { AuditoriaComponent } from './views/auditoria/auditoria.component';
+import { TicketsComponent } from './views/tickets/tickets.component';
+import { TableroComponent } from './views/tablero/tablero.component';
+import { ArticulosOrdenComponent } from './views/taller/components/articulos-orden/articulos-orden.component';
 
 
 
@@ -74,6 +78,13 @@ import { MatRadioModule } from '@angular/material/radio';
     AltaMarquesinaComponent,
     EditarMarquesinaComponent,
     VerMarquesinaComponent,
+    AuditoriaComponent,
+    TicketsComponent,
+    TableroComponent,
+    ArticulosOrdenComponent,
+  ],
+  exports: [
+    TicketsComponent, // se usa también dentro de Despacho
   ],
   imports: [
     CommonModule,

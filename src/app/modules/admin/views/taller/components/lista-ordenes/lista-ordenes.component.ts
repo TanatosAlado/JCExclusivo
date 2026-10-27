@@ -11,6 +11,9 @@ import { EdicionOrdenComponent } from '../edicion-orden/edicion-orden.component'
 import { VerOrdenComponent } from '../ver-orden/ver-orden.component';
 import { ToastService } from 'src/app/shared/services/toast.service';
 import { ConfirmDialogComponent } from 'src/app/shared/components/confirm-dialog/confirm-dialog.component';
+import { ArticulosOrdenComponent } from '../articulos-orden/articulos-orden.component';
+import { ArticulosOrdenService, articulosActivos } from 'src/app/modules/admin/services/articulos-orden.service';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-lista-ordenes',
@@ -30,10 +33,11 @@ export class ListaOrdenesComponent {
   @ViewChild('paginatorOrdenesPendientes') paginatorOrdenesPendientes!: MatPaginator;
   @ViewChild('paginatorOrdenesFinalizados') paginatorOrdenesFinalizadas!: MatPaginator;
   @ViewChild('paginatorOrdenesEliminados') paginatorOrdenesEliminadas!: MatPaginator;
-  displayedColumns: string[] = ['numeroOrden', 'cliente', 'imei', 'equipo', 'estado', 'fechaIngreso', 'acciones'];
-  displayedColumnsFinalizadas: string[] = [ 'numeroOrden', 'cliente', 'imei', 'equipo', 'fechaIngreso', 'fechaEntrega', 'garantia', 'acciones' ];
+  displayedColumns: string[] = ['numeroOrden', 'cliente', 'imei', 'equipo', 'estado', 'fechaIngreso', 'pago', 'acciones'];
+  displayedColumnsFinalizadas: string[] = [ 'numeroOrden', 'cliente', 'imei', 'equipo', 'fechaIngreso', 'fechaEntrega', 'garantia', 'pago', 'acciones' ];
 
-  constructor(private dialog: MatDialog, private ordenesService: OrdenesService,private cdRef: ChangeDetectorRef, private toastService:ToastService) { 
+  constructor(private dialog: MatDialog, private ordenesService: OrdenesService,private cdRef: ChangeDetectorRef, private toastService:ToastService,
+    private articulosOrden: ArticulosOrdenService) { 
 
     this.datasourceOrdenesPendientes = new MatTableDataSource(this.ordenesPendientes);
     this.datasourceOrdenesFinalizadas = new MatTableDataSource(this.ordenesFinalizadas);
@@ -208,9 +212,94 @@ abrirModalAltaOrden(): void {
       width: '400px',
       data: {
         message: `¿Está seguro que desea eliminar esta órden?`,
-        confirmAction: () => this.moverDocumento(id, tabla, 'Ordenes Eliminadas') // Acción a ejecutar si se confirma
+        confirmAction: () => this.eliminarConArticulos(id, tabla) // Acción a ejecutar si se confirma
       }
     });
+  }
+
+  // =====================================================
+  // ARTÍCULOS DE STOCK USADOS EN LA REPARACIÓN
+  // =====================================================
+
+  cantidadArticulos(orden: any): number {
+    return articulosActivos(orden).length;
+  }
+
+  abrirArticulos(orden: any, coleccion: string) {
+    this.dialog.open(ArticulosOrdenComponent, {
+      width: '90vw',
+      maxWidth: '820px',
+      maxHeight: '90vh',
+      data: { orden, coleccion }
+    });
+  }
+
+  /**
+   * Eliminar una orden: si tiene artículos de stock cargados, pregunta si se devuelven al stock
+   * (sí → error de carga / no se usaron; no → se usaron igual).
+   */
+  private async eliminarConArticulos(id: string, tabla: string) {
+    const lista: any[] = tabla === 'Ordenes Pendientes' ? this.ordenesPendientes
+      : tabla === 'Ordenes Finalizadas' ? this.ordenesFinalizadas : [];
+    const orden = lista.find(o => o.id === id);
+    const activos = orden ? articulosActivos(orden) : [];
+
+    if (activos.length && tabla !== 'Ordenes Eliminadas') {
+      const detalle = activos.map(a => `<li>${a.cantidad} x ${this.escapar(a.nombre)}</li>`).join('');
+      const r = await Swal.fire({
+        title: '¿Devolver los artículos al stock?',
+        html: `La orden #${orden.numeroOrden} tiene artículos cargados:<ul style="text-align:left">${detalle}</ul>` +
+          '<small>Devolvelos si se cargaron por error o no se usaron. Si se usaron igual, no los devuelvas.</small>',
+        icon: 'question',
+        showDenyButton: true,
+        showCancelButton: true,
+        confirmButtonText: 'Sí, devolver al stock',
+        denyButtonText: 'No, se usaron',
+        cancelButtonText: 'Cancelar eliminación'
+      });
+      if (r.isDismissed) return;
+      if (r.isConfirmed) {
+        try {
+          const res = await this.articulosOrden.devolverVarios(
+            { id, coleccion: tabla, numeroOrden: orden.numeroOrden }, null, 'Orden eliminada');
+          if (res.sinProducto.length) {
+            await Swal.fire('Atención', `No se pudo reponer stock de: ${res.sinProducto.join(', ')} (el producto ya no existe).`, 'info');
+          }
+        } catch (e: any) {
+          await Swal.fire('No se eliminó la orden', 'No se pudieron devolver los artículos al stock. ' + (e?.message || ''), 'error');
+          return;
+        }
+      }
+    }
+    this.moverDocumento(id, tabla, 'Ordenes Eliminadas');
+  }
+
+  private escapar(t: any): string {
+    return String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' } as any)[c]);
+  }
+
+  // =====================================================
+  // PAGOS (los cobros se registran desde Despacho → Cobrar reparación)
+  // =====================================================
+
+  pagado(orden: any): number {
+    return (orden?.cobros || [])
+      .filter((c: any) => !c.anulado)
+      .reduce((acc: number, c: any) => acc + (Number(c.monto) || 0), 0);
+  }
+
+  saldo(orden: any): number {
+    return Math.max(0, Math.round(((Number(orden?.presupuesto) || 0) - this.pagado(orden)) * 100) / 100);
+  }
+
+  etiquetaPago(orden: any): string {
+    if (this.pagado(orden) <= 0) return 'Sin pagos';
+    return this.saldo(orden) > 0 ? 'Seña' : 'Pagada';
+  }
+
+  clasePago(orden: any): string {
+    if (this.pagado(orden) <= 0) return 'bg-secondary';
+    return this.saldo(orden) > 0 ? 'bg-warning text-dark' : 'bg-success';
   }
 
   obtenerEstadoGarantia(orden: Orden): string {

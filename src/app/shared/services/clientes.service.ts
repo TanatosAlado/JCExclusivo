@@ -2,12 +2,14 @@ import { inject, Injectable } from '@angular/core';
 import { collection, collectionData, CollectionReference, deleteDoc, doc, Firestore, getDoc, getDocs, query, updateDoc, where } from '@angular/fire/firestore';
 import { BehaviorSubject, from, map, Observable, shareReplay, tap } from 'rxjs';
 import { Cliente } from 'src/app/modules/auth/models/cliente.model';
+import { AuditoriaService } from 'src/app/shared/services/auditoria.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ClientesService {
 private firestore = inject(Firestore);
+  private auditoria = inject(AuditoriaService);
   clientesSubject = new BehaviorSubject<Cliente[]>([]);
   clientes$ = this.clientesSubject.asObservable();
   private cliente$: Observable<Cliente[]> | null = null;
@@ -45,8 +47,9 @@ private firestore = inject(Firestore);
     return this.cliente$;
   }
 
-  actualizarCliente(id: string, datosParciales: Partial<Cliente>): Promise<void> {
+  async actualizarCliente(id: string, datosParciales: Partial<Cliente>): Promise<void> {
 
+    const antes = await this.auditoria.capturar('Clientes', id);
     const clienteDocRef = doc(this.firestore, 'Clientes', id);
 
     const datosPlano = JSON.parse(
@@ -61,12 +64,30 @@ private firestore = inject(Firestore);
       datosPlano.dni = Number(datosPlano.dni);
     }
 
-    return updateDoc(clienteDocRef, datosPlano);
+    await updateDoc(clienteDocRef, datosPlano);
+
+    this.auditoria.registrar({
+      accion: 'modificar',
+      entidad: 'Clientes',
+      entidadId: id,
+      descripcion: `Modificó el cliente ${antes?.usuario || datosPlano.usuario || id}`,
+      antes,
+      despues: datosPlano
+    });
   }
 
-  eliminarCliente(id: string): Promise<void> {
+  async eliminarCliente(id: string): Promise<void> {
+    const antes = await this.auditoria.capturar('Clientes', id);
     const ref = doc(this.firestore, 'Clientes', id);
-    return deleteDoc(ref);
+    await deleteDoc(ref);
+
+    this.auditoria.registrar({
+      accion: 'eliminar',
+      entidad: 'Clientes',
+      entidadId: id,
+      descripcion: `Eliminó el cliente ${antes?.usuario || id} (${[antes?.nombre, antes?.apellido].filter(Boolean).join(' ')})`,
+      antes
+    });
   }
 
   async buscarPorDni(dni: number): Promise<Cliente | null> {

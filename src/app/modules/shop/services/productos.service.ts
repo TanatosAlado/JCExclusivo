@@ -3,20 +3,31 @@ import { map, Observable } from 'rxjs';
 import { addDoc, collection, collectionData, deleteDoc, doc, Firestore, getDocs, query, setDoc, updateDoc, where } from '@angular/fire/firestore';
 import { Producto, StockSucursal, VarianteProducto } from '../models/producto.model';
 import { ProductosCacheService } from '../../despacho/services/productos-cache.service';
+import { AuditoriaService } from 'src/app/shared/services/auditoria.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ProductosService {
 
-  constructor(private firestore: Firestore, private productosCache: ProductosCacheService) { }
+  constructor(
+    private firestore: Firestore,
+    private productosCache: ProductosCacheService,
+    private auditoria: AuditoriaService
+  ) { }
+
+  /** Copia del producto sin campos que no se auditan */
+  private datosAuditables(producto: any): any {
+    const { variantes, ...resto } = producto || {};
+    return resto;
+  }
 
    obtenerProductos(): Observable<Producto[]> {
     const ref = collection(this.firestore, 'productos');
     return collectionData(ref, { idField: 'id' }) as Observable<Producto[]>;
   }
 
-  agregarProducto(producto: Producto): Promise<any> {
+  async agregarProducto(producto: Producto): Promise<any> {
 
     const ref = collection(this.firestore, 'productos');
 
@@ -26,17 +37,46 @@ export class ProductosService {
       stockSucursales: producto.stockSucursales || [] // asegurar que sea array simple
     };
 
-    return addDoc(ref, productoPlano);
+    const docRef = await addDoc(ref, productoPlano);
+
+    this.auditoria.registrar({
+      accion: 'crear',
+      entidad: 'productos',
+      entidadId: docRef.id,
+      descripcion: `Creó el producto "${producto.descripcion || ''}"`,
+      despues: this.datosAuditables(productoPlano)
+    });
+
+    return docRef;
   }
 
-  editarProducto(producto: Producto): Promise<void> {
+  async editarProducto(producto: Producto): Promise<void> {
+    const antes = await this.auditoria.capturar('productos', producto.id);
     const productoRef = doc(this.firestore, `productos/${producto.id}`);
-    return updateDoc(productoRef, { ...producto });
+    await updateDoc(productoRef, { ...producto });
+
+    this.auditoria.registrar({
+      accion: 'modificar',
+      entidad: 'productos',
+      entidadId: producto.id,
+      descripcion: `Modificó el producto "${producto.descripcion || antes?.descripcion || ''}"`,
+      antes,
+      despues: this.datosAuditables(producto)
+    });
   }
 
-  eliminarProducto(id: string): Promise<void> {
+  async eliminarProducto(id: string): Promise<void> {
+    const antes = await this.auditoria.capturar('productos', id);
     const docRef = doc(this.firestore, 'productos', id);
-    return deleteDoc(docRef);
+    await deleteDoc(docRef);
+
+    this.auditoria.registrar({
+      accion: 'eliminar',
+      entidad: 'productos',
+      entidadId: id,
+      descripcion: `Eliminó el producto "${antes?.descripcion || id}"`,
+      antes
+    });
   }
 
   obtenerDestacados(): Observable<Producto[]> {
@@ -45,7 +85,24 @@ export class ProductosService {
     return collectionData(q) as Observable<Producto[]>;
   }
 
+  /** Actualiza el producto (y sus variantes) y lo registra en auditoría */
   async actualizarProducto(producto: Producto): Promise<void> {
+    const antes = await this.auditoria.capturar('productos', producto.id);
+
+    await this.actualizarProductoSinAuditar(producto);
+
+    this.auditoria.registrar({
+      accion: 'modificar',
+      entidad: 'productos',
+      entidadId: producto.id,
+      descripcion: `Modificó el producto "${producto.descripcion || antes?.descripcion || ''}"` +
+        (producto.variantes?.length ? ` (con ${producto.variantes.length} variantes)` : ''),
+      antes,
+      despues: this.datosAuditables(producto)
+    });
+  }
+
+  private async actualizarProductoSinAuditar(producto: Producto): Promise<void> {
 
     // =====================================================
     // 1️⃣ ACTUALIZAR EL DOCUMENTO ACTUAL
@@ -374,19 +431,28 @@ export class ProductosService {
   }
 
 
-  actualizarStockProducto(
+  async actualizarStockProducto(
       id: string,
       stockSucursales: StockSucursal[],
       stockMayorista: number
   ): Promise<void> {
 
+      const antes = await this.auditoria.capturar('productos', id);
       const docRef = doc(this.firestore, 'productos', id);
 
-      return updateDoc(docRef, {
+      await updateDoc(docRef, {
           stockSucursales,
           stockMayorista
       });
 
+      this.auditoria.registrar({
+        accion: 'modificar',
+        entidad: 'productos',
+        entidadId: id,
+        descripcion: `Modificó el stock de "${antes?.descripcion || id}"`,
+        antes,
+        despues: { stockSucursales, stockMayorista }
+      });
   }
 
   obtenerProductosAgrupados(): Observable<Producto[]> {

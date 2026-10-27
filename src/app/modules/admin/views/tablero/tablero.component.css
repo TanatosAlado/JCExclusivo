@@ -1,0 +1,472 @@
+/* ===== Tokens del dashboard ===== */
+.tablero {
+  --superficie: #fcfcfb;
+  --fondo: #f4f4f1;
+  --tinta: #0b0b0b;
+  --tinta-2: #52514e;
+  --tinta-3: #898781;
+  --grilla: #e1e0d9;
+  --base: #c3c2b7;
+  --borde: #e6e5df;
+
+  /* Series (orden fijo) */
+  --serie-1: #2a78d6;
+  --serie-2: #eb6834;
+  --serie-3: #1baf7a;
+
+  /* Estados (reservados, siempre con ícono + texto) */
+  --bien: #0ca30c;
+  --alerta: #fab219;
+  --serio: #ec835a;
+  --critico: #d03b3b;
+
+  background: var(--fondo);
+  color: var(--tinta);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  min-height: 100%;
+}
+
+/* ===== Filtros ===== */
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.filtros mat-form-field {
+  margin-bottom: -1.25em;
+}
+
+.campo-fecha { width: 150px; }
+.campo-sucursal { width: 200px; }
+.espacio { flex: 1; }
+
+.filtros button i { margin-right: 6px; }
+
+.subtexto {
+  color: var(--tinta-3);
+  font-size: 0.82rem;
+}
+
+.cargando {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 48px 0;
+  justify-content: center;
+  color: var(--tinta-2);
+}
+
+.atenuado {
+  opacity: 0.55;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+/* ===== Tarjetas ===== */
+.tarjeta {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  padding: 16px 18px;
+  min-width: 0;
+}
+
+.tarjeta-titulo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.tarjeta-titulo h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--tinta);
+}
+
+.tarjeta-titulo h3 i {
+  color: var(--tinta-3);
+  margin-right: 6px;
+}
+
+.etiqueta {
+  color: var(--tinta-2);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.seccion {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 24px 0 10px;
+  color: var(--tinta-2);
+}
+
+/* ===== Hero + KPIs ===== */
+.fila-hero {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) 2fr;
+  gap: 12px;
+}
+
+.hero-valor {
+  font-size: 3.2rem;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin: 6px 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.delta {
+  font-weight: 600;
+  color: var(--tinta-2);
+}
+
+.delta.sube i { color: var(--bien); }
+.delta.baja i { color: var(--critico); }
+.delta .subtexto { font-weight: 400; margin-left: 4px; }
+
+.hero-partes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin-top: 14px;
+  font-size: 0.85rem;
+  color: var(--tinta-2);
+}
+
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.kpi-valor {
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin: 4px 0 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.texto-critico { color: var(--critico); }
+
+/* ===== Marcas de serie ===== */
+.marca {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: 6px;
+  vertical-align: baseline;
+}
+
+.serie-1 { background: var(--serie-1); }
+.serie-2 { background: var(--serie-2); }
+.serie-3 { background: var(--serie-3); }
+
+.leyenda {
+  display: flex;
+  gap: 14px;
+  font-size: 0.82rem;
+  color: var(--tinta-2);
+}
+
+/* ===== Estados ===== */
+.estado {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--tinta-2);
+  white-space: nowrap;
+}
+
+.estado i { margin-right: 4px; }
+.estado.bien i { color: var(--bien); }
+.estado.alerta i { color: var(--alerta); }
+.estado.serio i { color: var(--serio); }
+.estado.critico i { color: var(--critico); }
+
+/* ===== Gráfico de columnas apiladas ===== */
+.grafico {
+  display: flex;
+  gap: 8px;
+  position: relative;
+  padding-bottom: 28px;
+}
+
+.eje-y {
+  position: relative;
+  width: 52px;
+  height: 240px;
+  flex-shrink: 0;
+}
+
+.eje-y span {
+  position: absolute;
+  right: 0;
+  transform: translateY(50%);
+  font-size: 0.72rem;
+  color: var(--tinta-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.area {
+  position: relative;
+  flex: 1;
+  height: 240px;
+  min-width: 0;
+}
+
+.grilla {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px solid var(--grilla);
+}
+
+.grilla.base { border-top-color: var(--base); }
+
+.columnas {
+  position: absolute;
+  inset: 0;
+  display: flex;
+}
+
+.columna {
+  flex: 1;
+  position: relative;
+  height: 100%;
+  cursor: default;
+  min-width: 0;
+}
+
+.columna.activa {
+  background: rgba(11, 11, 11, 0.04);
+}
+
+.pila {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(24px, 70%);
+  height: 100%;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 2px;
+}
+
+.segmento {
+  width: 100%;
+  min-height: 2px;
+}
+
+.segmento.tope {
+  border-radius: 4px 4px 0 0;
+}
+
+.etiqueta-x {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.72rem;
+  color: var(--tinta-3);
+  white-space: nowrap;
+}
+
+.etiqueta-x.oculta { visibility: hidden; }
+
+.tooltip-grafico {
+  position: absolute;
+  top: 4px;
+  z-index: 2;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  padding: 8px 12px;
+  min-width: 190px;
+  pointer-events: none;
+  font-size: 0.82rem;
+}
+
+.tt-titulo {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.tt-fila {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--tinta-2);
+}
+
+.tt-fila b {
+  margin-left: auto;
+  color: var(--tinta);
+  font-variant-numeric: tabular-nums;
+}
+
+.tt-total {
+  border-top: 1px solid var(--grilla);
+  margin-top: 4px;
+  padding-top: 4px;
+}
+
+.vacio {
+  position: absolute;
+  inset: 0 0 28px 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--tinta-3);
+}
+
+/* ===== Tablas ===== */
+.tabla-scroll {
+  max-height: 320px;
+  overflow: auto;
+}
+
+.tabla-datos {
+  font-size: 0.85rem;
+  --bs-table-bg: transparent;
+}
+
+.tabla-datos th {
+  color: var(--tinta-2);
+  font-weight: 600;
+  border-bottom-color: var(--base);
+}
+
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.recorte {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ===== Barras horizontales ===== */
+.grilla-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.grilla-4 {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.barras {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.barra-fila {
+  display: grid;
+  grid-template-columns: 120px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+}
+
+.barra-nombre {
+  color: var(--tinta-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.barra-pista {
+  height: 20px;
+  display: flex;
+  align-items: center;
+  border-left: 1px solid var(--base);
+}
+
+.barra {
+  height: 18px;
+  background: var(--serie-1);
+  border-radius: 0 4px 4px 0;
+}
+
+.barra-valor {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-align: right;
+  min-width: 90px;
+}
+
+/* ===== Paneles "Ahora" ===== */
+.lista {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+}
+
+.lista li {
+  padding: 4px 0;
+  border-top: 1px solid var(--grilla);
+}
+
+.lista li .estado { margin-right: 6px; }
+
+.dos-cifras {
+  display: flex;
+  gap: 28px;
+}
+
+details summary {
+  cursor: pointer;
+  color: var(--serie-1);
+  font-size: 0.85rem;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  font-size: 0.78rem;
+  background: var(--fondo);
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  padding: 2px 10px;
+  color: var(--tinta-2);
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 1200px) {
+  .grilla-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grilla-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 992px) {
+  .fila-hero { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 700px) {
+  .kpis, .grilla-3, .grilla-4 { grid-template-columns: 1fr; }
+  .hero-valor { font-size: 2.6rem; }
+  .barra-fila { grid-template-columns: 90px 1fr auto; }
+}

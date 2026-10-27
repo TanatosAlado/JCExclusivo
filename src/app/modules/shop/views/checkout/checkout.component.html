@@ -154,8 +154,12 @@
 
     <div class="contenedor-boton">
       <button
-        (click)="registroCheckout(getPuntosAplicados(clienteEncontrado), (generalService.getTotalPrecio(clienteEncontrado, usarPuntos) / valorParaSumarPunto ))"
-        type="button">Finalizar pedido</button>
+        (click)="registroCheckout()"
+        [disabled]="procesando"
+        type="button">
+        <span *ngIf="procesando" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+        {{ procesando ? 'Procesando pedido...' : 'Finalizar pedido' }}
+      </button>
     </div>
   </div>
 
@@ -262,8 +266,8 @@
         <div *ngIf="usarPuntos && cliente.puntos > 0" class="card mb-3" style="max-width: 500px; margin: auto;">
           <div class="card-body">
             <small class="text-success">
-              Descuento por {{ puntosAplicados }} puntos utilizados:
-              {{ puntosAplicados * valorMonetarioPorPunto | currency }}
+              Descuento por {{ getPuntosAUsar() }} puntos utilizados:
+              {{ getPuntosAUsar() * valorMonetarioPorPunto | currency }}
             </small>
           </div>
         </div>
@@ -285,7 +289,7 @@
             <small>
               Esta compra sumará
               <strong>
-                {{ (generalService.getTotalPrecio(cliente, usarPuntos) / valorParaSumarPunto) | number:'1.0-0' }}
+                {{ getPuntosASumar() }}
               </strong>
               puntos
             </small>
@@ -301,7 +305,7 @@
 <!-- MODAL DE COMPRA FINALIZADA -->
 <div *ngIf="mostrarModal" class="modal-overlay">
   <div class="modal-content">
-    <h2>¡Gracias por su compra! Nro Pedido: {{ contador[0]?.contador }}</h2>
+    <h2>¡Gracias por su compra! Nro Pedido: {{ nroPedidoConfirmado }}</h2>
     <p>Su pedido ha sido procesado con éxito.</p>
     <button (click)="cerrarModal()">Cerrar</button>
   </div>

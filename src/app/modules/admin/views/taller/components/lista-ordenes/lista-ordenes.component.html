@@ -65,6 +65,20 @@
                 </ng-container>
 
                 <!-- Acciones -->
+                <!-- Pago (cobros desde despacho) -->
+                <ng-container matColumnDef="pago">
+                  <th mat-header-cell *matHeaderCellDef class="cabecera"> Pago </th>
+                  <td mat-cell *matCellDef="let orden">
+                    <ng-container *ngIf="orden.presupuesto > 0; else sinPresupuesto0">
+                      <span class="badge estado-pago" [ngClass]="clasePago(orden)">{{ etiquetaPago(orden) }}</span>
+                      <div class="small">Presup.: {{ orden.presupuesto | currency:'ARS':'symbol':'1.0-0' }}</div>
+                      <div class="small" *ngIf="pagado(orden) > 0">Pagado: {{ pagado(orden) | currency:'ARS':'symbol':'1.0-0' }}</div>
+                      <div class="small fw-bold" *ngIf="saldo(orden) > 0">Saldo: {{ saldo(orden) | currency:'ARS':'symbol':'1.0-0' }}</div>
+                    </ng-container>
+                    <ng-template #sinPresupuesto0><span class="small text-muted">Sin presupuesto</span></ng-template>
+                  </td>
+                </ng-container>
+
                 <ng-container matColumnDef="acciones">
                   <th mat-header-cell *matHeaderCellDef class="cabecera"> Acciones </th>
                   <td mat-cell *matCellDef="let orden">
@@ -77,6 +91,9 @@
                     </a>
                     <a class="pointer" title="Editar Orden" (click)="editarOrden(orden)">
                       <i class="fa-solid fa-pen"></i>
+                    </a>
+                    <a class="pointer articulos" title="Artículos de stock usados" (click)="abrirArticulos(orden, 'Ordenes Pendientes')">
+                      <i class="fa-solid fa-screwdriver-wrench"></i><span *ngIf="cantidadArticulos(orden)" class="contador">{{ cantidadArticulos(orden) }}</span>
                     </a>
                     <a (click)="openConfirmDialog(orden.id,'Ordenes Pendientes')" class="pointer"
                       title="Eliminar Orden">
@@ -163,6 +180,20 @@
                 </ng-container>
 
                 <!-- Acciones -->
+                <!-- Pago (cobros desde despacho) -->
+                <ng-container matColumnDef="pago">
+                  <th mat-header-cell *matHeaderCellDef class="cabecera"> Pago </th>
+                  <td mat-cell *matCellDef="let orden">
+                    <ng-container *ngIf="orden.presupuesto > 0; else sinPresupuesto1">
+                      <span class="badge estado-pago" [ngClass]="clasePago(orden)">{{ etiquetaPago(orden) }}</span>
+                      <div class="small">Presup.: {{ orden.presupuesto | currency:'ARS':'symbol':'1.0-0' }}</div>
+                      <div class="small" *ngIf="pagado(orden) > 0">Pagado: {{ pagado(orden) | currency:'ARS':'symbol':'1.0-0' }}</div>
+                      <div class="small fw-bold" *ngIf="saldo(orden) > 0">Saldo: {{ saldo(orden) | currency:'ARS':'symbol':'1.0-0' }}</div>
+                    </ng-container>
+                    <ng-template #sinPresupuesto1><span class="small text-muted">Sin presupuesto</span></ng-template>
+                  </td>
+                </ng-container>
+
                 <ng-container matColumnDef="acciones">
                   <th mat-header-cell *matHeaderCellDef class="cabecera"> Acciones </th>
                   <td mat-cell *matCellDef="let orden">
@@ -172,6 +203,9 @@
                     <a (click)="this.moverDocumento(orden.id,'Ordenes Finalizadas','Ordenes Pendientes')"
                       class="pointer" title="Pasar a Pendiente">
                       <i class="fa-solid fa-hourglass-half"></i>
+                    </a>
+                    <a class="pointer articulos" title="Artículos de stock usados" (click)="abrirArticulos(orden, 'Ordenes Finalizadas')">
+                      <i class="fa-solid fa-screwdriver-wrench"></i><span *ngIf="cantidadArticulos(orden)" class="contador">{{ cantidadArticulos(orden) }}</span>
                     </a>
                     <a (click)="openConfirmDialog(orden.id,'Ordenes Finalizadas')" class="pointer"
                       title="Eliminar Orden">
@@ -239,6 +273,20 @@
                 </ng-container>
 
                 <!-- Acciones -->
+                <!-- Pago (cobros desde despacho) -->
+                <ng-container matColumnDef="pago">
+                  <th mat-header-cell *matHeaderCellDef class="cabecera"> Pago </th>
+                  <td mat-cell *matCellDef="let orden">
+                    <ng-container *ngIf="orden.presupuesto > 0; else sinPresupuesto2">
+                      <span class="badge estado-pago" [ngClass]="clasePago(orden)">{{ etiquetaPago(orden) }}</span>
+                      <div class="small">Presup.: {{ orden.presupuesto | currency:'ARS':'symbol':'1.0-0' }}</div>
+                      <div class="small" *ngIf="pagado(orden) > 0">Pagado: {{ pagado(orden) | currency:'ARS':'symbol':'1.0-0' }}</div>
+                      <div class="small fw-bold" *ngIf="saldo(orden) > 0">Saldo: {{ saldo(orden) | currency:'ARS':'symbol':'1.0-0' }}</div>
+                    </ng-container>
+                    <ng-template #sinPresupuesto2><span class="small text-muted">Sin presupuesto</span></ng-template>
+                  </td>
+                </ng-container>
+
                 <ng-container matColumnDef="acciones">
                   <th mat-header-cell *matHeaderCellDef class="cabecera"> Acciones </th>
                   <td mat-cell *matCellDef="let orden">
@@ -269,4 +317,4 @@
       </div>
     </div>
   </div>
-</div>
+</div>

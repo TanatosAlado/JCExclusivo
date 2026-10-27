@@ -1,8 +1,10 @@
 // caja.service.ts
 import { Injectable } from '@angular/core';
-import { Firestore, collection, query, where, getDocs, Timestamp, addDoc, collectionData, updateDoc, deleteDoc, doc } from '@angular/fire/firestore';
+import { Firestore, collection, query, where, getDocs, Timestamp, addDoc, collectionData, updateDoc, deleteDoc, doc, serverTimestamp } from '@angular/fire/firestore';
 import { from, map, Observable } from 'rxjs';
 import { Gasto } from '../models/gasto.model';
+import { AuditoriaService } from 'src/app/shared/services/auditoria.service';
+import { pagosDeVenta } from 'src/app/modules/despacho/services/pagos';
 
 export interface Movimiento {
   id?: string;
@@ -10,6 +12,16 @@ export interface Movimiento {
   descripcion: string;
   monto: number;
   fecha: Date;
+  origen?: 'web' | 'local' | 'gasto' | 'movimiento';
+  tipoMovimiento?: string;   // ingreso | retiro | gasto | proveedor | deposito (movimientos de caja)
+  metodoPago?: string;
+  sucursalId?: string;
+  observacion?: string;
+  usuario?: string;          // quién registró el movimiento
+  anulado?: boolean;         // los anulados se muestran pero no suman
+  motivoAnulacion?: string;
+  anuladoPor?: string;
+  ventaId?: string;          // venta del local (una venta con varios medios genera un renglón por medio)
 }
 
 @Injectable({
@@ -17,13 +29,14 @@ export interface Movimiento {
 })
 export class CajaService {
 
-   private gastosRef;
+  // Colección donde se guardan los gastos (la misma que lee getEgresos)
+  private gastosRef;
 //   private cajasRef;
   
 //    private readonly STORAGE_KEY = 'cajaActiva';
 
-  constructor(private firestore: Firestore) {
-    this.gastosRef = collection(this.firestore, 'Gastos');
+  constructor(private firestore: Firestore, private auditoria: AuditoriaService) {
+    this.gastosRef = collection(this.firestore, 'gastos');
   }
 
 //   async verificarCajaAbierta(sucursalId: string) {
@@ -99,9 +112,11 @@ getIngresos(fechaInicio: Date, fechaFin: Date) {
         return <Movimiento>{
           id: doc.id,
           tipo: 'ingreso',
-          descripcion: `Pedido #${data.nroPedido} - ${data.nombreCliente} ${data.apellidoCliente}`,
+          descripcion: `Pedido web #${data.nroPedido} - ${data.nombreCliente} ${data.apellidoCliente}`.trim(),
           monto: data.total ?? 0,
-          fecha
+          fecha,
+          origen: 'web',
+          metodoPago: (data.pago || '').toLowerCase()
         };
       });
 
@@ -111,6 +126,53 @@ getIngresos(fechaInicio: Date, fechaFin: Date) {
         m.fecha <= fechaFin
       );
     })
+  );
+}
+
+/**
+ * Ventas hechas en el local (Despacho), colección 'Ventas'.
+ * La fecha se guarda como ISO (UTC), por eso se filtra con el rango en ISO.
+ */
+getIngresosLocal(fechaInicio: Date, fechaFin: Date) {
+
+  const ventasRef = collection(this.firestore, 'Ventas');
+  const q = query(
+    ventasRef,
+    where('fecha', '>=', fechaInicio.toISOString()),
+    where('fecha', '<=', fechaFin.toISOString())
+  );
+
+  return from(getDocs(q)).pipe(
+    map(snapshot =>
+      snapshot.docs.flatMap(docSnap => {
+        const data: any = docSnap.data();
+        const cliente = data.cliente?.nombre || 'Consumidor final';
+        const lista = data.tipoPrecio === 'mayorista' ? ' (mayorista)' : '';
+        const esReparacion = data.tipoVenta === 'reparacion';
+        const ticket = data.nroTicket ? ` · Ticket ${String(data.nroTicket).padStart(8, '0')}` : '';
+        const descripcion = (esReparacion
+          ? `Cobro reparación orden #${data.orden?.numeroOrden ?? '?'} - ${cliente}`
+          : `Venta local - ${cliente}${lista}`) + ticket;
+
+        // Pagada con varios medios → un renglón por medio (así cuadran los totales por medio de pago)
+        const pagos = pagosDeVenta(data);
+        return pagos.map((pago, i) => <Movimiento>{
+          id: docSnap.id,
+          ventaId: docSnap.id,
+          tipo: 'ingreso',
+          descripcion: pagos.length > 1 ? `${descripcion} (pago ${i + 1} de ${pagos.length})` : descripcion,
+          monto: pago.monto,
+          fecha: new Date(data.fecha),
+          origen: 'local',
+          metodoPago: pago.metodo === 'otros' ? (data.metodoPago || '').toLowerCase() : pago.metodo,
+          sucursalId: data.sucursalId,
+          usuario: data.usuario?.usuario || '',
+          anulado: data.anulada === true,
+          motivoAnulacion: data.motivoAnulacion || '',
+          anuladoPor: data.anuladaPor?.usuario || ''
+        });
+      })
+    )
   );
 }
 
@@ -138,13 +200,69 @@ parseFecha(fechaStr: string): Date {
           return <Movimiento>{
             id: doc.id,
             tipo: 'egreso',
-            descripcion: data.descripcion ?? 'Gasto',
-            monto: data.monto ?? 0,
-            fecha: data.fecha.toDate()
+            descripcion: data.concepto ?? data.descripcion ?? 'Gasto',
+            monto: Number(data.monto) || 0,
+            fecha: data.fecha.toDate(),
+            origen: 'gasto',
+            observacion: data.observacion || '',
+            usuario: data.usuario?.usuario || '',
+            anulado: data.anulado === true,
+            motivoAnulacion: data.motivoAnulacion || '',
+            anuladoPor: data.anuladoPor?.usuario || ''
           };
         })
       )
     );
+  }
+
+  /** Registrar un gasto (egreso de caja) */
+  async agregarGasto(gasto: Gasto) {
+    const usuario = this.auditoria.getUsuarioActual();
+    const datos = {
+      fecha: Timestamp.fromDate(gasto.fecha),
+      concepto: gasto.concepto.trim(),
+      monto: Number(gasto.monto),
+      observacion: (gasto.observacion || '').trim(),
+      creadoEn: serverTimestamp(),
+      usuario: usuario || null,
+      anulado: false
+    };
+    const docRef = await addDoc(this.gastosRef, datos);
+
+    this.auditoria.registrar({
+      accion: 'crear',
+      entidad: 'gastos',
+      entidadId: docRef.id,
+      descripcion: `Cargó el gasto "${datos.concepto}" por $${datos.monto}`,
+      despues: { concepto: datos.concepto, monto: datos.monto, observacion: datos.observacion, fecha: gasto.fecha.toISOString() }
+    });
+
+    return docRef;
+  }
+
+  /**
+   * Anular un gasto cargado por error.
+   * NO se borra: queda marcado como anulado, con motivo, usuario y fecha (trazabilidad).
+   */
+  async anularGasto(id: string, motivo: string) {
+    const usuario = this.auditoria.getUsuarioActual();
+    const antes = await this.auditoria.capturar('gastos', id);
+    const cambios = {
+      anulado: true,
+      motivoAnulacion: motivo.trim(),
+      anuladoPor: usuario || null,
+      anuladoEn: serverTimestamp()
+    };
+    await updateDoc(doc(this.firestore, 'gastos', id), cambios);
+
+    this.auditoria.registrar({
+      accion: 'anular',
+      entidad: 'gastos',
+      entidadId: id,
+      descripcion: `Anuló el gasto "${antes?.concepto || id}" por $${antes?.monto ?? '?'}. Motivo: ${motivo.trim()}`,
+      antes: { anulado: antes?.anulado ?? false },
+      despues: { anulado: true, motivoAnulacion: motivo.trim() }
+    });
   }
 
 // agregarGasto(gasto: Gasto) {
@@ -269,4 +387,4 @@ parseFecha(fechaStr: string): Date {
 //   localStorage.removeItem(this.STORAGE_KEY);
 // }
 
-}
+}

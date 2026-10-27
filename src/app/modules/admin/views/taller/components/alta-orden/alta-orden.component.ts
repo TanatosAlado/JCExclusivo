@@ -7,6 +7,7 @@ import { ToastService } from 'src/app/shared/services/toast.service';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { ComprobanteOrdenComponent } from '../comprobante-orden/comprobante-orden.component';
 import { collection, Firestore, getDocs, query, where } from '@angular/fire/firestore';
+import { BuscadorClientesService, ClienteEncontrado } from 'src/app/shared/services/buscador-clientes.service';
 
 @Component({
   selector: 'app-alta-orden',
@@ -22,6 +23,13 @@ export class AltaOrdenComponent {
   cargando = false;
   imeiResultados: any[] | null = null;
 
+  // Búsqueda de cliente por nombre / apellido
+  textoCliente: any = '';
+  sugerenciasClientes: ClienteEncontrado[] = [];
+  idClienteSeleccionado: string | null = null;
+  readonly etiquetaCliente = BuscadorClientesService.etiqueta;
+  private ultimoTextoCliente = '';
+
   constructor(
     private fb: FormBuilder,
     private ordenesService: OrdenesService,
@@ -29,8 +37,8 @@ export class AltaOrdenComponent {
     private toastService: ToastService,
     private dialog: MatDialog,
     private dialogRef: MatDialogRef<AltaOrdenComponent>,
-    private firestore: Firestore
-
+    private firestore: Firestore,
+    private buscadorClientes: BuscadorClientesService
   ) { }
 
   ngOnInit(): void {
@@ -71,6 +79,46 @@ export class AltaOrdenComponent {
     });
   }
 
+  /** Mientras escribe nombre / apellido: coincidencias (desde 3 letras) */
+  async alEscribirCliente(texto: any) {
+    // Al elegir una opción el autocompletado manda el cliente (objeto), no texto
+    if (typeof texto !== 'string') return;
+    const valor = texto.trim();
+    this.ultimoTextoCliente = valor;
+    if (valor.length < 3) {
+      this.sugerenciasClientes = [];
+      return;
+    }
+    try {
+      const lista = await this.buscadorClientes.buscar(valor, 10);
+      if (this.ultimoTextoCliente === valor) this.sugerenciasClientes = lista;
+    } catch (e) {
+      console.error('Error buscando clientes:', e);
+    }
+  }
+
+  /** Eligió un cliente de la lista: completa DNI, nombre, apellido y teléfono */
+  elegirCliente(c: ClienteEncontrado) {
+    const documento = Number(c.dni) || Number(c.cuit) || null;
+    this.idClienteSeleccionado = c.id;
+    this.ordenForm.patchValue({
+      dniCliente: documento,
+      nombreCliente: c.nombre,
+      apellidoCliente: c.apellido,
+      telefonoCliente: c.telefono
+    }, { emitEvent: false });
+    this.errorCliente = documento ? null : 'El cliente no tiene DNI/CUIT cargado: completalo a mano.';
+    this.textoCliente = '';
+    this.sugerenciasClientes = [];
+  }
+
+  get sinCoincidencias(): boolean {
+    return typeof this.textoCliente === 'string' && this.textoCliente.trim().length >= 3 && !this.sugerenciasClientes.length;
+  }
+
+  /** Lo que se muestra en el campo al elegir (se limpia: los datos quedan en el formulario) */
+  mostrarCliente = (_: any) => '';
+
   buscarCliente(): void {
     let valor = this.ordenForm.get('dniCliente')?.value;
 
@@ -91,6 +139,7 @@ export class AltaOrdenComponent {
     this.errorCliente = null;
 
     this.clientesService.buscarPorDocumento(numero).then(cliente => {
+      this.idClienteSeleccionado = cliente?.id || null;
       if (cliente) {
         this.ordenForm.patchValue({
           nombreCliente: cliente.nombre,
@@ -122,6 +171,7 @@ export class AltaOrdenComponent {
 
       const nuevaOrden: Omit<Orden, 'id'> = {
         numeroOrden: numero,
+        ...(this.idClienteSeleccionado ? { idCliente: this.idClienteSeleccionado } : {}),
         dniCliente: Number(this.ordenForm.value.dniCliente),
         nombreCliente: this.ordenForm.value.nombreCliente,
         apellidoCliente: this.ordenForm.value.apellidoCliente,
