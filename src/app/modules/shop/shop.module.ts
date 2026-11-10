@@ -9,6 +9,9 @@ import { SharedModule } from 'src/app/shared/shared.module';
 import { BannerComponent } from './views/banner/banner.component';
 import { DetalleProductoComponent } from './views/detalle-producto/detalle-producto.component';
 import { CheckoutComponent } from './views/checkout/checkout.component';
+import { ItemEquipoComponent } from './views/item-equipo/item-equipo.component';
+import { GaleriaFotosComponent } from './components/galeria-fotos/galeria-fotos.component';
+import { MiCuentaComponent } from './views/mi-cuenta/mi-cuenta.component';
 
 
 
@@ -21,7 +24,10 @@ import { CheckoutComponent } from './views/checkout/checkout.component';
     GrillaItemComponent,
     BannerComponent,
     DetalleProductoComponent,
-    CheckoutComponent
+    CheckoutComponent,
+    ItemEquipoComponent,
+    GaleriaFotosComponent,
+    MiCuentaComponent
   ],
   imports: [
     CommonModule,

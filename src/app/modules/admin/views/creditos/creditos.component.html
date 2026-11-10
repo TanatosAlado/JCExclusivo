@@ -1,0 +1,261 @@
+<app-encabezado>
+  Créditos de la casa
+</app-encabezado>
+
+<div class="container mt-4 mb-5">
+
+  <!-- ===================== LISTADO ===================== -->
+  <mat-card *ngIf="!credito">
+    <mat-card-title>🏠 Créditos de la casa</mat-card-title>
+    <mat-card-subtitle>
+      Ventas financiadas en cuotas. Las ventas y los cobros de cuotas se hacen en Despacho; las cuotas vencen del 1 al 10 de cada mes.
+    </mat-card-subtitle>
+
+    <mat-card-content>
+      <div class="indicadores" *ngIf="cartera">
+        <div class="indicador destacado">
+          <span class="etiqueta">Falta cobrar</span>
+          <strong>{{ cartera.saldo | currency }}</strong>
+          <small class="text-muted">{{ cartera.vigentes }} crédito(s) vigente(s)</small>
+        </div>
+        <div class="indicador" [class.alerta]="cartera.vencido > 0">
+          <span class="etiqueta">Vencido</span>
+          <strong>{{ cartera.vencido | currency }}</strong>
+          <small class="text-muted">{{ cartera.conAtraso }} crédito(s) con atraso</small>
+        </div>
+        <div class="indicador">
+          <span class="etiqueta">Cuotas de este mes</span>
+          <strong>{{ cartera.esteMes | currency }}</strong>
+          <small class="text-muted">vencen del 1 al 10</small>
+        </div>
+        <div class="indicador">
+          <span class="etiqueta">Terminados</span>
+          <strong>{{ cartera.cancelados }}</strong>
+          <small class="text-muted" *ngIf="cartera.anulados">{{ cartera.anulados }} anulado(s)</small>
+        </div>
+      </div>
+
+      <div class="chips-estado" role="group" aria-label="Filtrar por estado">
+        <button *ngFor="let f of filtrosEstado" type="button" class="chip" [class.activo]="filtroEstado === f.valor"
+          (click)="filtroEstado = f.valor">
+          {{ f.nombre }} <span class="contador">{{ cantidad(f.valor) }}</span>
+        </button>
+      </div>
+
+      <div class="barra-lista">
+        <mat-form-field appearance="outline" class="campo-filtro">
+          <mat-label>Buscar</mat-label>
+          <input matInput [(ngModel)]="filtro" placeholder="Cliente, DNI, teléfono, equipo, IMEI o ticket" autocomplete="off">
+          <mat-icon matSuffix>search</mat-icon>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="campo-orden">
+          <mat-label>Ordenar por</mat-label>
+          <mat-select [(ngModel)]="orden">
+            <mat-option value="atraso">Más atrasados primero</mat-option>
+            <mat-option value="saldo">Mayor saldo</mat-option>
+            <mat-option value="reciente">Más nuevos</mat-option>
+            <mat-option value="nombre">Nombre</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <span class="espacio"></span>
+        <button mat-stroked-button type="button" (click)="cargar()" [disabled]="cargando">
+          <mat-icon>refresh</mat-icon> Actualizar
+        </button>
+        <button mat-stroked-button type="button" (click)="exportar()" [disabled]="cargando || !visibles.length">
+          <mat-icon>download</mat-icon> Excel
+        </button>
+      </div>
+
+      <div *ngIf="cargando" class="text-muted py-3"><span class="spinner-border spinner-border-sm"></span> Cargando…</div>
+      <div *ngIf="error" class="alert alert-danger">{{ error }}</div>
+
+      <div class="tabla-scroll" *ngIf="!cargando && visibles.length">
+        <table class="table table-sm table-hover align-middle">
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th class="d-none d-md-table-cell">Equipo</th>
+              <th>Cuotas</th>
+              <th class="d-none d-sm-table-cell">Próxima cuota</th>
+              <th class="text-end">Saldo</th>
+              <th>Estado</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let x of visibles" class="fila" (click)="abrir(x.c)" [class.fila-apagada]="x.estado === 'anulado'">
+              <td>
+                <strong>{{ x.c.cliente.nombre }}</strong>
+                <div class="small text-muted">
+                  <ng-container *ngIf="x.c.cliente.telefono">📞 {{ x.c.cliente.telefono }} · </ng-container>compra {{ x.c.fecha | date:'dd/MM/yy' }}
+                </div>
+              </td>
+              <td class="d-none d-md-table-cell small">{{ x.c.equipos[0]?.nombre || x.c.detalle }}</td>
+              <td class="small text-nowrap">
+                {{ x.s.cuotasPagadas }}/{{ x.c.cantidadCuotas }}
+                <div class="avance" [attr.aria-label]="avance(x.c) + '% pagado'"><div [style.width.%]="avance(x.c)"></div></div>
+              </td>
+              <td class="d-none d-sm-table-cell small">
+                <ng-container *ngIf="x.s.proxima && x.estado !== 'anulado'; else sinProxima">
+                  Nº {{ x.s.proxima.numero }} · {{ x.s.proxima.hasta | date:'dd/MM/yy' }}
+                  <div class="text-muted">{{ faltaCuota(x.s.proxima) | currency }}</div>
+                </ng-container>
+                <ng-template #sinProxima><span class="text-muted">—</span></ng-template>
+              </td>
+              <td class="text-end">
+                <strong *ngIf="x.estado !== 'anulado'" [class.text-danger]="x.estado === 'vencido'">{{ x.s.saldo | currency }}</strong>
+                <div class="small text-danger" *ngIf="x.s.montoVencido > 0 && x.estado !== 'anulado'">vencido {{ x.s.montoVencido | currency }}</div>
+              </td>
+              <td [ngSwitch]="x.estado">
+                <span *ngSwitchCase="'vencido'" class="estado vencido">Vencida · {{ x.s.diasAtraso }} d</span>
+                <span *ngSwitchCase="'por-vencer'" class="estado por-vencer">Vence este mes</span>
+                <span *ngSwitchCase="'al-dia'" class="estado al-dia">Al día</span>
+                <span *ngSwitchCase="'cancelado'" class="estado cancelado">Terminado</span>
+                <span *ngSwitchCase="'anulado'" class="estado anulado">Anulado</span>
+              </td>
+              <td class="text-end"><mat-icon class="flecha">chevron_right</mat-icon></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div *ngIf="!cargando && !error && !visibles.length" class="vacio">
+        <mat-icon>check_circle</mat-icon>
+        <div>{{ filtro ? 'No hay créditos que coincidan con la búsqueda.' : (filtroEstado === 'vencidos' ? 'No hay créditos con cuotas vencidas. 👏' : 'No hay créditos en esta lista.') }}</div>
+        <small class="text-muted" *ngIf="!filas.length">Los créditos se crean al vender un equipo con "🏠 Crédito de la casa" en Despacho.</small>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- ===================== DETALLE ===================== -->
+  <mat-card *ngIf="credito">
+    <div class="encabezado-detalle">
+      <button mat-icon-button type="button" (click)="cerrarDetalle()" title="Volver al listado"><mat-icon>arrow_back</mat-icon></button>
+      <div class="titulo">
+        <h2>{{ credito.cliente.nombre }}</h2>
+        <div class="small text-muted">
+          <ng-container *ngIf="credito.cliente.dni">DNI {{ credito.cliente.dni }}</ng-container>
+          <ng-container *ngIf="credito.cliente.telefono"> · 📞 <a [href]="'tel:' + telefono(credito.cliente.telefono)">{{ credito.cliente.telefono }}</a></ng-container>
+          <ng-container *ngIf="credito.cliente.direccion"> · {{ credito.cliente.direccion }}</ng-container>
+        </div>
+      </div>
+      <span *ngIf="credito.estado === 'anulado'" class="estado anulado">Anulado</span>
+      <span *ngIf="credito.estado === 'cancelado'" class="estado cancelado">Terminado</span>
+    </div>
+
+    <mat-card-content>
+      <div class="indicadores" *ngIf="situacion as s">
+        <div class="indicador destacado" *ngIf="credito.estado !== 'anulado'">
+          <span class="etiqueta">Debe</span>
+          <strong [class.text-success]="s.saldo <= 0.004">{{ s.saldo | currency }}</strong>
+          <small class="text-muted">{{ s.cuotasPagadas }} de {{ credito.cantidadCuotas }} cuotas pagadas</small>
+        </div>
+        <div class="indicador" [class.alerta]="s.montoVencido > 0" *ngIf="credito.estado !== 'anulado'">
+          <span class="etiqueta">Vencido</span>
+          <strong>{{ s.montoVencido | currency }}</strong>
+          <small class="text-muted">{{ s.cuotasVencidas ? s.cuotasVencidas + ' cuota(s) · ' + s.diasAtraso + ' días' : 'sin atraso' }}</small>
+        </div>
+        <div class="indicador">
+          <span class="etiqueta">Financiado</span>
+          <strong>{{ credito.importe | currency }}</strong>
+          <small class="text-muted">en {{ credito.cantidadCuotas }} cuota(s)</small>
+        </div>
+        <div class="indicador" *ngIf="totalRecargos > 0">
+          <span class="etiqueta">Recargos cobrados</span>
+          <strong>{{ totalRecargos | currency }}</strong>
+          <small class="text-muted">por pagos fuera de término</small>
+        </div>
+      </div>
+
+      <!-- Condiciones de la venta -->
+      <div class="condiciones">
+        <div><span>Equipo</span><strong>{{ credito.equipos[0]?.nombre || credito.detalle }}</strong>
+          <small class="text-muted" *ngIf="credito.equipos[0]?.imei"> · IMEI {{ credito.equipos[0].imei }}</small></div>
+        <div><span>Compra</span><strong>{{ credito.fecha | date:'dd/MM/yyyy' }}</strong>
+          · <button type="button" class="link-ticket" (click)="verTicket(credito.ventaId)">Ticket {{ nro(credito.nroTicket) }}</button>
+          <small class="text-muted"> · {{ nombreSucursal(credito.sucursalId) }}</small></div>
+        <div><span>Precio de contado</span><strong>{{ credito.precioContado | currency }}</strong></div>
+        <div *ngIf="credito.recargo"><span>Precio financiado</span><strong>{{ credito.precioFinanciado | currency }}</strong>
+          <small class="text-muted"> ({{ credito.recargo > 0 ? '+' : '' }}{{ credito.recargo | currency }})</small></div>
+        <div *ngIf="credito.canje"><span>Plan canje</span><strong>{{ credito.canje.monto | currency }}</strong>
+          <small class="text-muted"> · {{ credito.canje.detalle }}</small></div>
+        <div *ngIf="credito.entrega"><span>Entrega</span><strong>{{ credito.entrega | currency }}</strong></div>
+      </div>
+
+      <div *ngIf="credito.estado === 'anulado'" class="alert alert-secondary py-2 small">
+        Anulado el {{ credito.anulado?.fecha | date:'dd/MM/yyyy HH:mm' }}
+        <ng-container *ngIf="credito.anulado?.usuario"> por {{ credito.anulado.usuario.nombre || credito.anulado.usuario.usuario }}</ng-container>.
+        <ng-container *ngIf="credito.anulado?.motivo"> Motivo: {{ credito.anulado.motivo }}</ng-container>
+      </div>
+
+      <!-- Cuotas -->
+      <h3 class="subtitulo">Cuotas</h3>
+      <div class="tabla-scroll">
+        <table class="table table-sm align-middle tabla-cuotas">
+          <thead>
+            <tr><th>Cuota</th><th>Vence</th><th class="text-end">Importe</th><th class="text-end">Pagado</th><th class="text-end">Falta</th><th>Estado</th></tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let q of credito.cuotas" [ngClass]="credito.estado === 'anulado' ? 'anulada' : estadoCuota(q).estado">
+              <td>{{ q.numero }}/{{ credito.cantidadCuotas }}</td>
+              <td class="small">del {{ textoVencimiento(q) }}</td>
+              <td class="text-end">{{ q.importe | currency }}</td>
+              <td class="text-end">{{ q.pagado ? (q.pagado | currency) : '—' }}</td>
+              <td class="text-end">{{ faltaCuota(q) > 0 && credito.estado !== 'anulado' ? (faltaCuota(q) | currency) : '—' }}</td>
+              <td [ngSwitch]="credito.estado === 'anulado' ? 'anulada' : estadoCuota(q).estado">
+                <span *ngSwitchCase="'pagada'" class="estado cancelado">Pagada</span>
+                <span *ngSwitchCase="'vencida'" class="estado vencido">Vencida · {{ estadoCuota(q).diasAtraso }} días</span>
+                <span *ngSwitchCase="'por-vencer'" class="estado por-vencer">Vence este mes</span>
+                <span *ngSwitchCase="'a-vencer'" class="estado al-dia">A vencer</span>
+                <span *ngSwitchCase="'anulada'" class="estado anulado">Anulada</span>
+                <span *ngIf="q.pagado > 0 && estadoCuota(q).estado !== 'pagada' && credito.estado !== 'anulado'" class="small text-muted ms-1">(parcial)</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagos (comprobantes) -->
+      <div class="d-flex align-items-center gap-3 mt-3 mb-1">
+        <h3 class="subtitulo m-0">Pagos</h3>
+        <mat-checkbox *ngIf="cantidadPagosAnulados" [(ngModel)]="verAnulados">Ver anulados ({{ cantidadPagosAnulados }})</mat-checkbox>
+      </div>
+      <div *ngIf="cargandoDetalle" class="text-muted py-2"><span class="spinner-border spinner-border-sm"></span> Cargando pagos…</div>
+      <div *ngIf="!cargandoDetalle && !pagosVisibles.length" class="text-muted small py-2">Todavía no hay pagos de cuotas.</div>
+      <div class="movimientos" *ngIf="!cargandoDetalle && pagosVisibles.length">
+        <div *ngFor="let p of pagosVisibles" class="movimiento pago" [class.anulado]="p.anulado">
+          <div class="mov-icono"><mat-icon>payments</mat-icon></div>
+          <div class="mov-cuerpo">
+            <div class="mov-linea">
+              <strong>Pago cuota(s) {{ cuotasDePago(p) }}</strong>
+              <button type="button" class="link-ticket" (click)="verTicket(p.ventaId)" title="Ver comprobante">Ticket {{ nro(p.nroTicket) }}</button>
+              <span class="text-muted small">{{ p.fecha | date:'dd/MM/yyyy HH:mm' }}</span>
+              <span *ngIf="p.anulado" class="badge bg-danger">ANULADO</span>
+            </div>
+            <div class="small">{{ textoPagos(p) }}</div>
+            <div class="small text-muted" *ngIf="p.recargo > 0">Incluye {{ p.recargo | currency }} de recargo fuera de término</div>
+            <div class="small text-muted">
+              <span *ngFor="let a of p.aplicaciones; let ult = last">cuota {{ a.numero }}: {{ a.importe | currency }}{{ a.pendienteNuevo <= 0.004 ? ' (pagada)' : '' }}{{ ult ? '' : ' · ' }}</span>
+            </div>
+          </div>
+          <div class="mov-importes">
+            <div class="importe haber">{{ p.cobrado | currency }}</div>
+            <div class="small text-muted" *ngIf="!p.anulado">saldo {{ p.saldoPosterior | currency }}</div>
+          </div>
+        </div>
+      </div>
+
+      <p class="small text-muted mt-3 mb-0">
+        Las cuotas se cobran en <strong>Despacho → 🏠 Cuota</strong> (con la caja abierta). Un pago mal cargado se anula desde Tickets.
+      </p>
+
+      <div class="acciones-detalle" *ngIf="credito.estado !== 'anulado'">
+        <button mat-stroked-button color="warn" type="button" (click)="anular()" [disabled]="!puedeAnular || anulando || cargandoDetalle"
+          [title]="puedeAnular ? 'Anula la venta y el crédito' : 'Tiene pagos: primero hay que anular los cobros de las cuotas (desde Tickets)'">
+          <mat-icon>block</mat-icon> {{ anulando ? 'Anulando…' : 'Anular crédito' }}
+        </button>
+        <small class="text-muted" *ngIf="!puedeAnular">Solo se puede anular si no tiene cuotas pagadas.</small>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

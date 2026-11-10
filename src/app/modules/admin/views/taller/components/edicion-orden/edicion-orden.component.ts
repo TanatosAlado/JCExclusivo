@@ -2,6 +2,7 @@ import { Component, Inject } from '@angular/core';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { ToastService } from 'src/app/shared/services/toast.service';
+import { datosPresupuesto, desgloseDeOrden } from 'src/app/modules/despacho/services/desglose-reparacion';
 
 @Component({
   selector: 'app-edicion-orden',
@@ -27,6 +28,9 @@ export class EdicionOrdenComponent {
       equipo: [orden.equipo],
       motivoIngreso: [orden.motivoIngreso],
       presupuesto: [orden.presupuesto],
+      // Presupuesto = mano de obra + repuestos. Las órdenes viejas no los tienen ("sin discriminar")
+      manoObra: [desgloseDeOrden(orden)?.manoObra ?? null],
+      repuestos: [desgloseDeOrden(orden)?.repuestos ?? null],
 
       // 🏛️ GREMIO
       esGremio: [orden.esGremio || false],
@@ -62,6 +66,17 @@ export class EdicionOrdenComponent {
     });
   }
 
+  /** Si cargó mano de obra o repuestos, el presupuesto se calcula solo */
+  get discriminada(): boolean {
+    const v = this.formOrdenes.value;
+    return datosPresupuesto(v.manoObra, v.repuestos, 0).manoObra !== null;
+  }
+
+  get presupuestoCalculado(): number {
+    const v = this.formOrdenes.value;
+    return datosPresupuesto(v.manoObra, v.repuestos, v.presupuesto).presupuesto;
+  }
+
 guardar(): void {
   if (this.formOrdenes.valid) {
     const fechaActual = new Date();
@@ -77,8 +92,10 @@ guardar(): void {
     if (nuevaObs) {
       observacionesActuales.push(`${fechaFormateada}: ${nuevaObs}`);
     }
+    const valores = this.formOrdenes.getRawValue();
     const ordenActualizada = {
-      ...this.formOrdenes.getRawValue(),
+      ...valores,
+      ...datosPresupuesto(valores.manoObra, valores.repuestos, valores.presupuesto),
       observaciones: observacionesActuales,
       newObservacion: '',
       id: this.orden.id

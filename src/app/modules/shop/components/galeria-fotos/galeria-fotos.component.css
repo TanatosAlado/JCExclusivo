@@ -1,0 +1,125 @@
+.flecha {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  color: #1f2430;
+  font-size: 1.4rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+}
+
+.flecha.izq { left: 8px; }
+.flecha.der { right: 8px; }
+
+/* ---------- Galería (fotos grandes) ---------- */
+.galeria {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(0, 0, 0, 0.82);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.galeria-contenido {
+  position: relative;
+  width: 100%;
+  max-width: 760px;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #fff;
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.galeria-cerrar {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: #f1f2f4;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.galeria-titulo {
+  padding-right: 40px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.galeria-foto {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: min(62vh, 520px);
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.galeria-foto img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.galeria-foto .flecha {
+  opacity: 1;
+  width: 40px;
+  height: 40px;
+}
+
+.galeria-miniaturas {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.galeria-miniaturas button {
+  flex: 0 0 64px;
+  height: 64px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: #f8f9fa;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.galeria-miniaturas button.activa {
+  border-color: #e71634;
+}
+
+.galeria-miniaturas img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.galeria-contador {
+  text-align: center;
+  font-size: 0.85rem;
+  color: #6c757d;
+}

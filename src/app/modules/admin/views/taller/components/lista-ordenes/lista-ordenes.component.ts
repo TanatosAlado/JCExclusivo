@@ -12,6 +12,7 @@ import { VerOrdenComponent } from '../ver-orden/ver-orden.component';
 import { ToastService } from 'src/app/shared/services/toast.service';
 import { ConfirmDialogComponent } from 'src/app/shared/components/confirm-dialog/confirm-dialog.component';
 import { ArticulosOrdenComponent } from '../articulos-orden/articulos-orden.component';
+import { TrabajoTerminadoComponent } from '../trabajo-terminado/trabajo-terminado.component';
 import { ArticulosOrdenService, articulosActivos } from 'src/app/modules/admin/services/articulos-orden.service';
 import Swal from 'sweetalert2';
 
@@ -223,6 +224,24 @@ abrirModalAltaOrden(): void {
 
   cantidadArticulos(orden: any): number {
     return articulosActivos(orden).length;
+  }
+
+  /** El taller terminó: carga el costo del taller (el local se lo debe) y la orden queda lista para retirar */
+  terminarTrabajo(orden: any) {
+    this.dialog.open(TrabajoTerminadoComponent, {
+      width: '92vw',
+      maxWidth: '560px',
+      data: orden,
+      autoFocus: false
+    }).afterClosed().subscribe(trabajo => {
+      if (!trabajo) return;
+      Swal.fire({
+        toast: true, position: 'top-end', timer: 3000, showConfirmButton: false, icon: 'success',
+        title: trabajo.costoTaller > 0
+          ? `Trabajo terminado · el local le debe ${new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(trabajo.costoTaller)} al taller`
+          : 'Trabajo terminado'
+      });
+    });
   }
 
   abrirArticulos(orden: any, coleccion: string) {

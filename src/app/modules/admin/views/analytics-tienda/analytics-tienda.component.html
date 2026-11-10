@@ -1,0 +1,324 @@
+<app-encabezado>
+  Analytics de la tienda
+</app-encabezado>
+
+<div class="container-fluid tablero py-3">
+
+  <!-- ===================== FILTROS ===================== -->
+  <div class="filtros">
+    <mat-button-toggle-group [value]="periodo" (change)="elegirPeriodo($event.value)" aria-label="Período">
+      <mat-button-toggle *ngFor="let p of periodos" [value]="p.valor">{{ p.nombre }}</mat-button-toggle>
+    </mat-button-toggle-group>
+
+    <ng-container *ngIf="periodo === 'custom'">
+      <mat-form-field appearance="outline" class="campo-fecha">
+        <mat-label>Desde</mat-label>
+        <input matInput [matDatepicker]="pDesde" [(ngModel)]="desde">
+        <mat-datepicker-toggle matSuffix [for]="pDesde"></mat-datepicker-toggle>
+        <mat-datepicker #pDesde></mat-datepicker>
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="campo-fecha">
+        <mat-label>Hasta</mat-label>
+        <input matInput [matDatepicker]="pHasta" [(ngModel)]="hasta">
+        <mat-datepicker-toggle matSuffix [for]="pHasta"></mat-datepicker-toggle>
+        <mat-datepicker #pHasta></mat-datepicker>
+      </mat-form-field>
+      <button mat-raised-button color="primary" type="button" (click)="aplicarFechas()" [disabled]="cargando">Ver</button>
+    </ng-container>
+
+    <span class="espacio"></span>
+
+    <div class="ahora" *ngIf="datos?.ahora !== null && datos?.ahora !== undefined" matTooltip="Personas en la tienda en los últimos 30 minutos">
+      <span class="punto-vivo" [class.activo]="datos!.ahora! > 0"></span>
+      <b>{{ numero(datos!.ahora!) }}</b> {{ datos!.ahora === 1 ? 'persona' : 'personas' }} ahora
+    </div>
+
+    <button mat-stroked-button type="button" (click)="cargar(true)" [disabled]="cargando" matTooltip="Volver a pedir los datos a Google">
+      <i class="fas fa-sync-alt" [class.fa-spin]="cargando"></i> Actualizar
+    </button>
+  </div>
+
+  <div class="subtexto mb-2" *ngIf="datos">
+    {{ textoRango }} · Solo la tienda online (sin Gestiones, Despacho ni administradores)
+    <span> · datos de {{ datos.generado | date:'HH:mm' }}</span>
+  </div>
+
+  <div class="cargando" *ngIf="cargando && !datos">
+    <mat-spinner diameter="40"></mat-spinner>
+    <span>Pidiendo los datos a Google Analytics…</span>
+  </div>
+
+  <!-- ===================== CONFIGURACIÓN PENDIENTE ===================== -->
+  <div class="tarjeta configuracion" *ngIf="!cargando && faltaConfigurar">
+    <div class="tarjeta-titulo">
+      <h3><i class="fas fa-tools"></i> Falta terminar de conectar Google Analytics</h3>
+    </div>
+    <p class="subtexto mb-3">
+      La tienda ya está mandando los datos a Google. Para verlos acá faltan estos pasos (se hacen una sola vez):
+    </p>
+    <ol class="pasos">
+      <li *ngFor="let p of pasos; let i = index" class="paso" [ngClass]="estadoPaso(i)">
+        <span class="paso-icono">
+          <i class="fas" [ngClass]="estadoPaso(i) === 'listo' ? 'fa-check' : estadoPaso(i) === 'falta' ? 'fa-arrow-right' : 'fa-circle'"></i>
+        </span>
+        <div class="paso-cuerpo">
+          <div class="paso-titulo">
+            {{ p.titulo }}
+            <span class="paso-estado" *ngIf="estadoPaso(i) === 'listo'">Listo</span>
+            <span class="paso-estado falta" *ngIf="estadoPaso(i) === 'falta'">Falta este</span>
+          </div>
+          <ng-container *ngIf="estadoPaso(i) !== 'listo'">
+            <div class="paso-detalle">{{ p.detalle }}</div>
+            <div class="paso-codigo" *ngIf="p.codigo">
+              <pre>{{ p.codigo }}</pre>
+              <button mat-button type="button" (click)="copiar(p.codigo)"><i class="far fa-copy"></i> Copiar</button>
+            </div>
+            <a *ngIf="p.link" [href]="p.link.url" target="_blank" rel="noopener" class="paso-link">
+              {{ p.link.texto }} <i class="fas fa-external-link-alt"></i>
+            </a>
+          </ng-container>
+        </div>
+      </li>
+    </ol>
+    <details class="detalle-tecnico" *ngIf="detalleError">
+      <summary>Ver la respuesta de Google</summary>
+      <code>{{ detalleError }}</code>
+    </details>
+    <button mat-raised-button color="primary" type="button" (click)="cargar(true)">
+      <i class="fas fa-redo"></i> Ya lo hice, probar de nuevo
+    </button>
+  </div>
+
+  <div class="alert alert-danger" *ngIf="!cargando && error && !faltaConfigurar">
+    {{ error }}
+    <div class="small mt-1" *ngIf="detalleError"><code>{{ detalleError }}</code></div>
+    <button mat-button type="button" (click)="cargar(true)">Reintentar</button>
+  </div>
+
+  <!-- ===================== DATOS ===================== -->
+  <ng-container *ngIf="datos">
+    <div [class.atenuado]="cargando">
+
+      <div class="aviso-sin-datos" *ngIf="sinDatos">
+        <i class="fas fa-hourglass-half"></i>
+        <div>
+          <b>Todavía no hay visitas registradas en este período.</b>
+          <div class="subtexto">Google tarda entre 24 y 48 horas en procesar los datos para los informes. "Personas ahora" sí se ve al instante.</div>
+        </div>
+      </div>
+
+      <!-- ===================== HERO + KPIs ===================== -->
+      <div class="fila-hero">
+        <div class="tarjeta hero">
+          <div class="etiqueta">Visitantes</div>
+          <div class="hero-valor">{{ numero(datos.totales.usuarios) }}</div>
+          <ng-container *ngTemplateOutlet="delta; context: { v: variacion('usuarios'), antes: datos.anterior?.usuarios }"></ng-container>
+          <div class="hero-partes">
+            <span>{{ numero(datos.totales.nuevos) }} nuevos ({{ porcentajeNuevos }})</span>
+            <span>{{ numero(datos.totales.sesiones) }} visitas (sesiones)</span>
+          </div>
+        </div>
+
+        <div class="kpis">
+          <div class="tarjeta kpi">
+            <div class="etiqueta">Páginas vistas</div>
+            <div class="kpi-valor">{{ numero(datos.totales.vistas) }}</div>
+            <div class="subtexto">{{ paginasPorSesion }} por visita</div>
+            <ng-container *ngTemplateOutlet="delta; context: { v: variacion('vistas'), antes: datos.anterior?.vistas }"></ng-container>
+          </div>
+          <div class="tarjeta kpi">
+            <div class="etiqueta">Interés</div>
+            <div class="kpi-valor">{{ porciento(datos.totales.interaccion) }}</div>
+            <div class="subtexto">de las visitas se quedaron a mirar (más de 10 s o más de una página)</div>
+          </div>
+          <div class="tarjeta kpi">
+            <div class="etiqueta">Tiempo promedio</div>
+            <div class="kpi-valor">{{ duracion(datos.totales.duracionMedia) }}</div>
+            <div class="subtexto">por visita</div>
+          </div>
+          <div class="tarjeta kpi">
+            <div class="etiqueta">Compras online</div>
+            <div class="kpi-valor">{{ numero(datos.totales.compras) }}</div>
+            <div class="subtexto">{{ moneda(datos.totales.ingresos) }} · conversión {{ conversion }}</div>
+            <ng-container *ngTemplateOutlet="delta; context: { v: variacion('compras'), antes: datos.anterior?.compras }"></ng-container>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================== VISITAS EN EL TIEMPO ===================== -->
+      <div class="tarjeta mt-3">
+        <div class="tarjeta-titulo">
+          <h3>Visitantes por día</h3>
+          <button mat-button type="button" class="ms-auto" (click)="verTabla = !verTabla">
+            <i class="fas" [ngClass]="verTabla ? 'fa-chart-bar' : 'fa-table'"></i>
+            {{ verTabla ? 'Ver gráfico' : 'Ver tabla' }}
+          </button>
+        </div>
+
+        <div class="grafico" *ngIf="!verTabla" (mouseleave)="hover = null">
+          <div class="eje-y">
+            <span *ngFor="let t of ticks" [style.bottom.%]="alto(t)">{{ numero(t) }}</span>
+          </div>
+          <div class="area">
+            <div class="grilla" *ngFor="let t of ticks" [style.bottom.%]="alto(t)" [class.base]="t === 0"></div>
+            <div class="columnas">
+              <div class="columna" *ngFor="let b of datos.porDia; let i = index"
+                   (mouseenter)="hover = b; hoverIdx = i" [class.activa]="hover === b">
+                <div class="pila">
+                  <div class="segmento serie-1 tope" *ngIf="b.usuarios > 0" [style.height.%]="alto(b.usuarios)"></div>
+                </div>
+                <div class="etiqueta-x" [class.oculta]="!mostrarEtiqueta(i)">{{ fechaCorta(b.fecha) }}</div>
+              </div>
+            </div>
+            <div class="tooltip-grafico" *ngIf="hover" [style.left.%]="posTooltip().left" [style.transform]="posTooltip().transform">
+              <div class="tt-titulo">{{ fecha(hover.fecha) }}</div>
+              <div class="tt-fila"><i class="marca serie-1"></i><span>Visitantes</span><b>{{ numero(hover.usuarios) }}</b></div>
+              <div class="tt-fila"><span>Visitas</span><b>{{ numero(hover.sesiones) }}</b></div>
+              <div class="tt-fila"><span>Páginas vistas</span><b>{{ numero(hover.vistas) }}</b></div>
+            </div>
+          </div>
+          <div class="vacio" *ngIf="datos.totales.usuarios === 0">Sin visitas en el período</div>
+        </div>
+
+        <div class="tabla-scroll" *ngIf="verTabla">
+          <table class="table table-sm tabla-datos">
+            <thead><tr><th>Fecha</th><th class="num">Visitantes</th><th class="num">Visitas</th><th class="num">Páginas vistas</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let b of datos.porDia">
+                <td>{{ fecha(b.fecha) }}</td>
+                <td class="num">{{ numero(b.usuarios) }}</td>
+                <td class="num">{{ numero(b.sesiones) }}</td>
+                <td class="num">{{ numero(b.vistas) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ===================== EMBUDO + PRODUCTOS ===================== -->
+      <div class="fila-2 mt-3">
+        <div class="tarjeta">
+          <div class="tarjeta-titulo">
+            <h3><i class="fas fa-filter"></i> Embudo de compra</h3>
+          </div>
+          <p class="subtexto">Personas que llegaron a cada paso. Muestra dónde se pierden los compradores.</p>
+          <div class="embudo">
+            <div class="paso-embudo" *ngFor="let p of datos.embudo; let i = index">
+              <div class="paso-embudo-cab">
+                <span class="paso-embudo-nombre">{{ i + 1 }}. {{ p.nombre }}</span>
+                <b>{{ numero(p.usuarios) }}</b>
+              </div>
+              <div class="barra-pista">
+                <div class="barra" [style.width.%]="anchoEmbudo(p.usuarios)"></div>
+              </div>
+              <div class="subtexto" *ngIf="pasoSiguiente(i)">{{ pasoSiguiente(i) }}</div>
+            </div>
+          </div>
+          <div class="conversion">Conversión total (vieron un producto → compraron): <b>{{ conversion }}</b></div>
+        </div>
+
+        <div class="tarjeta">
+          <div class="tarjeta-titulo">
+            <h3><i class="fas fa-box-open"></i> Productos más vistos</h3>
+          </div>
+          <div class="tabla-scroll" *ngIf="datos.productos.length; else sinDatosLista">
+            <table class="table table-sm tabla-datos">
+              <thead>
+                <tr><th>Producto</th><th class="num">Vistos</th><th class="num">Al carrito</th><th class="num">Comprados</th></tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let p of datos.productos">
+                  <td class="nombre-largo" [title]="p.nombre">{{ p.nombre }}</td>
+                  <td class="num">{{ numero(p.vistos) }}</td>
+                  <td class="num">{{ numero(p.agregados) }} <span class="subtexto">{{ tasa(p.agregados, p.vistos) }}</span></td>
+                  <td class="num">{{ numero(p.comprados) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="subtexto mt-2 mb-0" *ngIf="datos.productos.length">
+            Un producto muy visto que casi nadie agrega al carrito puede tener un precio o una foto para revisar.
+          </p>
+        </div>
+      </div>
+
+      <!-- ===================== BÚSQUEDAS / ORIGEN / DISPOSITIVOS ===================== -->
+      <div class="grilla-3 mt-3">
+        <div class="tarjeta">
+          <div class="tarjeta-titulo"><h3><i class="fas fa-search"></i> Qué buscan</h3></div>
+          <div class="barras" *ngIf="datos.busquedas.length; else sinDatosLista">
+            <div class="barra-fila" *ngFor="let b of datos.busquedas">
+              <div class="barra-nombre" [title]="b.termino">{{ b.termino }}</div>
+              <div class="barra-pista"><div class="barra" [style.width.%]="ancho(b.veces, datos.busquedas, 'veces')"></div></div>
+              <div class="barra-valor">{{ numero(b.veces) }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tarjeta">
+          <div class="tarjeta-titulo"><h3><i class="fas fa-sign-in-alt"></i> De dónde llegan</h3></div>
+          <div class="barras" *ngIf="datos.canales.length; else sinDatosLista">
+            <div class="barra-fila" *ngFor="let c of datos.canales">
+              <div class="barra-nombre" [title]="c.nombre">{{ c.nombre }}</div>
+              <div class="barra-pista"><div class="barra" [style.width.%]="ancho(c.sesiones, datos.canales, 'sesiones')"></div></div>
+              <div class="barra-valor">{{ porcentaje(c.sesiones, datos.canales, 'sesiones') }}</div>
+            </div>
+          </div>
+          <div class="chips mt-2" *ngIf="datos.fuentes.length">
+            <span class="chip" *ngFor="let f of datos.fuentes">{{ f.nombre }}: <b>{{ numero(f.sesiones) }}</b></span>
+          </div>
+        </div>
+
+        <div class="tarjeta">
+          <div class="tarjeta-titulo"><h3><i class="fas fa-mobile-alt"></i> Dispositivos</h3></div>
+          <div class="barras" *ngIf="datos.dispositivos.length; else sinDatosLista">
+            <div class="barra-fila" *ngFor="let d of datos.dispositivos">
+              <div class="barra-nombre">{{ d.nombre }}</div>
+              <div class="barra-pista"><div class="barra" [style.width.%]="ancho(d.usuarios, datos.dispositivos, 'usuarios')"></div></div>
+              <div class="barra-valor">{{ porcentaje(d.usuarios, datos.dispositivos, 'usuarios') }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================== CIUDADES / PÁGINAS ===================== -->
+      <div class="fila-2 mt-3">
+        <div class="tarjeta">
+          <div class="tarjeta-titulo"><h3><i class="fas fa-map-marker-alt"></i> Ciudades</h3></div>
+          <div class="barras" *ngIf="datos.ciudades.length; else sinDatosLista">
+            <div class="barra-fila" *ngFor="let c of datos.ciudades">
+              <div class="barra-nombre" [title]="c.nombre">{{ c.nombre }}</div>
+              <div class="barra-pista"><div class="barra" [style.width.%]="ancho(c.usuarios, datos.ciudades, 'usuarios')"></div></div>
+              <div class="barra-valor">{{ numero(c.usuarios) }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tarjeta">
+          <div class="tarjeta-titulo"><h3><i class="far fa-file-alt"></i> Páginas más vistas</h3></div>
+          <div class="barras" *ngIf="datos.paginas.length; else sinDatosLista">
+            <div class="barra-fila" *ngFor="let p of datos.paginas">
+              <div class="barra-nombre" [title]="p.ruta">{{ p.nombre }}</div>
+              <div class="barra-pista"><div class="barra" [style.width.%]="ancho(p.vistas, datos.paginas, 'vistas')"></div></div>
+              <div class="barra-valor">{{ numero(p.vistas) }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </ng-container>
+</div>
+
+<ng-template #sinDatosLista>
+  <div class="vacio-lista">Sin datos en el período</div>
+</ng-template>
+
+<!-- Variación contra el período anterior -->
+<ng-template #delta let-v="v" let-antes="antes">
+  <div class="delta" *ngIf="v !== null" [class.sube]="v > 0" [class.baja]="v < 0">
+    <i class="fas" [class.fa-arrow-up]="v > 0" [class.fa-arrow-down]="v < 0" [class.fa-equals]="v === 0"></i>
+    {{ v > 0 ? '+' : '' }}{{ v | number:'1.0-1' }}%
+    <span class="subtexto">vs. período anterior ({{ numero(antes) }})</span>
+  </div>
+</ng-template>

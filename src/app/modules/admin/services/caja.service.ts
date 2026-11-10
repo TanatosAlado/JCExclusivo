@@ -4,7 +4,7 @@ import { Firestore, collection, query, where, getDocs, Timestamp, addDoc, collec
 import { from, map, Observable } from 'rxjs';
 import { Gasto } from '../models/gasto.model';
 import { AuditoriaService } from 'src/app/shared/services/auditoria.service';
-import { pagosDeVenta } from 'src/app/modules/despacho/services/pagos';
+import { pagosEnCaja, aCuentaDeVenta } from 'src/app/modules/despacho/services/pagos';
 
 export interface Movimiento {
   id?: string;
@@ -149,24 +149,37 @@ getIngresosLocal(fechaInicio: Date, fechaFin: Date) {
         const cliente = data.cliente?.nombre || 'Consumidor final';
         const lista = data.tipoPrecio === 'mayorista' ? ' (mayorista)' : '';
         const esReparacion = data.tipoVenta === 'reparacion';
+        const esCobroCuenta = data.tipoVenta === 'cobrocuenta';
+        const esCobroCuota = data.tipoVenta === 'cobrocuota';
         const ticket = data.nroTicket ? ` · Ticket ${String(data.nroTicket).padStart(8, '0')}` : '';
+        const aCuenta = aCuentaDeVenta(data);
         const descripcion = (esReparacion
           ? `Cobro reparación orden #${data.orden?.numeroOrden ?? '?'} - ${cliente}`
-          : `Venta local - ${cliente}${lista}`) + ticket;
+          : esCobroCuenta
+            ? `Cobro cuenta corriente - ${cliente}`
+            : esCobroCuota
+              ? `Cobro cuota crédito de la casa - ${cliente}`
+              : `Venta local - ${cliente}${lista}` +
+              (aCuenta > 0 ? ` (${new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(aCuenta)} a cuenta corriente)` : '')) + ticket;
 
-        // Pagada con varios medios → un renglón por medio (así cuadran los totales por medio de pago)
-        const pagos = pagosDeVenta(data);
+        // Pagada con varios medios → un renglón por medio (así cuadran los totales por medio de pago).
+        // La parte a cuenta corriente no es dinero: no va al libro diario (entra cuando se cobra).
+        const pagos = pagosEnCaja(data);
         return pagos.map((pago, i) => <Movimiento>{
           id: docSnap.id,
           ventaId: docSnap.id,
           tipo: 'ingreso',
-          descripcion: pagos.length > 1 ? `${descripcion} (pago ${i + 1} de ${pagos.length})` : descripcion,
+          descripcion: (pagos.length > 1 ? `${descripcion} (pago ${i + 1} de ${pagos.length})` : descripcion) +
+            (pago.detalle ? ` · ${pago.detalle}` : ''),   // tarjeta: nº de operación del posnet
           monto: pago.monto,
           fecha: new Date(data.fecha),
           origen: 'local',
           metodoPago: pago.metodo === 'otros' ? (data.metodoPago || '').toLowerCase() : pago.metodo,
           sucursalId: data.sucursalId,
-          usuario: data.usuario?.usuario || '',
+          // Quién cobró (cajero); las ventas viejas muestran el usuario de la sesión
+          usuario: data.cajero
+            ? [data.cajero.nombre, data.cajero.apellido].filter(Boolean).join(' ')
+            : (data.usuario?.usuario || ''),
           anulado: data.anulada === true,
           motivoAnulacion: data.motivoAnulacion || '',
           anuladoPor: data.anuladaPor?.usuario || ''

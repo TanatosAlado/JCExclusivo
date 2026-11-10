@@ -1,0 +1,85 @@
+rules_version = '2';
+
+// =====================================================================
+// Reglas de Firebase Storage - JC Exclusivo
+// (se pegan en Firebase Console → Storage → Reglas)
+//
+//   • Banners (uploads/minorista, uploads/mayorista): los VE cualquiera
+//     (también visitantes sin sesión). Suben/borran quienes tienen el permiso 'banner'.
+//   • Imágenes de productos (productos/): las ve cualquiera.
+//     Suben/borran quienes tienen el permiso 'productos'.
+//   • Fotos de equipos (equipos/): las ve cualquiera. Suben/borran quienes tienen el permiso 'equipos'.
+//   • Cualquier otra carpeta: la ve un usuario logueado y la modifica un administrador.
+//
+// Los permisos se leen del documento Clientes/{uid} de Firestore, igual que en
+// firestore.rules (misma lista de permisos por defecto que core/secciones.ts).
+// =====================================================================
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function cliente() {
+      return firestore.get(/databases/(default)/documents/Clientes/$(request.auth.uid)).data;
+    }
+
+    function esAdmin() {
+      return request.auth != null
+        && firestore.exists(/databases/(default)/documents/Clientes/$(request.auth.uid))
+        && cliente().get('administrador', false) == true
+        && cliente().get('estado', true) != false;
+    }
+
+    function esSuperAdmin() {
+      return esAdmin()
+        && (cliente().get('superAdmin', false) == true || cliente().get('dueno', false) == true);
+    }
+
+    function tienePermiso(seccion) {
+      return esSuperAdmin()
+        || (esAdmin() && seccion in cliente().get('permisos',
+          ['despacho', 'clientes', 'productos', 'pedidos', 'taller', 'caja', 'cajeros', 'sucursales', 'tickets']));
+    }
+
+    function esImagen() {
+      return request.resource.contentType.matches('image/.*');
+    }
+
+    function esImagenOVideo() {
+      return esImagen() || request.resource.contentType.matches('video/.*');
+    }
+
+    // ---------- Banners ----------
+    match /uploads/{archivo=**} {
+      allow read: if true;   // ver y listar (lo necesita el banner de la tienda)
+      allow create, update: if tienePermiso('banner')
+        && request.resource.size < 50 * 1024 * 1024
+        && esImagenOVideo();
+      allow delete: if tienePermiso('banner');
+    }
+
+    // ---------- Imágenes de productos ----------
+    match /productos/{archivo=**} {
+      allow read: if true;
+      allow create, update: if tienePermiso('productos')
+        && request.resource.size < 10 * 1024 * 1024
+        && esImagen();
+      allow delete: if tienePermiso('productos');
+    }
+
+    // ---------- Fotos de equipos (se ven en la tienda) ----------
+    match /equipos/{archivo=**} {
+      allow read: if true;
+      allow create, update: if tienePermiso('equipos')
+        && request.resource.size < 10 * 1024 * 1024
+        && esImagen();
+      allow delete: if tienePermiso('equipos');
+    }
+
+    // ---------- Todo lo demás ----------
+    // (sin incluir banners ni productos, que tienen sus reglas arriba)
+    match /{ruta=**} {
+      allow read: if request.auth != null;
+      allow write: if esAdmin() && !ruta.matches('^(uploads|productos|equipos)/.*');
+    }
+  }
+}

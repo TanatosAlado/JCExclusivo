@@ -1,15 +1,24 @@
 import { Injectable } from '@angular/core';
 import { Firestore, collection, query, where, getDocs, addDoc, doc, runTransaction, serverTimestamp } from '@angular/fire/firestore';
 import { AuditoriaService, UsuarioRegistro } from 'src/app/shared/services/auditoria.service';
-import { pagosDeVenta } from './pagos';
+import { pagosDeVenta, esCobroCuenta, esCobroCuota } from './pagos';
 
 /** Totales de una caja (se calculan a partir de sus ventas) */
 export interface ResumenCaja {
   montoInicial: number;
   cantidadVentas: number;        // ventas vigentes
   cantidadAnuladas: number;      // ventas anuladas (no suman)
-  totalVendido: number;
-  porMetodo: { efectivo: number; tarjeta: number; transferencia: number; otros: number };
+  totalVendido: number;          // ventas + cobros de reparaciones (sin los cobros de cuenta corriente)
+  /** Lo que entró por cada medio. 'cuentacorriente' = vendido a cuenta: NO es dinero, no entra a la caja */
+  porMetodo: {
+    efectivo: number; tarjeta: number; transferencia: number; otros: number; cuentacorriente?: number;
+    creditocasa?: number;   // financiado con el crédito de la casa: NO es dinero
+    canje?: number;         // equipos usados recibidos en parte de pago: NO es dinero
+  };
+  /** Cobros de deudas de cuenta corriente (ya incluidos en efectivo / tarjeta / transferencia) */
+  cobrosCuentaCorriente?: number;
+  /** Cobros de cuotas del crédito de la casa (ya incluidos en efectivo / tarjeta / transferencia) */
+  cobrosCuotas?: number;
   movimientos: {                 // movimientos de efectivo vigentes (no anulados)
     ingresos: number;
     retiros: number;
@@ -233,10 +242,12 @@ export class CajaService {
       else if (mov.tipo === 'deposito') movimientos.depositos += importe;
     }
 
-    const porMetodo = { efectivo: 0, tarjeta: 0, transferencia: 0, otros: 0 };
+    const porMetodo = { efectivo: 0, tarjeta: 0, transferencia: 0, otros: 0, cuentacorriente: 0, creditocasa: 0, canje: 0 };
     let cantidadVentas = 0;
     let cantidadAnuladas = 0;
     let totalVendido = 0;
+    let cobrosCuentaCorriente = 0;
+    let cobrosCuotas = 0;
 
     for (const d of snap.docs) {
       const venta: any = d.data();
@@ -246,7 +257,10 @@ export class CajaService {
       }
       const monto = Number(venta.total) || 0;
       cantidadVentas++;
-      totalVendido += monto;
+      // El cobro de una deuda no es una venta nueva (la venta se contó cuando se llevó la mercadería)
+      if (esCobroCuenta(venta)) cobrosCuentaCorriente += monto;
+      else if (esCobroCuota(venta)) cobrosCuotas += monto;
+      else totalVendido += monto;
 
       // Una venta puede pagarse con varios medios: cada parte suma a su medio
       for (const pago of pagosDeVenta(venta)) {
@@ -265,8 +279,13 @@ export class CajaService {
         efectivo: this.redondear(porMetodo.efectivo),
         tarjeta: this.redondear(porMetodo.tarjeta),
         transferencia: this.redondear(porMetodo.transferencia),
-        otros: this.redondear(porMetodo.otros)
+        otros: this.redondear(porMetodo.otros),
+        cuentacorriente: this.redondear(porMetodo.cuentacorriente),
+        creditocasa: this.redondear(porMetodo.creditocasa),
+        canje: this.redondear(porMetodo.canje)
       },
+      cobrosCuentaCorriente: this.redondear(cobrosCuentaCorriente),
+      cobrosCuotas: this.redondear(cobrosCuotas),
       movimientos: {
         ingresos: this.redondear(movimientos.ingresos),
         retiros: this.redondear(movimientos.retiros),

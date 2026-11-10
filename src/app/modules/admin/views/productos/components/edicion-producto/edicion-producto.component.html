@@ -1,186 +1,253 @@
-<div class="imagen-central fadeIn first">
-  <img src="../../../../../assets/logo.png" alt="Editar Producto" />
+<!-- ===================== ENCABEZADO ===================== -->
+<div class="encabezado" *ngIf="formProducto">
+  <div class="miniatura">
+    <img *ngIf="imagenActual && !subiendoImagen" [src]="imagenActual" alt="Foto del producto">
+    <mat-spinner *ngIf="subiendoImagen" diameter="28"></mat-spinner>
+    <mat-icon *ngIf="!imagenActual && !subiendoImagen">image</mat-icon>
+  </div>
+  <div class="titulo">
+    <span class="sobretitulo">Editar producto</span>
+    <h2>{{ formProducto.get('descripcion')?.value || 'Sin descripción' }}</h2>
+    <div class="chips">
+      <span class="chip" *ngIf="formProducto.get('marca')?.value">{{ formProducto.get('marca')?.value }}</span>
+      <span class="chip" *ngIf="formProducto.get('rubro')?.value">{{ formProducto.get('rubro')?.value }}</span>
+      <span class="chip" *ngIf="variantesArray.length">{{ variantesArray.length }} variante(s)</span>
+      <span class="chip">{{ formProducto.get('moneda')?.value || 'ARS' }}</span>
+      <span class="chip chip-oferta" *ngIf="formProducto.get('oferta')?.value">En oferta</span>
+      <span class="chip chip-destacado" *ngIf="formProducto.get('destacado')?.value">Destacado</span>
+    </div>
+  </div>
+  <button mat-icon-button type="button" mat-dialog-close class="cerrar" aria-label="Cerrar">
+    <mat-icon>close</mat-icon>
+  </button>
 </div>
 
-<mat-dialog-content *ngIf="formProducto" [formGroup]="formProducto" class="contenido-modal">
+<mat-dialog-content *ngIf="formProducto" [formGroup]="formProducto" class="contenido">
 
-  <!-- 🔹 Básicos -->
-  <div class="form-grid">
-    <mat-form-field appearance="outline" class="form-field">
-      <mat-label>Código de Barras</mat-label>
-      <input matInput formControlName="codigoBarras" required>
-    </mat-form-field>
+  <div class="columnas">
 
-    <mat-form-field appearance="outline" class="form-field">
-      <mat-label>Rubro</mat-label>
-      <input matInput formControlName="rubro">
-    </mat-form-field>
+    <!-- ===================== COLUMNA PRINCIPAL ===================== -->
+    <div class="principal">
 
-    <mat-form-field appearance="outline" class="form-field">
-      <mat-label>Subrubro</mat-label>
-      <input matInput formControlName="subrubro">
-    </mat-form-field>
-
-    <mat-form-field appearance="outline" class="form-field">
-      <mat-label>Marca</mat-label>
-      <input matInput formControlName="marca">
-    </mat-form-field>
-  </div>
-
-  <mat-form-field appearance="outline" class="full-width">
-    <mat-label>Descripción</mat-label>
-    <textarea matInput rows="3" formControlName="descripcion"></textarea>
-  </mat-form-field>
-
-  <mat-form-field appearance="outline" class="full-width">
-    <mat-label>URL de Imagen</mat-label>
-    <input matInput formControlName="imagen" placeholder="https://...">
-  </mat-form-field>
-
-  <!-- 📷 Subir imagen local -->
-  <div class="full-width mt-2">
-    <input
-      type="file"
-      accept="image/*"
-      (change)="onImagenSeleccionada($event)"
-    />
-  </div>
-
-  <!-- 🎨 Color principal -->
-  <div class="color-principal">
-    <div class="color-preview" [style.background]="formProducto.get('color')?.value"></div>
-    <mat-form-field appearance="outline" class="form-field">
-      <mat-label>Color principal</mat-label>
-      <input matInput type="color" formControlName="color">
-    </mat-form-field>
-  </div>
-
-  <!-- 💰 Precios -->
-  <div class="form-grid">
-    <mat-form-field appearance="outline" class="form-field">
-      <mat-label>Precio Costo</mat-label>
-      <input matInput type="number" formControlName="precioCosto">
-    </mat-form-field>
-
-    <mat-form-field appearance="outline" class="form-field">
-      <mat-label>Precio sin Impuestos</mat-label>
-      <input matInput type="number" formControlName="precioSinImpuestos">
-    </mat-form-field>
-  </div>
-
-  <div class="form-grid">
-    <mat-checkbox formControlName="ventaMinorista">¿Se vende en Minorista?</mat-checkbox>
-    <mat-form-field appearance="outline" class="form-field" *ngIf="formProducto.get('ventaMinorista')?.value">
-      <mat-label>Precio Minorista</mat-label>
-      <input matInput type="number" formControlName="precioMinorista">
-    </mat-form-field>
-
-    <mat-checkbox formControlName="ventaMayorista">¿Se vende en Mayorista?</mat-checkbox>
-    <mat-form-field appearance="outline" class="form-field" *ngIf="formProducto.get('ventaMayorista')?.value">
-      <mat-label>Precio Mayorista</mat-label>
-      <input matInput type="number" formControlName="precioMayorista">
-    </mat-form-field>
-  </div>
-
-  <!-- 🏷️ Oferta y destacado -->
-  <div class="form-grid">
-    <mat-checkbox formControlName="oferta">¿Está en oferta?</mat-checkbox>
-    <mat-form-field appearance="outline" class="form-field" *ngIf="formProducto.get('oferta')?.value">
-      <mat-label>Precio de Oferta</mat-label>
-      <input matInput type="number" formControlName="precioOferta">
-    </mat-form-field>
-
-    <mat-checkbox formControlName="destacado">¿Es destacado?</mat-checkbox>
-  </div>
-
-  <div class="form-grid">
-
-    <mat-form-field appearance="outline" class="form-field">
-      <mat-label>Moneda</mat-label>
-
-      <mat-select formControlName="moneda">
-
-        <mat-option value="ARS">
-          Pesos Argentinos (ARS)
-        </mat-option>
-
-        <mat-option value="USD">
-          Dólares (USD)
-        </mat-option>
-
-      </mat-select>
-
-    </mat-form-field>
-
-  </div>
-
-  <!-- 📦 Stock principal -->
-  <h3>📦 Stock por sucursal (producto principal)</h3>
-  <div formArrayName="stockSucursales" class="form-grid">
-    <div *ngFor="let sCtrl of stockArray.controls; let i = index" [formGroupName]="i">
-      <mat-form-field appearance="outline" class="form-field">
-        <mat-label>{{ sucursales[i].nombre }}</mat-label>
-        <input matInput type="number" formControlName="cantidad">
-      </mat-form-field>
-    </div>
-  </div>
-
-  <mat-form-field appearance="outline" class="form-field">
-    <mat-label>Stock Mayorista</mat-label>
-    <input matInput type="number" formControlName="stockMayorista">
-  </mat-form-field>
-
-  <mat-form-field appearance="outline" class="form-field">
-    <mat-label>Stock Mínimo</mat-label>
-    <input matInput type="number" formControlName="stockMinimo">
-  </mat-form-field>
-
-  <!-- 🧩 Variantes -->
-  <div formArrayName="variantes" class="variantes-section">
-    <h3>🎨 Variantes (colores)</h3>
-    <div *ngFor="let varianteCtrl of variantesArray.controls; let i = index" [formGroupName]="i" class="variante-card">
-
-      <div class="color-header">
-        <div class="color-preview" [style.background]="varianteCtrl.get('color')?.value"></div>
-
-        <mat-form-field appearance="outline" class="form-field">
-          <mat-label>Color</mat-label>
-          <input matInput type="color" formControlName="color">
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" class="form-field">
-          <mat-label>Código de Barras</mat-label>
-          <input matInput formControlName="codigoBarras">
-        </mat-form-field>
-
-        <button mat-icon-button color="warn" (click)="eliminarVariante(i)" matTooltip="Eliminar variante">
-          <mat-icon>delete</mat-icon>
-        </button>
-      </div>
-
-      <div formArrayName="stockSucursales" class="form-grid">
-        <div *ngFor="let sCtrl of getStockSucursales(i).controls; let j = index" [formGroupName]="j">
-          <mat-form-field appearance="outline" class="form-field">
-            <mat-label>{{ sucursales[j]?.nombre }}</mat-label>
-            <input matInput type="number" formControlName="cantidad">
+      <!-- Datos -->
+      <section class="seccion">
+        <h3><mat-icon>inventory_2</mat-icon> Datos del producto</h3>
+        <div class="grilla">
+          <mat-form-field appearance="outline" class="ancho-completo">
+            <mat-label>Descripción</mat-label>
+            <textarea matInput rows="2" formControlName="descripcion"></textarea>
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="ancho-completo">
+            <mat-label>Subdescripción (opcional)</mat-label>
+            <input matInput formControlName="subdescripcion">
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Código de barras</mat-label>
+            <input matInput formControlName="codigoBarras" required>
+            <mat-icon matSuffix>qr_code_2</mat-icon>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Marca</mat-label>
+            <input matInput formControlName="marca">
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Rubro</mat-label>
+            <input matInput formControlName="rubro">
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Subrubro</mat-label>
+            <input matInput formControlName="subrubro">
           </mat-form-field>
         </div>
-      </div>
+      </section>
 
-      <mat-form-field appearance="outline" class="form-field">
-        <mat-label>Stock Mayorista</mat-label>
-        <input matInput type="number" formControlName="stockMayorista">
-      </mat-form-field>
+      <!-- Precios -->
+      <section class="seccion">
+        <h3><mat-icon>sell</mat-icon> Precios</h3>
+        <div class="grilla">
+          <mat-form-field appearance="outline">
+            <mat-label>Moneda</mat-label>
+            <mat-select formControlName="moneda">
+              <mat-option value="ARS">Pesos (ARS)</mat-option>
+              <mat-option value="USD">Dólares (USD)</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Precio de costo</mat-label>
+            <span matTextPrefix>$&nbsp;</span>
+            <input matInput type="number" min="0" formControlName="precioCosto">
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Precio sin impuestos</mat-label>
+            <span matTextPrefix>$&nbsp;</span>
+            <input matInput type="number" min="0" formControlName="precioSinImpuestos">
+          </mat-form-field>
+        </div>
 
-      <mat-divider></mat-divider>
+        <div class="listas">
+          <!-- Minorista -->
+          <div class="lista" [class.activa]="formProducto.get('ventaMinorista')?.value">
+            <mat-slide-toggle formControlName="ventaMinorista" color="primary">Venta minorista</mat-slide-toggle>
+            <mat-form-field appearance="outline" *ngIf="formProducto.get('ventaMinorista')?.value">
+              <mat-label>Precio minorista</mat-label>
+              <span matTextPrefix>$&nbsp;</span>
+              <input matInput type="number" min="0" formControlName="precioMinorista">
+              <mat-hint *ngIf="margen('precioMinorista') !== null">Margen sobre costo: {{ margen('precioMinorista') }}%</mat-hint>
+            </mat-form-field>
+          </div>
+
+          <!-- Mayorista -->
+          <div class="lista" [class.activa]="formProducto.get('ventaMayorista')?.value">
+            <mat-slide-toggle formControlName="ventaMayorista" color="primary">Venta mayorista</mat-slide-toggle>
+            <mat-form-field appearance="outline" *ngIf="formProducto.get('ventaMayorista')?.value">
+              <mat-label>Precio mayorista</mat-label>
+              <span matTextPrefix>$&nbsp;</span>
+              <input matInput type="number" min="0" formControlName="precioMayorista">
+              <mat-hint *ngIf="margen('precioMayorista') !== null">Margen sobre costo: {{ margen('precioMayorista') }}%</mat-hint>
+            </mat-form-field>
+          </div>
+
+          <!-- Oferta -->
+          <div class="lista" [class.activa]="formProducto.get('oferta')?.value">
+            <mat-slide-toggle formControlName="oferta" color="primary">En oferta</mat-slide-toggle>
+            <mat-form-field appearance="outline" *ngIf="formProducto.get('oferta')?.value">
+              <mat-label>Precio de oferta</mat-label>
+              <span matTextPrefix>$&nbsp;</span>
+              <input matInput type="number" min="0" formControlName="precioOferta">
+            </mat-form-field>
+          </div>
+        </div>
+      </section>
+
+      <!-- Stock -->
+      <section class="seccion">
+        <h3>
+          <mat-icon>warehouse</mat-icon> Stock
+          <span class="total">Total: <strong>{{ totalStockPrincipal }}</strong></span>
+        </h3>
+        <p class="ayuda" *ngIf="variantesArray.length">Stock de esta variante. El de las demás se edita abajo, en Variantes.</p>
+        <div class="grilla grilla-stock">
+          <ng-container formArrayName="stockSucursales">
+            <mat-form-field appearance="outline" *ngFor="let sCtrl of stockArray.controls; let i = index" [formGroupName]="i">
+              <mat-label>{{ sucursales[i]?.nombre }}</mat-label>
+              <input matInput type="number" min="0" formControlName="cantidad">
+            </mat-form-field>
+          </ng-container>
+          <mat-form-field appearance="outline">
+            <mat-label>Mayorista</mat-label>
+            <input matInput type="number" min="0" formControlName="stockMayorista">
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Stock mínimo</mat-label>
+            <input matInput type="number" min="0" formControlName="stockMinimo">
+            <mat-hint>Aviso de stock bajo</mat-hint>
+          </mat-form-field>
+        </div>
+      </section>
     </div>
 
-    <button mat-stroked-button color="primary" (click)="agregarVariante()">+ Agregar Variante</button>
+    <!-- ===================== COLUMNA LATERAL ===================== -->
+    <aside class="lateral">
+      <section class="seccion">
+        <h3><mat-icon>photo_camera</mat-icon> Fotos</h3>
+        <app-editor-fotos [fotos]="fotosProducto" (fotosChange)="alCambiarFotos($event)" carpeta="productos"
+          (subiendo)="subiendoImagen = $event"></app-editor-fotos>
+      </section>
+
+      <section class="seccion">
+        <h3><mat-icon>palette</mat-icon> Color principal</h3>
+        <label class="selector-color">
+          <input type="color" formControlName="color">
+          <span class="muestra" [style.background]="formProducto.get('color')?.value"></span>
+          <span>{{ nombreColor(formProducto.get('color')?.value) || 'Elegir color' }}</span>
+          <small class="hex">{{ formProducto.get('color')?.value }}</small>
+        </label>
+      </section>
+
+      <section class="seccion">
+        <h3><mat-icon>star</mat-icon> Tienda</h3>
+        <mat-slide-toggle formControlName="destacado" color="primary">Mostrar como destacado</mat-slide-toggle>
+      </section>
+    </aside>
   </div>
+
+  <!-- ===================== VARIANTES ===================== -->
+  <section class="seccion variantes" formArrayName="variantes">
+    <h3>
+      <mat-icon>style</mat-icon> Variantes
+      <span class="total" *ngIf="variantesArray.length">{{ variantesArray.length }}</span>
+      <button mat-stroked-button color="primary" type="button" class="ms-auto" (click)="agregarVariante()"
+        [disabled]="cargandoVariantes || !!errorVariantes">
+        <mat-icon>add</mat-icon> Agregar variante
+      </button>
+    </h3>
+
+    <div *ngIf="cargandoVariantes" class="aviso-carga">
+      <mat-spinner diameter="16"></mat-spinner> Cargando variantes…
+    </div>
+    <div *ngIf="errorVariantes" class="aviso-error">{{ errorVariantes }}</div>
+    <div *ngIf="variantesEliminadas.length" class="aviso-eliminadas">
+      Se van a eliminar {{ variantesEliminadas.length }} variante(s) al guardar.
+    </div>
+    <p *ngIf="!cargandoVariantes && !errorVariantes && !variantesArray.length" class="ayuda">
+      Este producto no tiene variantes.
+    </p>
+
+    <div class="tabla-scroll" *ngIf="variantesArray.length">
+      <table class="tabla-variantes">
+        <thead>
+          <tr>
+            <th>Color</th>
+            <th>Código de barras</th>
+            <th *ngFor="let s of sucursales" class="num">{{ s.nombre }}</th>
+            <th class="num">Mayorista</th>
+            <th class="num">Total</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let varianteCtrl of variantesArray.controls; let i = index" [formGroupName]="i"
+            [class.actual]="esVarianteActual(i)">
+            <td>
+              <label class="selector-color chico" [title]="nombreColor(varianteCtrl.get('color')?.value)">
+                <input type="color" formControlName="color">
+                <span class="muestra" [style.background]="varianteCtrl.get('color')?.value"></span>
+                <span>{{ nombreColor(varianteCtrl.get('color')?.value) }}</span>
+              </label>
+              <small *ngIf="varianteCtrl.get('modelo')?.value" class="modelo">Modelo: {{ varianteCtrl.get('modelo')?.value }}</small>
+              <small *ngIf="esVarianteActual(i)" class="etiqueta-actual">esta variante</small>
+            </td>
+            <td><input class="celda" formControlName="codigoBarras" placeholder="Código"></td>
+            <ng-container formArrayName="stockSucursales">
+              <td *ngFor="let sCtrl of getStockSucursales(i).controls; let j = index" [formGroupName]="j" class="num">
+                <input class="celda num" type="number" min="0" formControlName="cantidad">
+              </td>
+            </ng-container>
+            <td class="num"><input class="celda num" type="number" min="0" formControlName="stockMayorista"></td>
+            <td class="num"><strong>{{ totalVariante(i) }}</strong></td>
+            <td class="acciones">
+              <button mat-icon-button color="warn" type="button" (click)="eliminarVariante(i)"
+                [matTooltip]="esVarianteActual(i) ? 'Es la variante que estás editando' : 'Eliminar variante'">
+                <mat-icon>delete_outline</mat-icon>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
 
 </mat-dialog-content>
 
-<mat-dialog-actions align="end">
-  <button mat-raised-button color="primary" (click)="guardar()">Guardar</button>
-  <button mat-button mat-dialog-close>Cancelar</button>
+<!-- ===================== ACCIONES ===================== -->
+<mat-dialog-actions class="acciones-pie">
+  <span *ngIf="!puedeGuardar && formProducto" class="motivo-espera">
+    <mat-spinner diameter="14"></mat-spinner>
+    {{ subiendoImagen ? 'Subiendo foto…' : cargandoVariantes ? 'Cargando variantes…' : '' }}
+  </span>
+  <span class="espacio"></span>
+  <button mat-button type="button" mat-dialog-close>Cancelar</button>
+  <button mat-raised-button color="primary" type="button" (click)="guardar()" [disabled]="!puedeGuardar">
+    <mat-icon>save</mat-icon> Guardar cambios
+  </button>
 </mat-dialog-actions>

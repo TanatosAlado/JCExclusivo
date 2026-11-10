@@ -6,6 +6,7 @@ import { ClientesService } from '../../services/clientes.service';
 import { Router } from '@angular/router';
 import { VouchersPuntosService } from '../../services/vouchers-puntos.service';
 import { InfoEmpresaService } from '../../services/info-empresa.service';
+import { esItemEquipo, detalleEquipo, subtotalesCarrito, cotizacionEquipos } from '../../utils/equipos-tienda';
 declare var bootstrap: any;
 
 @Component({
@@ -37,6 +38,7 @@ export class CarritoComponent {
       if (info?.dolar) {
         this.dolar = info.dolar;
       }
+      this.dolarJC = cotizacionEquipos(info);   // equipos
     });
     await this.cargarConfiguracionYCalculos();
   }
@@ -91,6 +93,7 @@ export class CarritoComponent {
 
   //FUNCION PARA AUMENTAR EN UNO LA CANTIDAD DEL PRODUCTO EN EL CARRO
   aumentarCantidad(producto: any): void {
+    if (esItemEquipo(producto)) return;   // un equipo es una unidad única
     producto.cantidad++;
     this.guardarCambiosCarrito();
     this.carritoService.actualizarCantidadProductos(this.cliente);
@@ -181,31 +184,38 @@ export class CarritoComponent {
   }
 
   getPuntosPorCompra(): number {
-    const total = this.getTotalPrecio();
-    return Math.floor(total / this.valorParaSumarPunto);
+    // Los equipos no suman puntos
+    const productos = subtotalesCarrito(this.carrito, p => this.getPrecioProducto(p)).productos;
+    return Math.floor(productos / this.valorParaSumarPunto);
+  }
+
+  esEquipo(producto: any): boolean {
+    return esItemEquipo(producto);
+  }
+
+  detalleEquipo(producto: any): string {
+    return detalleEquipo(producto?.equipo);
   }
 
   getTotalPrecio(): number {
 
     return this.carrito.reduce((acc, prod) => {
 
-      let precio = prod.precioFinal || 0;
-
-      if (prod.moneda === 'USD') {
-        precio = precio * this.dolar;
-      }
-
-      return acc + (precio * prod.cantidad);
+      return acc + (this.getPrecioProducto(prod) * prod.cantidad);
 
     }, 0);
   }
+
+  /** Dólar JC (equipos): Gestiones → Empresa; si no está cargado, el dólar común */
+  dolarJC = 0;
 
   getPrecioProducto(producto: any): number {
 
     let precio = producto.precioFinal || 0;
 
     if (producto.moneda === 'USD') {
-      precio = precio * this.dolar;
+      // Los equipos se pasan a pesos con el dólar JC
+      precio = precio * (esItemEquipo(producto) ? (this.dolarJC || this.dolar) : this.dolar);
     }
 
     return precio;

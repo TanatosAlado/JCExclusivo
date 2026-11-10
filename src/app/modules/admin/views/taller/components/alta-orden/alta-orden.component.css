@@ -203,3 +203,25 @@ button[mat-raised-button] {
 .resultado-card p {
   margin: 4px 0;
 }
+
+/* Presupuesto = mano de obra + repuestos */
+.presupuesto-total {
+  flex: 1 1 200px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 6px 14px;
+  margin-bottom: 1.3em;
+  border-radius: 8px;
+  background: #f4f7fb;
+  border: 1px solid #e3e8f0;
+}
+
+.presupuesto-total span {
+  font-size: 0.78rem;
+  color: #5b6170;
+}
+
+.presupuesto-total strong {
+  font-size: 1.15rem;
+}

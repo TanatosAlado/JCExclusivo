@@ -470,3 +470,53 @@ details summary {
   .hero-valor { font-size: 2.6rem; }
   .barra-fila { grid-template-columns: 90px 1fr auto; }
 }
+
+/* ===== Cobros de reparaciones: mano de obra / repuestos ===== */
+.desglose-rep {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--borde, #e3e6eb);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.82rem;
+}
+
+.desglose-rep div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.desglose-rep span { color: var(--tinta-2, #5b6170); }
+.desglose-rep b { font-variant-numeric: tabular-nums; }
+.desglose-rep .sin-discriminar { color: var(--tinta-3, #8a909c); }
+.desglose-rep .sin-discriminar span { color: inherit; }
+
+
+/* ===================== Resultado por sucursal ===================== */
+.tabla-sucursales td, .tabla-sucursales th { vertical-align: middle; }
+.tabla-sucursales tr.elegida td { background: #eef4fc; }
+.tabla-sucursales tr.fila-aparte td { color: var(--tinta-2); }
+.tabla-sucursales tfoot td { border-top: 2px solid var(--base); font-weight: 600; }
+.tabla-sucursales .positivo { color: var(--tinta); }
+.tabla-sucursales .col-barra { width: 18%; min-width: 80px; }
+.barra-resultado {
+  height: 8px;
+  border-radius: 0 4px 4px 0;
+  background: var(--serie-1);
+}
+.barra-resultado.negativa { background: var(--critico); }
+.chip-taller {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--fondo);
+  border: 1px solid var(--borde);
+  color: var(--tinta-2);
+  font-size: 0.72rem;
+}
+@media (max-width: 700px) {
+  .tabla-sucursales .col-barra { display: none; }
+}

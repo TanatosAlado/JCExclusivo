@@ -136,9 +136,19 @@
       <!-- Otros campos -->
       <div class="form-grid fadeIn fourth">
         <mat-form-field appearance="outline" class="form-field">
-          <mat-label>Presupuesto (opcional)</mat-label>
-          <input matInput formControlName="presupuesto" type="number">
+          <mat-label>Mano de obra (opcional)</mat-label>
+          <span matPrefix>$&nbsp;</span>
+          <input matInput formControlName="manoObra" type="number" min="0">
         </mat-form-field>
+        <mat-form-field appearance="outline" class="form-field">
+          <mat-label>Repuestos (opcional)</mat-label>
+          <span matPrefix>$&nbsp;</span>
+          <input matInput formControlName="repuestos" type="number" min="0">
+        </mat-form-field>
+        <div class="presupuesto-total">
+          <span>Presupuesto total</span>
+          <strong>{{ presupuestoTotal | currency:'ARS':'symbol':'1.0-2' }}</strong>
+        </div>
       </div>
 
       <mat-form-field appearance="outline" class="form-field full-width fadeIn fourth">

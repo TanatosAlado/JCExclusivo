@@ -78,7 +78,7 @@
 
       </div>
 
-      <mat-hint *ngIf="loginFail">Datos de accesos incorrectos</mat-hint>
+      <mat-hint *ngIf="loginFail" class="text-danger">{{ mensajeError }}</mat-hint>
 
       <button class="fadeIn third" mat-raised-button type="button" (click)="login()" [disabled]="!loginForm.form.valid"
         [ngClass]="loginForm.form.valid ? 'botonesRojos' : ''">
@@ -94,4 +94,4 @@
       <p>¿No tienes una cuenta? <a (click)="abrirRegistro()">Regístrate</a></p>
     </div>
   </div>
-</div>
+</div>

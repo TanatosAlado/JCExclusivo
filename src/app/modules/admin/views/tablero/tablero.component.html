@@ -96,6 +96,38 @@
             <div class="etiqueta">Cobros de reparaciones</div>
             <div class="kpi-valor">{{ moneda(ind.reparacionesCobradas) }}</div>
             <div class="subtexto">{{ ind.cobrosReparacion }} cobro(s)</div>
+            <div class="desglose-rep" *ngIf="ind.reparacionesCobradas > 0">
+              <div><span>🛠 Mano de obra</span><b>{{ moneda(ind.reparacionesManoObra) }}</b></div>
+              <div><span>🔩 Repuestos</span><b>{{ moneda(ind.reparacionesRepuestos) }}</b></div>
+              <div *ngIf="ind.reparacionesSinDiscriminar > 0" class="sin-discriminar">
+                <span>Sin discriminar</span><b>{{ moneda(ind.reparacionesSinDiscriminar) }}</b>
+              </div>
+            </div>
+          </div>
+          <div class="tarjeta kpi" *ngIf="ind.equiposVendidos">
+            <div class="etiqueta">Equipos vendidos</div>
+            <div class="kpi-valor">{{ moneda(ind.montoEquiposVendidos) }}</div>
+            <div class="subtexto">{{ ind.equiposVendidos }} equipo(s) · local + web</div>
+          </div>
+          <div class="tarjeta kpi" *ngIf="ind.ventasACuenta || ind.cobrosCuenta || ind.deudaCuentas">
+            <div class="etiqueta">Cuentas corrientes</div>
+            <div class="kpi-valor" title="Lo que deben hoy los clientes">{{ moneda(ind.deudaCuentas) }}</div>
+            <div class="subtexto">Deuda actual · {{ ind.cuentasConDeuda }} cliente(s)</div>
+            <div class="subtexto">En el período: vendido a cuenta {{ moneda(ind.ventasACuenta) }} · cobrado {{ moneda(ind.cobrosCuenta) }}</div>
+          </div>
+          <div class="tarjeta kpi" *ngIf="ind.ventasACredito || ind.cobrosCuotas || ind.deudaCreditos">
+            <div class="etiqueta">Crédito de la casa</div>
+            <div class="kpi-valor" title="Lo que falta cobrar hoy de los créditos vigentes">{{ moneda(ind.deudaCreditos) }}</div>
+            <div class="subtexto">Falta cobrar · {{ ind.creditosVigentes }} crédito(s)</div>
+            <div class="subtexto" *ngIf="ind.deudaCreditosVencida > 0">
+              <span class="estado critico"><i class="fas fa-exclamation-circle"></i></span>
+              Vencido {{ moneda(ind.deudaCreditosVencida) }} · {{ ind.creditosConAtraso }} con atraso
+            </div>
+            <div class="subtexto">
+              En el período: financiado {{ moneda(ind.ventasACredito) }} ({{ ind.cantidadVentasCredito }})
+              · cobrado de cuotas {{ moneda(ind.cobrosCuotas) }}<ng-container *ngIf="ind.recargosCuotas"> (recargos {{ moneda(ind.recargosCuotas) }})</ng-container>
+            </div>
+            <a routerLink="/gestiones/creditos" class="subtexto">Ver créditos</a>
           </div>
           <div class="tarjeta kpi">
             <div class="etiqueta">Egresos</div>
@@ -105,7 +137,31 @@
           <div class="tarjeta kpi">
             <div class="etiqueta">Resultado</div>
             <div class="kpi-valor" [class.texto-critico]="ind.resultado < 0">{{ moneda(ind.resultado) }}</div>
-            <div class="subtexto">Vendido − egresos (no incluye costo de mercadería)</div>
+            <div class="subtexto" *ngIf="!sucursalId">Vendido − egresos (no incluye costo de mercadería)</div>
+            <div class="subtexto" *ngIf="sucursalId && ind.esTallerSeleccionado">Trabajos para el local + ventas − egresos de caja</div>
+            <div class="subtexto" *ngIf="sucursalId && !ind.esTallerSeleccionado">
+              Ventas + reparaciones{{ ind.hayTaller ? ' − costo de taller' : '' }} − egresos de caja (sin la tienda web)
+            </div>
+          </div>
+          <div class="tarjeta kpi" *ngIf="ind.hayTaller && (ind.costoTaller || ind.trabajosParaLocal || ind.deudaInternaTaller)">
+            <ng-container *ngIf="ind.esTallerSeleccionado; else costoLocal">
+              <div class="etiqueta">Trabajos para el local</div>
+              <div class="kpi-valor">{{ moneda(ind.trabajosParaLocal) }}</div>
+              <div class="subtexto">{{ ind.cantidadTrabajosTaller }} trabajo(s) terminado(s) en el período</div>
+            </ng-container>
+            <ng-template #costoLocal>
+              <div class="etiqueta">{{ sucursalId ? 'Costo de taller' : 'Taller interno' }}</div>
+              <div class="kpi-valor">{{ moneda(ind.costoTaller) }}</div>
+              <div class="subtexto">
+                {{ ind.cantidadTrabajos }} trabajo(s) · se cobra a clientes {{ moneda(ind.presupuestoTrabajos) }}
+                · le quedan al local {{ moneda(ind.gananciaTrabajos) }}
+              </div>
+              <div class="subtexto" *ngIf="!sucursalId">Es interno: en el total del negocio se compensa.</div>
+            </ng-template>
+            <div class="subtexto" *ngIf="ind.deudaInternaTaller">
+              Hoy se le debe al taller: <b>{{ moneda(ind.deudaInternaTaller) }}</b>
+              · <a routerLink="/gestiones/cuenta-taller">ver cuenta</a>
+            </div>
           </div>
           <div class="tarjeta kpi">
             <div class="etiqueta">Diferencias de caja</div>
@@ -119,6 +175,66 @@
               {{ ind.cierresConDiferencia ? ind.cierresConDiferencia + ' cierre(s) con diferencia' : 'Todos los cierres exactos' }}
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- ===================== RESULTADO POR SUCURSAL ===================== -->
+      <div class="tarjeta mt-3" *ngIf="ind.porSucursal.length > 1">
+        <div class="tarjeta-titulo">
+          <h3>Resultado por sucursal</h3>
+          <span class="subtexto">{{ textoRango }} · siempre todas las sucursales</span>
+        </div>
+        <div class="tabla-scroll">
+          <table class="table table-sm tabla-datos tabla-sucursales mb-0">
+            <thead>
+              <tr>
+                <th>Sucursal</th>
+                <th class="num">Ventas</th>
+                <th class="num">Reparaciones</th>
+                <th class="num" *ngIf="ind.hayTaller" title="Lo que el taller le cobra al local por las reparaciones">Taller interno</th>
+                <th class="num">Egresos</th>
+                <th class="num">Resultado</th>
+                <th class="col-barra" aria-hidden="true"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let f of ind.porSucursal" [class.elegida]="f.id === sucursalId" [class.fila-aparte]="f.tipo === 'web' || f.tipo === 'generales' || f.tipo === 'otras'">
+                <td>
+                  {{ f.nombre }}
+                  <span class="chip-taller" *ngIf="f.tipo === 'taller'">taller</span>
+                  <div class="subtexto" *ngIf="f.trabajos">{{ f.trabajos }} trabajo(s) de taller</div>
+                </td>
+                <td class="num">{{ f.tipo === 'web' ? moneda(f.web) : (f.ventas ? moneda(f.ventas) : '–') }}</td>
+                <td class="num">{{ f.reparaciones ? moneda(f.reparaciones) : '–' }}</td>
+                <td class="num" *ngIf="ind.hayTaller">
+                  <span *ngIf="f.trabajosParaLocal" class="positivo">+ {{ moneda(f.trabajosParaLocal) }}</span>
+                  <span *ngIf="f.costoTaller">− {{ moneda(f.costoTaller) }}</span>
+                  <span *ngIf="!f.trabajosParaLocal && !f.costoTaller">–</span>
+                </td>
+                <td class="num">{{ f.egresos ? '− ' + moneda(f.egresos) : '–' }}</td>
+                <td class="num"><b [class.texto-critico]="f.resultado < 0">{{ moneda(f.resultado) }}</b></td>
+                <td class="col-barra" aria-hidden="true">
+                  <div class="barra-resultado" [class.negativa]="f.resultado < 0"
+                       [style.width.%]="anchoResultado(f.resultado)" [title]="f.nombre + ': ' + moneda(f.resultado)"></div>
+                </td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr>
+                <td>{{ ind.totalSucursales.nombre }}</td>
+                <td class="num">{{ moneda(ind.totalSucursales.ventas + ind.totalSucursales.web) }}</td>
+                <td class="num">{{ moneda(ind.totalSucursales.reparaciones) }}</td>
+                <td class="num" *ngIf="ind.hayTaller" title="Lo que el local le debe al taller y lo que el taller le cobró se compensan">$ 0 (se compensa)</td>
+                <td class="num">− {{ moneda(ind.totalSucursales.egresos) }}</td>
+                <td class="num"><b [class.texto-critico]="ind.totalSucursales.resultado < 0">{{ moneda(ind.totalSucursales.resultado) }}</b></td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <div class="subtexto mt-2" *ngIf="ind.hayTaller">
+          El costo de taller se cuenta cuando el taller da el trabajo por terminado, y el cobro al cliente cuando retira el equipo:
+          en un período puede haber órdenes terminadas que todavía no se cobraron.
         </div>
       </div>
 
@@ -200,7 +316,7 @@
         </div>
 
         <div class="tarjeta">
-          <div class="tarjeta-titulo"><h3>Ventas por vendedor</h3><span class="subtexto">local</span></div>
+          <div class="tarjeta-titulo"><h3>Ventas por cajero</h3><span class="subtexto">local</span></div>
           <div class="barras" *ngIf="ind.porVendedor.length; else sinDatos">
             <div class="barra-fila" *ngFor="let v of ind.porVendedor">
               <div class="barra-nombre" [title]="v.vendedor">{{ v.vendedor }}</div>
@@ -278,6 +394,32 @@
               Lista completa en el reporte Excel.
             </div>
           </details>
+        </div>
+
+        <!-- Equipos -->
+        <div class="tarjeta">
+          <div class="tarjeta-titulo"><h3><i class="fas fa-mobile-alt"></i> Equipos</h3></div>
+          <div class="dos-cifras">
+            <div>
+              <div class="kpi-valor">{{ ind.equiposDisponibles }}</div>
+              <span class="subtexto">Disponibles</span>
+            </div>
+            <div>
+              <div class="kpi-valor">{{ ind.equiposReservadosWeb }}</div>
+              <span class="estado" [ngClass]="ind.equiposReservadosWeb ? 'alerta' : 'bien'">
+                <i class="fas" [ngClass]="ind.equiposReservadosWeb ? 'fa-clock' : 'fa-check-circle'"></i> En pedidos web
+              </span>
+            </div>
+          </div>
+          <div class="subtexto mt-2" *ngIf="ind.equiposDisponibles">
+            Valor (minorista):
+            <b *ngIf="ind.stockEquiposUsd">US$ {{ numero(ind.stockEquiposUsd) }}</b>
+            <ng-container *ngIf="ind.stockEquiposUsd && ind.stockEquiposArs"> + </ng-container>
+            <b *ngIf="ind.stockEquiposArs">{{ moneda(ind.stockEquiposArs) }}</b>
+            <span *ngIf="ind.stockEquiposUsd"> ≈ {{ moneda(ind.stockEquiposPesos) }} (dólar JC)</span>
+          </div>
+          <div class="subtexto mt-2" *ngIf="!ind.equiposDisponibles">No hay equipos a la venta.</div>
+          <a mat-stroked-button routerLink="/gestiones/equipos" class="mt-2">Ir a equipos</a>
         </div>
 
         <!-- Taller -->

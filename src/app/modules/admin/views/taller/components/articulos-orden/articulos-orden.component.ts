@@ -1,19 +1,17 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, ElementRef, Inject, OnInit, ViewChild } from '@angular/core';
 import { MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { take } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 import {
-  ArticulosOrdenService, ArticuloOrden, ArticuloOrdenError, stockEnSucursal
+  ArticulosOrdenService, ArticuloOrden, ArticuloOrdenError, stockMayorista, esDeMayorista
 } from 'src/app/modules/admin/services/articulos-orden.service';
 import { SucursalesService } from 'src/app/modules/admin/services/sucursales.service';
 import { ProductosCacheService } from 'src/app/modules/despacho/services/productos-cache.service';
 
-const CLAVE_SUCURSAL = 'tallerSucursalArticulos';
-
 /**
- * Artículos de nuestro stock usados en una orden de reparación.
- * Agregar descuenta el stock de la sucursal elegida; devolver lo repone.
- * No modifica el presupuesto de la orden.
+ * Artículos de nuestro stock usados en una orden de reparación (puede tener varios).
+ * Salen del STOCK MAYORISTA (está en el local donde se hacen las reparaciones).
+ * Agregar descuenta el stock; devolver lo repone. No modifica el presupuesto de la orden.
  */
 @Component({
   selector: 'app-articulos-orden',
@@ -26,12 +24,20 @@ export class ArticulosOrdenComponent implements OnInit {
   coleccion: string;
   articulos: ArticuloOrden[] = [];
 
-  sucursales: { id: string; nombre: string }[] = [];
+  // Solo para mostrar artículos viejos que salieron del stock de una sucursal
   nombresSucursales: { [id: string]: string } = {};
-  sucursalId = '';
 
   productos: any[] = [];
   cargandoProductos = false;
+
+  // Código de barras: se escanea con la pistola (o se tipea) y Enter
+  @ViewChild('inputCodigo') inputCodigo?: ElementRef<HTMLInputElement>;
+  @ViewChild('inputBusqueda') inputBusqueda?: ElementRef<HTMLInputElement>;
+  codigo = '';
+  codigoNoEncontrado = '';
+  /** Búsqueda por nombre: se habilita si el código no se encuentra (o si la piden) */
+  modoBusqueda = false;
+
   busqueda = '';
   resultados: any[] = [];
   seleccionado: any = null;
@@ -52,12 +58,7 @@ export class ArticulosOrdenComponent implements OnInit {
 
   async ngOnInit() {
     this.sucursalesService.obtenerSucursales().pipe(take(1)).subscribe(lista => {
-      this.sucursales = (lista || []).map((s: any) => ({ id: s.id, nombre: s.nombre || s.id }));
-      this.sucursales.forEach(s => this.nombresSucursales[s.id] = s.nombre);
-      let guardada = '';
-      try { guardada = localStorage.getItem(CLAVE_SUCURSAL) || localStorage.getItem('sucursalSeleccionada') || ''; } catch { }
-      this.sucursalId = this.sucursales.some(s => s.id === guardada) ? guardada : (this.sucursales[0]?.id || '');
-      this.filtrar();
+      (lista || []).forEach((s: any) => this.nombresSucursales[s.id] = s.nombre || s.id);
     });
 
     this.cargandoProductos = true;
@@ -69,7 +70,63 @@ export class ArticulosOrdenComponent implements OnInit {
       console.error('Error cargando productos', e);
     } finally {
       this.cargandoProductos = false;
+      this.enfocar('codigo');
     }
+  }
+
+  // =====================================================
+  // CÓDIGO DE BARRAS
+  // =====================================================
+
+  /** Enter en el campo de código (la pistola manda el código + Enter) */
+  buscarPorCodigo() {
+    const codigo = String(this.codigo || '').trim();
+    if (!codigo || this.cargandoProductos) return;
+    const clave = codigo.toLowerCase();
+    const producto = this.productos.find(p => String(p.codigoBarras ?? '').trim().toLowerCase() === clave);
+    this.codigo = '';
+
+    if (!producto) {
+      // No está: se habilita la búsqueda por nombre
+      this.codigoNoEncontrado = codigo;
+      this.abrirBusqueda();
+      return;
+    }
+
+    this.codigoNoEncontrado = '';
+    this.modoBusqueda = false;
+    this.busqueda = '';
+    this.resultados = [];
+    if (this.seleccionado?.id === producto.id) {
+      // El mismo código otra vez: una unidad más
+      this.cantidad = (Math.floor(Number(this.cantidad)) || 0) + 1;
+    } else {
+      this.elegir(producto);
+    }
+    if (this.stock(producto) <= 0) {
+      Swal.fire({ toast: true, position: 'top-end', timer: 2500, showConfirmButton: false, icon: 'warning',
+        title: `${producto.descripcion}: sin stock mayorista` });
+    }
+    this.enfocar('codigo');
+  }
+
+  /** Habilita el buscador por nombre (si no se encontró el código, o no lo tienen) */
+  abrirBusqueda() {
+    this.modoBusqueda = true;
+    this.seleccionado = null;
+    this.enfocar('busqueda');
+  }
+
+  cerrarBusqueda() {
+    this.modoBusqueda = false;
+    this.busqueda = '';
+    this.resultados = [];
+    this.codigoNoEncontrado = '';
+    this.enfocar('codigo');
+  }
+
+  private enfocar(campo: 'codigo' | 'busqueda') {
+    setTimeout(() => (campo === 'codigo' ? this.inputCodigo : this.inputBusqueda)?.nativeElement?.focus(), 50);
   }
 
   get activos(): ArticuloOrden[] {
@@ -84,13 +141,19 @@ export class ArticulosOrdenComponent implements OnInit {
     return this.articulos.length - this.activos.length;
   }
 
-  cambiarSucursal() {
-    try { localStorage.setItem(CLAVE_SUCURSAL, this.sucursalId); } catch { }
-    this.filtrar();
+  /** Stock mayorista del producto */
+  stock(p: any): number {
+    return stockMayorista(p);
   }
 
-  stock(p: any): number {
-    return stockEnSucursal(p, this.sucursalId);
+  /** De qué stock salió un artículo ya cargado */
+  origen(a: ArticuloOrden): string {
+    return esDeMayorista(a) ? 'Mayorista' : (this.nombresSucursales[a.sucursalId || ''] || a.sucursalId || '-');
+  }
+
+  /** Total de unidades usadas (no devueltas) */
+  get unidadesUsadas(): number {
+    return this.activos.reduce((acc, a) => acc + (Number(a.cantidad) || 0), 0);
   }
 
   /** Busca por descripción, código de barras, marca o modelo (varias palabras, sin tildes) */
@@ -122,13 +185,14 @@ export class ArticulosOrdenComponent implements OnInit {
     try {
       const { articulo, producto } = await this.articulosService.agregar(
         { id: this.orden.id, coleccion: this.coleccion, numeroOrden: this.orden.numeroOrden },
-        this.seleccionado.id, this.sucursalId, cant, this.nombresSucursales[this.sucursalId]);
+        this.seleccionado.id, cant);
 
       this.articulos = [...this.articulos, articulo];
       this.actualizarProductoLocal(producto);
+      // Queda listo para escanear el próximo repuesto (la búsqueda por nombre queda armada si estaba abierta)
       this.seleccionado = null;
-      this.busqueda = '';
-      this.resultados = [];
+      this.codigoNoEncontrado = '';
+      this.enfocar(this.modoBusqueda ? 'busqueda' : 'codigo');
       Swal.fire({ toast: true, position: 'top-end', timer: 2000, showConfirmButton: false, icon: 'success',
         title: `${cant} x ${articulo.nombre} descontado del stock` });
     } catch (e: any) {
@@ -148,7 +212,7 @@ export class ArticulosOrdenComponent implements OnInit {
   async devolver(a: ArticuloOrden) {
     const r = await Swal.fire({
       title: 'Devolver al stock',
-      html: `<strong>${a.cantidad} x ${a.nombre}</strong><br>vuelve al stock de ${this.nombreSucursal(a.sucursalId)}.`,
+      html: `<strong>${a.cantidad} x ${a.nombre}</strong><br>vuelve al stock ${esDeMayorista(a) ? 'mayorista' : 'de ' + this.origen(a)}.`,
       input: 'text',
       inputLabel: 'Motivo',
       inputPlaceholder: 'Ej: no se usó / cargado por error',
@@ -163,7 +227,7 @@ export class ArticulosOrdenComponent implements OnInit {
     try {
       const { producto } = await this.articulosService.devolver(
         { id: this.orden.id, coleccion: this.coleccion, numeroOrden: this.orden.numeroOrden },
-        a.id, r.value.trim(), this.nombreSucursal(a.sucursalId));
+        a.id, r.value.trim());
       this.articulos = this.articulos.map(x => x.id === a.id ? { ...x, devuelto: true, motivoDevolucion: r.value.trim() } : x);
       if (producto) this.actualizarProductoLocal(producto);
       else Swal.fire('Devuelto', 'El producto ya no existe, así que no se pudo reponer stock. Quedó marcado como devuelto.', 'info');
@@ -172,10 +236,6 @@ export class ArticulosOrdenComponent implements OnInit {
     } finally {
       this.guardando = false;
     }
-  }
-
-  nombreSucursal(id: string): string {
-    return this.nombresSucursales[id] || id || '-';
   }
 
   private actualizarProductoLocal(producto: any) {

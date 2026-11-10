@@ -48,6 +48,9 @@ export class Producto {
     public productoPadre?: string 
   ) {}
 
+  /** Fotos del producto (la primera es la principal = "imagen"). Los productos viejos no lo tienen. */
+  imagenes?: string[];
+
   get stockTotal(): number {
     return (this.stockSucursales || []).reduce((a, b) => a + b.cantidad, 0);
   }

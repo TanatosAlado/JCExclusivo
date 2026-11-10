@@ -1,0 +1,44 @@
+<div class="editor-fotos">
+  <div class="foto-grande" [class.vacia]="!lista.length">
+    <img *ngIf="grande" [src]="grande" alt="Foto">
+    <span *ngIf="lista.length && seleccionada === 0" class="sello-principal">Principal</span>
+    <div *ngIf="subiendoFotos" class="estado subiendo"><mat-spinner diameter="30"></mat-spinner><span>Subiendo…</span></div>
+    <div *ngIf="!lista.length && !subiendoFotos" class="estado">
+      <mat-icon>photo_camera</mat-icon><span>Sin fotos</span>
+    </div>
+  </div>
+
+  <div class="miniaturas" *ngIf="lista.length">
+    <div class="mini" *ngFor="let f of lista; let i = index; let primera = first; let ultima = last" [class.activa]="i === seleccionada">
+      <button type="button" class="mini-img" (click)="seleccionada = i" [title]="primera ? 'Foto principal' : 'Ver foto ' + (i + 1)">
+        <img [src]="f" [alt]="'Foto ' + (i + 1)">
+        <span *ngIf="primera" class="estrella">★</span>
+      </button>
+      <div class="mini-acciones">
+        <button type="button" (click)="mover(i, -1)" [disabled]="primera || deshabilitado" title="Mover a la izquierda">‹</button>
+        <button type="button" *ngIf="!primera" (click)="hacerPrincipal(i)" [disabled]="deshabilitado" title="Hacer principal">★</button>
+        <button type="button" (click)="mover(i, 1)" [disabled]="ultima || deshabilitado" title="Mover a la derecha">›</button>
+        <button type="button" class="quitar" (click)="quitar(i)" [disabled]="subiendoFotos || deshabilitado" title="Quitar">✕</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="botones">
+    <button mat-stroked-button color="primary" type="button" (click)="inputFotos.click()"
+      [disabled]="subiendoFotos || deshabilitado || lleno">
+      <mat-icon>add_photo_alternate</mat-icon> {{ lista.length ? 'Agregar fotos' : 'Subir fotos' }}
+    </button>
+    <button mat-button type="button" (click)="mostrarUrl = !mostrarUrl" [disabled]="deshabilitado || lleno">
+      {{ mostrarUrl ? 'Ocultar URL' : 'Pegar una URL' }}
+    </button>
+    <input #inputFotos type="file" accept="image/*" multiple hidden (change)="alElegir($event)">
+  </div>
+
+  <div class="url" *ngIf="mostrarUrl">
+    <input type="url" class="form-control form-control-sm" [(ngModel)]="url" [ngModelOptions]="{ standalone: true }"
+      placeholder="https://..." (keydown.enter)="$event.preventDefault(); agregarUrl()">
+    <button mat-stroked-button type="button" (click)="agregarUrl()" [disabled]="!url.trim()">Agregar</button>
+  </div>
+
+  <div class="nota">{{ lista.length }} de {{ max }} fotos. Podés elegir varias a la vez. La ★ es la principal.</div>
+</div>

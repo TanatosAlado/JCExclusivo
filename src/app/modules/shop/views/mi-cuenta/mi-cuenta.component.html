@@ -1,0 +1,224 @@
+<section class="mi-cuenta">
+
+  <div *ngIf="cargando" class="estado-carga">
+    <div class="spinner-border text-secondary" role="status"></div>
+    <span>Cargando tu cuenta…</span>
+  </div>
+
+  <div *ngIf="!cargando && error" class="aviso error">
+    <i class="fas fa-exclamation-circle"></i> {{ error }}
+    <button type="button" class="btn btn-sm btn-outline-secondary ms-auto" (click)="cargar()">Reintentar</button>
+  </div>
+
+  <ng-container *ngIf="!cargando && cliente">
+
+    <!-- Encabezado -->
+    <header class="encabezado">
+      <div class="avatar" aria-hidden="true">{{ iniciales }}</div>
+      <div class="quien">
+        <h1>{{ nombreCompleto }}</h1>
+        <div class="sub">
+          <span><i class="fas fa-user"></i> {{ cliente.usuario }}</span>
+          <span *ngIf="cliente.esMayorista" class="sello mayorista">Mayorista</span>
+          <span *ngIf="estadoMayorista === 'pendiente'" class="sello revision">Mayorista en revisión</span>
+        </div>
+      </div>
+      <div class="puntos" *ngIf="muestraPuntos" title="Puntos para usar en tus compras online">
+        <span class="valor">{{ cliente.puntos || 0 }}</span>
+        <span class="etiqueta">puntos</span>
+      </div>
+    </header>
+
+    <!-- Pestañas -->
+    <nav class="pestanas" role="tablist">
+      <button type="button" role="tab" [class.activa]="pestana === 'compras'" (click)="pestana = 'compras'">
+        <i class="fas fa-receipt"></i> Mis compras
+      </button>
+      <button type="button" role="tab" [class.activa]="pestana === 'datos'" (click)="pestana = 'datos'">
+        <i class="fas fa-id-card"></i> Mis datos
+      </button>
+      <button type="button" role="tab" [class.activa]="pestana === 'clave'" (click)="pestana = 'clave'">
+        <i class="fas fa-lock"></i> Contraseña
+      </button>
+    </nav>
+
+    <!-- ================= MIS COMPRAS ================= -->
+    <div *ngIf="pestana === 'compras'" class="panel">
+
+      <div class="filtros" *ngIf="compras.length">
+        <button type="button" [class.activo]="filtro === 'todas'" (click)="filtro = 'todas'">Todas <span>{{ cantidad('todas') }}</span></button>
+        <button type="button" [class.activo]="filtro === 'web'" (click)="filtro = 'web'">Tienda online <span>{{ cantidad('web') }}</span></button>
+        <button type="button" [class.activo]="filtro === 'local'" (click)="filtro = 'local'">En el local <span>{{ cantidad('local') }}</span></button>
+      </div>
+
+      <div *ngIf="cargandoCompras" class="estado-carga chico">
+        <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
+        <span>Buscando tus compras…</span>
+      </div>
+
+      <div *ngIf="!cargandoCompras && errorCompras" class="aviso error">
+        <i class="fas fa-exclamation-circle"></i> {{ errorCompras }}
+        <button type="button" class="btn btn-sm btn-outline-secondary ms-auto" (click)="cargarCompras()">Reintentar</button>
+      </div>
+
+      <div *ngIf="!cargandoCompras && !errorCompras && !compras.length" class="vacio">
+        <i class="fas fa-shopping-bag"></i>
+        <p>Todavía no tenés compras.</p>
+        <a routerLink="/productos" class="btn btn-dark btn-sm">Ver productos</a>
+      </div>
+
+      <ul class="lista-compras" *ngIf="!cargandoCompras && comprasFiltradas.length">
+        <li *ngFor="let c of comprasFiltradas; trackBy: trackCompra" class="compra" [class.abierta]="abiertas.has(c.clave)"
+          [class.anulada]="c.estado === 'anulado' || c.estado === 'cancelado'">
+          <button type="button" class="compra-fila" (click)="alternar(c)" [attr.aria-expanded]="abiertas.has(c.clave)">
+            <span class="tipo" [ngClass]="c.tipo"><i class="fas" [ngClass]="icono(c)"></i></span>
+            <span class="compra-info">
+              <span class="titulo">{{ c.titulo }}</span>
+              <span class="fecha">{{ c.fecha ? (c.fecha | date:'dd/MM/yyyy HH:mm') : 'Sin fecha' }}</span>
+            </span>
+            <span class="estado" *ngIf="c.estado" [ngClass]="c.estado">{{ textoEstado[c.estado] }}</span>
+            <span class="total">{{ c.total | currency:'ARS':'symbol-narrow':'1.0-2' }}</span>
+            <i class="fas fa-chevron-down flecha"></i>
+          </button>
+
+          <div class="compra-detalle" *ngIf="abiertas.has(c.clave)">
+            <ul class="items" *ngIf="c.items.length">
+              <li *ngFor="let i of c.items"><span class="cant">{{ i.cantidad }}×</span> {{ i.nombre }}</li>
+            </ul>
+            <p *ngFor="let d of c.detalles" class="dato">{{ d }}</p>
+            <p *ngIf="!c.items.length && !c.detalles.length" class="dato">Sin más detalle.</p>
+          </div>
+        </li>
+      </ul>
+
+      <p *ngIf="!cargandoCompras && compras.length && !comprasFiltradas.length" class="vacio-filtro">
+        No hay compras en esta sección.
+      </p>
+    </div>
+
+    <!-- ================= MIS DATOS ================= -->
+    <form *ngIf="pestana === 'datos'" class="panel formulario" (ngSubmit)="guardarDatos()">
+      <div class="grilla">
+        <div class="campo">
+          <label>Nombre</label>
+          <input class="form-control" [value]="nombreCompleto" readonly>
+        </div>
+        <div class="campo">
+          <label>Usuario</label>
+          <input class="form-control" [value]="cliente.usuario || ''" readonly>
+        </div>
+        <div class="campo">
+          <label>DNI</label>
+          <input class="form-control" [value]="cliente.dni || ''" readonly>
+        </div>
+        <div class="campo">
+          <label>Mail</label>
+          <input class="form-control" [value]="cliente.mail || ''" readonly>
+        </div>
+        <div class="campo">
+          <label for="telefono">Teléfono</label>
+          <input id="telefono" name="telefono" class="form-control" [(ngModel)]="telefono" maxlength="40" autocomplete="tel" required>
+        </div>
+        <div class="campo">
+          <label for="direccion">Dirección</label>
+          <input id="direccion" name="direccion" class="form-control" [(ngModel)]="direccion" maxlength="200" autocomplete="street-address">
+        </div>
+      </div>
+      <p class="nota">Para cambiar tu nombre, DNI o mail, escribinos.</p>
+
+      <!-- Cuenta mayorista -->
+      <div class="bloque-mayorista" [ngClass]="estadoMayorista">
+        <div class="bm-titulo"><i class="fas fa-store"></i> Cuenta mayorista</div>
+
+        <ng-container [ngSwitch]="estadoMayorista">
+          <p *ngSwitchCase="'mayorista'" class="bm-texto">
+            Tu cuenta es mayorista<span *ngIf="cliente.razonSocial"> · {{ cliente.razonSocial }}</span>
+            <span *ngIf="cliente.cuit"> · CUIT {{ formatearCuit(cliente.cuit) }}</span>.
+          </p>
+          <p *ngSwitchCase="'pendiente'" class="bm-texto">
+            <b>Tu solicitud está en revisión</b> desde el {{ cliente.solicitudMayorista.fecha | date:'dd/MM/yyyy' }}
+            ({{ cliente.solicitudMayorista.razonSocial }} · CUIT {{ formatearCuit(cliente.solicitudMayorista.cuit) }}).
+            Mientras tanto ves los precios minoristas.
+          </p>
+          <p *ngSwitchCase="'rechazada'" class="bm-texto">
+            <b>Tu solicitud no fue aprobada</b><span *ngIf="cliente.solicitudMayorista.motivo">: {{ cliente.solicitudMayorista.motivo }}</span>.
+            Podés corregir los datos y volver a pedirla.
+          </p>
+          <p *ngSwitchDefault class="bm-texto">
+            Si tenés un comercio, podés pedir precios mayoristas. Revisamos tus datos y te habilitamos la cuenta.
+          </p>
+        </ng-container>
+
+        <button *ngIf="puedePedir && !mostrarFormMayorista" type="button" class="btn btn-outline-dark btn-sm" (click)="abrirFormMayorista()">
+          {{ estadoMayorista === 'rechazada' ? 'Volver a pedir' : 'Quiero ser mayorista' }}
+        </button>
+
+        <div *ngIf="mostrarFormMayorista" class="bm-form">
+          <div class="grilla">
+            <div class="campo">
+              <label for="razonSocial">Razón social</label>
+              <input id="razonSocial" name="razonSocial" class="form-control" [(ngModel)]="razonSocial" maxlength="120">
+            </div>
+            <div class="campo">
+              <label for="cuit">CUIT</label>
+              <input id="cuit" name="cuit" class="form-control" [(ngModel)]="cuit" placeholder="20-12345678-6" inputmode="numeric" maxlength="13">
+            </div>
+          </div>
+          <div class="ayuda" *ngIf="errorSolicitud">{{ errorSolicitud }}</div>
+          <div class="bm-acciones">
+            <button type="button" class="btn btn-dark btn-sm" (click)="pedirMayorista()" [disabled]="enviandoSolicitud || !!errorSolicitud || !razonSocial.trim() || !cuit.trim()">
+              <span *ngIf="enviandoSolicitud" class="spinner-border spinner-border-sm me-1"></span>
+              Enviar solicitud
+            </button>
+            <button type="button" class="btn btn-link btn-sm text-muted" (click)="mostrarFormMayorista = false">Cancelar</button>
+          </div>
+        </div>
+
+        <div class="mensaje" *ngIf="mensajeMayorista" [class.ok]="mensajeMayorista.ok" [class.mal]="!mensajeMayorista.ok">{{ mensajeMayorista.texto }}</div>
+      </div>
+
+      <div class="mensaje" *ngIf="mensajeDatos" [class.ok]="mensajeDatos.ok" [class.mal]="!mensajeDatos.ok">{{ mensajeDatos.texto }}</div>
+
+      <div class="acciones">
+        <button type="submit" class="btn btn-dark" [disabled]="!datosCambiados || guardandoDatos || !telefono.trim()">
+          <span *ngIf="guardandoDatos" class="spinner-border spinner-border-sm me-1"></span>
+          Guardar cambios
+        </button>
+      </div>
+    </form>
+
+    <!-- ================= CONTRASEÑA ================= -->
+    <form *ngIf="pestana === 'clave'" class="panel formulario angosto" (ngSubmit)="cambiarClave()" autocomplete="off">
+      <div class="campo">
+        <label for="claveActual">Contraseña actual</label>
+        <input id="claveActual" name="claveActual" class="form-control" [type]="verClaves ? 'text' : 'password'"
+          [(ngModel)]="claveActual" autocomplete="current-password">
+      </div>
+      <div class="campo">
+        <label for="claveNueva">Contraseña nueva</label>
+        <input id="claveNueva" name="claveNueva" class="form-control" [type]="verClaves ? 'text' : 'password'"
+          [(ngModel)]="claveNueva" autocomplete="new-password" [class.is-invalid]="errorClaveNueva">
+        <div class="invalid-feedback" *ngIf="errorClaveNueva">{{ errorClaveNueva }}</div>
+        <div class="ayuda" *ngIf="!errorClaveNueva">Mínimo {{ minLargoClave }} caracteres. Distingue mayúsculas.</div>
+      </div>
+      <div class="campo">
+        <label for="claveRepetida">Repetí la contraseña nueva</label>
+        <input id="claveRepetida" name="claveRepetida" class="form-control" [type]="verClaves ? 'text' : 'password'"
+          [(ngModel)]="claveRepetida" autocomplete="new-password" [class.is-invalid]="noCoinciden">
+        <div class="invalid-feedback" *ngIf="noCoinciden">No coincide con la contraseña nueva.</div>
+      </div>
+      <label class="ver-claves">
+        <input type="checkbox" name="verClaves" [(ngModel)]="verClaves"> Mostrar contraseñas
+      </label>
+
+      <div class="mensaje" *ngIf="mensajeClave" [class.ok]="mensajeClave.ok" [class.mal]="!mensajeClave.ok">{{ mensajeClave.texto }}</div>
+
+      <div class="acciones">
+        <button type="submit" class="btn btn-dark" [disabled]="!puedeCambiarClave">
+          <span *ngIf="guardandoClave" class="spinner-border spinner-border-sm me-1"></span>
+          Cambiar contraseña
+        </button>
+      </div>
+    </form>
+  </ng-container>
+</section>

@@ -1,9 +1,10 @@
 import { Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
-import { addDoc, collection, collectionData, deleteDoc, doc, Firestore, getDocs, query, setDoc, updateDoc, where } from '@angular/fire/firestore';
+import { addDoc, collection, collectionData, doc, Firestore, getDoc, getDocs, query, setDoc, updateDoc, where, writeBatch } from '@angular/fire/firestore';
 import { Producto, StockSucursal, VarianteProducto } from '../models/producto.model';
 import { ProductosCacheService } from '../../despacho/services/productos-cache.service';
 import { AuditoriaService } from 'src/app/shared/services/auditoria.service';
+import { fotosDe } from 'src/app/shared/utils/fotos';
 
 @Injectable({
   providedIn: 'root'
@@ -66,16 +67,44 @@ export class ProductosService {
   }
 
   async eliminarProducto(id: string): Promise<void> {
-    const antes = await this.auditoria.capturar('productos', id);
-    const docRef = doc(this.firestore, 'productos', id);
-    await deleteDoc(docRef);
+    // No se borra para siempre: se mueve a 'ProductosEliminados' (recuperable)
+    await this.archivarProducto(id, 'Eliminado desde la lista de productos');
+  }
 
-    this.auditoria.registrar({
+  /**
+   * Mueve un producto/variante a la colección 'ProductosEliminados' (con todos sus datos,
+   * quién y cuándo) y lo saca de 'productos', en una sola operación.
+   * Así el resto de la app (tienda, despacho, reportes) no lo ve, pero se puede recuperar.
+   */
+  private async archivarProducto(id: string, motivo: string, desdeProductoId: string | null = null): Promise<void> {
+    const ref = doc(this.firestore, 'productos', id);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return;
+    const datos: any = snap.data();
+    const usuario = this.auditoria.getUsuarioActual();
+
+    const batch = writeBatch(this.firestore);
+    batch.set(doc(this.firestore, 'ProductosEliminados', id), {
+      ...datos,
+      id,
+      eliminado: {
+        fecha: new Date().toISOString(),
+        usuario: usuario || null,
+        motivo,
+        desdeProductoId
+      }
+    });
+    batch.delete(ref);
+    await batch.commit();
+
+    await this.auditoria.registrar({
       accion: 'eliminar',
       entidad: 'productos',
       entidadId: id,
-      descripcion: `Eliminó el producto "${antes?.descripcion || id}"`,
-      antes
+      descripcion: `${motivo}: "${datos.descripcion || id}"` +
+        (datos.color ? ` (color ${datos.color})` : '') + (datos.modelo ? ` (modelo ${datos.modelo})` : '') +
+        ' — quedó en ProductosEliminados',
+      antes: datos
     });
   }
 
@@ -131,6 +160,8 @@ export class ProductosService {
       moneda: producto.moneda || 'ARS',
 
       imagen: producto.imagen || '',
+      // Galería (si viene; si no, no se toca la que ya tenga)
+      ...(Array.isArray(producto.imagenes) ? { imagenes: producto.imagenes } : {}),
 
       rubro: producto.rubro || '',
       subrubro: producto.subrubro || '',
@@ -243,6 +274,9 @@ export class ProductosService {
               producto.imagen ||
               '',
 
+            // La galería es la misma para toda la familia
+            ...(Array.isArray(producto.imagenes) ? { imagenes: producto.imagenes } : {}),
+
             stockMayorista:
               Number(variante.stockMayorista) || 0,
 
@@ -318,6 +352,8 @@ export class ProductosService {
           ventaMayorista:
             producto.ventaMayorista ?? false,
 
+          imagenes: Array.isArray(producto.imagenes) ? producto.imagenes : [],
+
           oferta:
             producto.oferta ?? false,
 
@@ -388,36 +424,21 @@ export class ProductosService {
 
 
     // =====================================================
-    // 5️⃣ ELIMINAR VARIANTES
+    // 5️⃣ QUITAR VARIANTES
+    //    SOLO las que el usuario eliminó a propósito (tachito + confirmación).
+    //    Antes se borraba "todo lo que no vino en el formulario": si se guardaba
+    //    antes de que cargaran las variantes, se borraban TODAS (y el producto mismo).
+    //    Ahora: nunca el producto que se está editando, nunca por omisión, y no se
+    //    borran: se mueven a 'ProductosEliminados' (recuperables).
     // =====================================================
 
-    const idsFormulario = new Set(
-      producto.variantes
-        .filter(v => !!v.id)
-        .map(v => v.id)
-    );
+    const idsEnFirestore = new Set(variantesFirestore.map(v => v.id));
+    const aEliminar = [...new Set((producto as any).variantesEliminadas || [])]
+      .filter((id: any) => typeof id === 'string' && id !== producto.id && idsEnFirestore.has(id)) as string[];
 
-    for (const varianteFirestore of variantesFirestore) {
-
-      if (
-        varianteFirestore.id &&
-        !idsFormulario.has(varianteFirestore.id)
-      ) {
-
-        await deleteDoc(
-          doc(
-            this.firestore,
-            'productos',
-            varianteFirestore.id
-          )
-        );
-
-        // 🗑️ Eliminar también de IndexedDB
-        await this.productosCache.eliminarProducto(
-          varianteFirestore.id
-        );
-
-      }
+    for (const id of aEliminar) {
+      await this.archivarProducto(id, `Variante quitada al editar "${producto.descripcion || ''}"`, producto.id);
+      await this.productosCache.eliminarProducto(id);
     }
 
 
@@ -500,6 +521,7 @@ export class ProductosService {
               subrubro: p.subrubro,
               marca: p.marca,
               imagen: p.imagen,
+              imagenes: fotosDe(p),
               codigoBarras: p.codigoBarras ?? null, 
               moneda: p.moneda || 'ARS',
               destacado: p.destacado,
@@ -742,34 +764,12 @@ export class ProductosService {
 
     /*
     * ============================================================
-    * 3️⃣ ELIMINAR VARIANTES QUE YA NO ESTÁN
+    * 3️⃣ (DESACTIVADO) Eliminar variantes que no vinieron en el formulario.
+    *    Era peligroso: si el formulario llegaba sin variantes, borraba todas.
+    *    Las variantes se quitan solo con actualizarProducto + variantesEliminadas.
     * ============================================================
     */
-
-    const idsFormulario = new Set(
-      variantesFormulario
-        .filter(v => v.id)
-        .map(v => v.id!)
-    );
-
-    for (const varianteFirestore of variantesFirestore) {
-
-      if (!idsFormulario.has(varianteFirestore.id)) {
-
-        const varianteRef = doc(
-          this.firestore,
-          'productos',
-          varianteFirestore.id
-        );
-
-        await deleteDoc(varianteRef);
-
-        console.log(
-          '🗑️ Variante eliminada:',
-          varianteFirestore.id
-        );
-      }
-    }
+    void variantesFirestore;
   }
 
 

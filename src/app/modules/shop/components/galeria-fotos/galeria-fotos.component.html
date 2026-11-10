@@ -1,0 +1,17 @@
+<div #capa class="galeria" (click)="cerrar.emit()" role="dialog" aria-modal="true">
+  <div class="galeria-contenido" (click)="$event.stopPropagation()">
+    <button type="button" class="galeria-cerrar" (click)="cerrar.emit()" aria-label="Cerrar">✕</button>
+    <div class="galeria-titulo" *ngIf="titulo">{{ titulo }}</div>
+    <div class="galeria-foto">
+      <button type="button" class="flecha izq" *ngIf="lista.length > 1" (click)="cambiar(-1, $event)" aria-label="Foto anterior">‹</button>
+      <img [src]="actual" [alt]="titulo">
+      <button type="button" class="flecha der" *ngIf="lista.length > 1" (click)="cambiar(1, $event)" aria-label="Foto siguiente">›</button>
+    </div>
+    <div class="galeria-miniaturas" *ngIf="lista.length > 1">
+      <button type="button" *ngFor="let f of lista; let i = index" [class.activa]="i === indice" (click)="ir(i, $event)">
+        <img [src]="f" [alt]="'Foto ' + (i + 1)">
+      </button>
+    </div>
+    <div class="galeria-contador" *ngIf="lista.length > 1">{{ indice + 1 }} / {{ lista.length }}</div>
+  </div>
+</div>

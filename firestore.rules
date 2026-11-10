@@ -4,10 +4,20 @@ rules_version = '2';
 // Reglas de Firestore - JC Exclusivo
 //
 // Quién puede hacer qué:
+//   • Dueño (dueno == true, se marca SOLO desde la consola de Firebase):
+//     superadministrador que nadie puede modificar desde la app.
+//   • Superadministrador (superAdmin == true): todas las secciones y administra
+//     los permisos de los demás administradores (nunca los del dueño, ni se
+//     puede quitar su propio superadmin).
+//   • Permisos por sección (Clientes/{uid}.permisos): en las colecciones propias
+//     de una sección (empresa, marquesina, vouchers, cajeros, sucursales,
+//     auditoría) hace falta ese permiso. Si el admin no tiene la lista cargada,
+//     se usan los permisos por defecto (ver permisosActuales()).
 //   • Administrador (Clientes/{uid}.administrador == true y habilitado): todo,
 //     salvo modificar/borrar la auditoría, borrar ventas, gastos o cajas,
 //     modificar una caja ya cerrada, modificar/borrar movimientos de caja,
-//     y modificar un ticket (solo se puede anular, una vez).
+//     modificar un ticket (solo se puede anular, una vez), lo que requiere un
+//     permiso de sección que no tiene, y cambiar permisos de usuarios.
 //   • Cliente logueado: su propio documento de cliente (sin poder darse
 //     permisos de admin / mayorista / habilitado).
 //   • Cualquiera (visitante o cliente): ver catálogo y configuración pública,
@@ -36,6 +46,23 @@ service cloud.firestore {
         && docClienteActual().data.get('estado', true) != false;
     }
 
+    function esSuperAdmin() {
+      return esAdmin()
+        && (docClienteActual().data.get('superAdmin', false) == true
+          || docClienteActual().data.get('dueno', false) == true);
+    }
+
+    // Permisos del admin logueado. Sin lista cargada = por defecto
+    // (MISMA lista que PERMISOS_POR_DEFECTO en src/app/core/secciones.ts)
+    function permisosActuales() {
+      return docClienteActual().data.get('permisos',
+        ['despacho', 'clientes', 'productos', 'pedidos', 'taller', 'caja', 'cajeros', 'sucursales', 'tickets']);
+    }
+
+    function tienePermiso(seccion) {
+      return esSuperAdmin() || (esAdmin() && seccion in permisosActuales());
+    }
+
     // Campos que cambian en un update
     function cambios() {
       return request.resource.data.diff(resource.data).affectedKeys();
@@ -50,12 +77,89 @@ service cloud.firestore {
     // Acceso total, con excepciones de trazabilidad:
     //   • Auditoria: solo se puede CREAR (ver más abajo), nunca modificar ni borrar.
     //   • Ventas, gastos y Cajas: no se pueden borrar (se anulan).
+    //   • Cajeros: no se borran (se dan de baja: las ventas viejas los siguen nombrando).
     //   • Cajas: una vez CERRADA no se puede modificar (ver más abajo).
 
+    //   • Las colecciones de secciones con permiso y Clientes tienen reglas propias (abajo).
+
     match /{coleccion}/{document=**} {
-      allow read: if esAdmin();
-      allow create, update: if esAdmin() && !(coleccion in ['Auditoria', 'Cajas', 'MovimientosCaja', 'Ventas']);
-      allow delete: if esAdmin() && !(coleccion in ['Auditoria', 'Ventas', 'gastos', 'Cajas', 'MovimientosCaja']);
+      allow read: if esAdmin() && !(coleccion in ['Auditoria']);
+      allow create, update: if esAdmin() && !(coleccion in [
+        'Auditoria', 'Cajas', 'MovimientosCaja', 'Ventas', 'Clientes',
+        'InfoEmpresa', 'infoEmpresa', 'configuracion', 'Marquesina', 'Cupones', 'Cajeros', 'Sucursales',
+        'CuentasCorrientes', 'Equipos', 'EquiposIMEI', 'EquiposEliminados', 'Creditos'
+      ]);
+      allow delete: if esAdmin() && !(coleccion in [
+        'Auditoria', 'Ventas', 'gastos', 'Cajas', 'MovimientosCaja', 'Cajeros', 'Clientes',
+        'InfoEmpresa', 'infoEmpresa', 'configuracion', 'Marquesina', 'Cupones', 'Sucursales',
+        'CuentasCorrientes', 'Equipos', 'EquiposIMEI', 'EquiposEliminados', 'CuentasInternas', 'Creditos'
+      ]);
+    }
+
+    // ---------- Secciones con permiso ----------
+    match /{coleccion}/{document=**} {
+      allow read: if coleccion == 'Auditoria' && tienePermiso('auditoria');
+      allow create, update, delete: if
+        (coleccion in ['InfoEmpresa', 'infoEmpresa'] && tienePermiso('empresa'))
+        || (coleccion == 'Marquesina' && tienePermiso('marquesina'))
+        || (coleccion in ['configuracion', 'Cupones'] && tienePermiso('gifts'))
+        || (coleccion == 'Sucursales' && tienePermiso('sucursales'));
+      // Cajeros: se dan de baja, nunca se borran
+      allow create, update: if coleccion == 'Cajeros' && tienePermiso('cajeros');
+    }
+
+    // ---------- Clientes (desde el panel) ----------
+    // Campos de permisos: administrador, superAdmin, permisos, dueno, y el estado de un admin.
+    function sinCambiosDePermisos() {
+      return sinCambio('administrador', false)
+        && sinCambio('superAdmin', false)
+        && sinCambio('permisos', null)
+        && sinCambio('dueno', false);
+    }
+
+    match /Clientes/{uid} {
+      // Administrador común: gestiona clientes, pero NO toca permisos, ni el documento
+      // de un superadministrador, ni habilita/deshabilita a otro admin, ni borra admins.
+      allow create: if esAdmin()
+        && request.resource.data.get('administrador', false) == false
+        && request.resource.data.get('superAdmin', false) == false
+        && request.resource.data.get('dueno', false) == false
+        && !('permisos' in request.resource.data);
+      allow update: if esAdmin() && (
+        // Despacho / anulación de tickets: sumar o descontar puntos a cualquier cliente
+        cambios().hasOnly(['puntos'])
+        || (sinCambiosDePermisos()
+          && resource.data.get('superAdmin', false) != true
+          && resource.data.get('dueno', false) != true
+          && (resource.data.get('administrador', false) != true || sinCambio('estado', true))));
+      allow delete: if esAdmin()
+        && resource.data.get('administrador', false) != true
+        && resource.data.get('superAdmin', false) != true
+        && resource.data.get('dueno', false) != true;
+
+      // Superadministrador: además da/quita administrador, superAdmin y permisos.
+      //  • 'dueno' no se cambia nunca desde la app.
+      //  • Al dueño no se le tocan permisos ni estado.
+      //  • Nadie se quita su propio superAdmin ni su administrador.
+      allow create: if esSuperAdmin() && request.resource.data.get('dueno', false) == false;
+      allow update: if esSuperAdmin()
+        && sinCambio('dueno', false)
+        && (resource.data.get('dueno', false) != true
+          || (sinCambiosDePermisos() && sinCambio('estado', true)))
+        && (uid != request.auth.uid
+          || (sinCambio('superAdmin', false) && sinCambio('administrador', false)));
+      allow delete: if esSuperAdmin()
+        && resource.data.get('dueno', false) != true
+        && uid != request.auth.uid;
+    }
+
+    // Cupones (cualquier administrador): en Despacho se usa un cupón (-1) y al anular
+    // un ticket se devuelve el uso (+1). Crear o editar cupones requiere el permiso 'gifts'.
+    match /Cupones/{id} {
+      allow update: if esAdmin()
+        && cambios().hasOnly(['cantidadDisponible', 'activo'])
+        && (request.resource.data.cantidadDisponible == resource.data.get('cantidadDisponible', 1) - 1
+          || request.resource.data.cantidadDisponible == resource.data.get('cantidadDisponible', 0) + 1);
     }
 
     // ---------- Cajas ----------
@@ -69,11 +173,140 @@ service cloud.firestore {
     // ---------- Ventas del local (tickets) ----------
     // Se crean con la venta; después solo se pueden ANULAR, una sola vez.
     match /Ventas/{id} {
+      // "Mi cuenta": cada cliente ve solo sus propios tickets del local
+      allow read: if logueado() && resource.data.cliente.id == request.auth.uid;
       allow create: if esAdmin();
       allow update: if esAdmin()
         && resource.data.get('anulada', false) == false
         && request.resource.data.anulada == true
         && cambios().hasOnly(['anulada', 'motivoAnulacion', 'anuladaPor', 'anuladaEn']);
+    }
+
+    // ---------- Cuentas corrientes de clientes ----------
+    // Las lee cualquier administrador (Despacho, Dashboard, Gestiones).
+    // Se escriben al vender a cuenta / cobrar (permiso 'despacho') y al anular tickets ('tickets').
+    // Nunca se borran: los movimientos se anulan. El tipo, el importe y el ticket de un movimiento no cambian.
+    function puedeOperarCuentas() {
+      return tienePermiso('despacho') || tienePermiso('tickets');
+    }
+
+    match /CuentasCorrientes/{clienteId} {
+      allow create, update: if puedeOperarCuentas()
+        && request.resource.data.saldo is number
+        && request.resource.data.saldo >= -0.01;
+
+      match /Movimientos/{movId} {
+        allow create: if puedeOperarCuentas()
+          && request.resource.data.tipo in ['cargo', 'pago']
+          && request.resource.data.importe > 0
+          && request.resource.data.ventaId == movId
+          && request.resource.data.anulado == false;
+        allow update: if puedeOperarCuentas()
+          && sinCambio('tipo', null)
+          && sinCambio('importe', null)
+          && sinCambio('ventaId', null)
+          && sinCambio('nroTicket', null)
+          && sinCambio('fecha', null)
+          && resource.data.get('anulado', false) == false;
+      }
+    }
+
+    // ---------- 🏠 Crédito de la casa ----------
+    // Los lee cualquier administrador. Se crean con la venta en Despacho (siempre 'vigente', sin pagos,
+    // de 1 a 6 cuotas). Después cambian al cobrar cuotas (Despacho) o al anular (Tickets / Cuentas):
+    // lo financiado, el cliente, la venta y las cuotas pactadas no cambian. Nunca se borran.
+    match /Creditos/{ventaId} {
+      allow create: if tienePermiso('despacho')
+        && request.resource.data.ventaId == ventaId
+        && request.resource.data.estado == 'vigente'
+        && request.resource.data.importe is number
+        && request.resource.data.importe > 0
+        && request.resource.data.saldo == request.resource.data.importe
+        && request.resource.data.pagado == 0
+        && request.resource.data.cantidadCuotas is int
+        && request.resource.data.cantidadCuotas >= 1
+        && request.resource.data.cantidadCuotas <= 6
+        && request.resource.data.cuotas.size() == request.resource.data.cantidadCuotas
+        && request.resource.data.cliente.id is string;
+      allow update: if (tienePermiso('despacho') || tienePermiso('tickets') || tienePermiso('cuentas'))
+        && resource.data.estado != 'anulado'
+        && request.resource.data.estado in ['vigente', 'cancelado', 'anulado']
+        && sinCambio('importe', null)
+        && sinCambio('ventaId', null)
+        && sinCambio('cliente', null)
+        && sinCambio('cantidadCuotas', null)
+        && sinCambio('fecha', null)
+        && request.resource.data.saldo is number
+        && request.resource.data.saldo >= -0.01
+        && request.resource.data.saldo <= resource.data.importe + 0.01;
+
+      // Pagos de cuotas (se crean al cobrar en Despacho; después solo se pueden anular)
+      match /Pagos/{pagoId} {
+        allow create: if tienePermiso('despacho')
+          && request.resource.data.importe > 0
+          && request.resource.data.anulado == false;
+        allow update: if (tienePermiso('despacho') || tienePermiso('tickets') || tienePermiso('cuentas'))
+          && sinCambio('importe', null)
+          && sinCambio('fecha', null)
+          && resource.data.get('anulado', false) == false;
+      }
+    }
+
+    // ---------- Equipos para la venta ----------
+    // Los lee cualquier administrador. Alta, modificación y baja: permiso 'equipos'.
+    //   • Se crean siempre como 'disponible'.
+    //   • Un equipo vendido no se modifica ni se borra (queda para la garantía).
+    //   • La baja guarda una copia en EquiposEliminados (que no se modifica ni se borra).
+    //   • EquiposIMEI: índice para que no se repita el IMEI entre equipos disponibles.
+    match /Equipos/{id} {
+      allow create: if tienePermiso('equipos')
+        && request.resource.data.estado == 'disponible'
+        && request.resource.data.imei is string
+        && request.resource.data.imei.size() >= 5
+        && request.resource.data.precioMinorista > 0
+        && request.resource.data.precioMayorista > 0
+        && request.resource.data.moneda in ['USD', 'ARS'];
+      allow update: if tienePermiso('equipos')
+        && resource.data.estado == 'disponible'
+        && request.resource.data.estado == 'disponible'
+        && request.resource.data.precioMinorista > 0
+        && request.resource.data.precioMayorista > 0
+        && request.resource.data.moneda in ['USD', 'ARS'];
+      allow delete: if tienePermiso('equipos') && resource.data.estado == 'disponible';
+
+      // Venta en Despacho (disponible → vendido), anulación del ticket o cancelación del pedido web (vendido → disponible)
+      allow update: if (tienePermiso('despacho') || tienePermiso('tickets') || tienePermiso('pedidos'))
+        && cambios().hasOnly(['estado', 'venta', 'ventasAnuladas'])
+        && (
+          (resource.data.estado == 'disponible' && request.resource.data.estado == 'vendido'
+            && request.resource.data.venta.ventaId is string)
+          ||
+          (resource.data.estado == 'vendido' && request.resource.data.estado == 'disponible')
+        );
+    }
+
+    match /EquiposIMEI/{imei} {
+      allow create, update, delete: if tienePermiso('equipos');
+      // Al vender se libera el IMEI; al anular la venta / cancelar el pedido se vuelve a ocupar
+      allow create, update, delete: if tienePermiso('despacho') || tienePermiso('tickets') || tienePermiso('pedidos');
+      // Tienda: al comprar el equipo se libera su IMEI (solo si en la misma operación quedó vendido)
+      allow delete: if getAfter(/databases/$(database)/documents/Equipos/$(resource.data.equipoId)).data.estado == 'vendido';
+    }
+
+    // Tienda online: cualquiera ve los equipos DISPONIBLES (la consulta tiene que filtrar estado == 'disponible')
+    // y al hacer el pedido el equipo pasa a vendido, solo si en la misma operación se crea ese pedido.
+    match /Equipos/{id} {
+      allow read: if resource.data.estado == 'disponible';
+      allow update: if resource.data.estado == 'disponible'
+        && request.resource.data.estado == 'vendido'
+        && cambios().hasOnly(['estado', 'venta'])
+        && request.resource.data.venta.origen == 'web'
+        && request.resource.data.venta.pedidoId is string
+        && existsAfter(/databases/$(database)/documents/$('Pedidos Pendientes')/$(request.resource.data.venta.pedidoId));
+    }
+
+    match /EquiposEliminados/{id} {
+      allow create: if tienePermiso('equipos');
     }
 
     // ---------- Movimientos de caja ----------
@@ -104,6 +337,7 @@ service cloud.firestore {
 
     // ---------- Auditoría ----------
     // Cada registro debe ser del usuario que está logueado y con la hora del servidor.
+    // La ve quien tiene el permiso 'auditoria' (regla de arriba).
     match /Auditoria/{id} {
       allow create: if esAdmin()
         && request.resource.data.uid == request.auth.uid
@@ -126,6 +360,16 @@ service cloud.firestore {
 
     // ---------- Clientes ----------
 
+    // Solicitud de cuenta mayorista que puede hacer el propio cliente: solo 'pendiente',
+    // con sus datos y nada de lo que completa el administrador al resolverla.
+    function solicitudMayoristaPropiaValida(s) {
+      return s.keys().hasOnly(['estado', 'fecha', 'razonSocial', 'cuit'])
+        && s.estado == 'pendiente'
+        && s.razonSocial is string && s.razonSocial.size() > 0 && s.razonSocial.size() <= 120
+        && s.cuit is string && s.cuit.matches('^[0-9]{11}$')
+        && s.fecha is string;
+    }
+
     match /Clientes/{uid} {
       // Cada cliente lee solo su propio documento
       allow get: if logueado() && request.auth.uid == uid;
@@ -133,16 +377,32 @@ service cloud.firestore {
       // Registro: solo su propio documento y sin privilegios
       allow create: if logueado() && request.auth.uid == uid
         && request.resource.data.get('administrador', false) == false
+        && request.resource.data.get('superAdmin', false) == false
+        && request.resource.data.get('dueno', false) == false
+        && !('permisos' in request.resource.data)
         && request.resource.data.get('estado', true) == true
         && request.resource.data.get('puntos', 0) == 0
-        && request.resource.data.get('mayoristaActivado', false) == false;
+        && request.resource.data.get('mayoristaActivado', false) == false
+        // Nadie se registra directamente como mayorista: lo aprueba un administrador
+        && request.resource.data.get('esMayorista', false) == false
+        && (!('solicitudMayorista' in request.resource.data)
+            || solicitudMayoristaPropiaValida(request.resource.data.solicitudMayorista));
 
       // Carrito, historial, puntos, datos de contacto... pero NO permisos
       allow update: if logueado() && request.auth.uid == uid
         && sinCambio('administrador', false)
+        && sinCambio('superAdmin', false)
+        && sinCambio('dueno', false)
+        && sinCambio('permisos', null)
         && sinCambio('esMayorista', false)
         && sinCambio('estado', true)
-        && sinCambio('usuario', '');
+        && sinCambio('usuario', '')
+        // Solicitud mayorista: solo puede PEDIRLA (si no es mayorista y no tiene una pendiente);
+        // aprobarla o rechazarla es cosa del administrador
+        && (sinCambio('solicitudMayorista', null)
+            || (resource.data.get('esMayorista', false) == false
+                && resource.data.get('solicitudMayorista', {'estado': ''}).estado != 'pendiente'
+                && solicitudMayoristaPropiaValida(request.resource.data.solicitudMayorista)));
     }
 
     // Índice nombre de usuario → mail (lo usa el login)
@@ -176,6 +436,10 @@ service cloud.firestore {
       allow update: if coleccion == 'Contador Pedidos'
         && cambios().hasOnly(['contador'])
         && request.resource.data.contador == resource.data.contador + 1;
+
+      // "Mi cuenta": cada cliente ve solo sus propios pedidos web (con su estado)
+      allow read: if coleccion in ['Pedidos Pendientes', 'Pedidos Finalizados', 'Pedidos Eliminados']
+        && logueado() && resource.data.clienteId == request.auth.uid;
 
       // Checkout: crear el pedido
       allow create: if coleccion == 'Pedidos Pendientes'

@@ -7,6 +7,7 @@ import { doc, Firestore, getDoc } from '@angular/fire/firestore';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { Producto } from 'src/app/modules/shop/models/producto.model';
 import { InfoEmpresaService } from './info-empresa.service';
+import { itemCarritoDeEquipo } from '../utils/equipos-tienda';
 
 @Injectable({
   providedIn: 'root'
@@ -611,6 +612,39 @@ async getProductoById(id: string) {
 
 
   
+  /**
+   * Agrega un EQUIPO al carrito (unidad única: no se puede agregar dos veces).
+   * Rechaza con { tipo: 'YA_EN_CARRITO' } si ya está.
+   */
+  async cargarEquipoCarrito(equipo: any): Promise<boolean> {
+    const cliente = await firstValueFrom(this.getCliente());
+    if (!cliente) throw 'No se encontró el cliente';
+
+    const item = itemCarritoDeEquipo(equipo, !!cliente.esMayorista);
+
+    if (cliente.id === 'invitado') {
+      const carritoRaw = localStorage.getItem('carritoInvitado');
+      const carrito: any[] = carritoRaw ? JSON.parse(carritoRaw) : [];
+      if (carrito.some(i => i.uidCarrito === item.uidCarrito)) throw { tipo: 'YA_EN_CARRITO' };
+      carrito.push(item);
+      localStorage.setItem('carritoInvitado', JSON.stringify(carrito));
+      this.carritoService.actualizarCantidadProductosDesdeLocalStorage();
+      const clienteActualizado = new Cliente(
+        false, '', carrito, '', '', null, false, true, [], 'invitado', '', 'Invitado', 0, '', '', 'invitado'
+      );
+      this.clienteSubject.next(clienteActualizado);
+      return true;
+    }
+
+    cliente.carrito = cliente.carrito || [];
+    if (cliente.carrito.some((i: any) => i.uidCarrito === item.uidCarrito)) throw { tipo: 'YA_EN_CARRITO' };
+    cliente.carrito.push(item);
+    await this.clientesService.actualizarCliente(cliente.id, JSON.parse(JSON.stringify(cliente)));
+    this.carritoService.actualizarCantidadProductos(cliente);
+    this.clienteSubject.next(cliente);
+    return true;
+  }
+
   //FUNCION PARA FORMATEAR FECHA
   formatearFechaDesdeDate(fecha: Date): string {
     const dia = fecha.getDate().toString().padStart(2, '0');

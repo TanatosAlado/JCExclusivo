@@ -1,0 +1,91 @@
+<app-encabezado>
+  Cajeros
+</app-encabezado>
+
+<div class="container mt-4 mb-5">
+  <mat-card>
+    <mat-card-title>🧑‍💼 Gestión de cajeros</mat-card-title>
+    <mat-card-subtitle>
+      Las personas que cobran en Despacho. Al cerrar cada venta se elige quién la cobró.
+    </mat-card-subtitle>
+
+    <mat-card-content>
+
+      <!-- ===== Alta / edición ===== -->
+      <form class="formulario" (ngSubmit)="guardar()" [class.editando]="editando">
+        <div class="titulo-form">
+          {{ editando ? 'Editando a ' + nombre(editando) : 'Nuevo cajero' }}
+        </div>
+        <div class="campos">
+          <mat-form-field appearance="outline">
+            <mat-label>Nombre</mat-label>
+            <input matInput name="nombre" [(ngModel)]="form.nombre" required autocomplete="off">
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Apellido</mat-label>
+            <input matInput name="apellido" [(ngModel)]="form.apellido" required autocomplete="off">
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="campo-dni">
+            <mat-label>DNI</mat-label>
+            <input matInput name="dni" [(ngModel)]="form.dni" required inputmode="numeric" autocomplete="off">
+          </mat-form-field>
+          <div class="botones">
+            <button mat-raised-button color="primary" type="submit" [disabled]="guardando">
+              <i class="fas" [ngClass]="editando ? 'fa-save' : 'fa-user-plus'"></i>
+              {{ guardando ? 'Guardando…' : (editando ? 'Guardar cambios' : 'Dar de alta') }}
+            </button>
+            <button *ngIf="editando" mat-button type="button" (click)="cancelarEdicion()" [disabled]="guardando">Cancelar</button>
+          </div>
+        </div>
+      </form>
+
+      <!-- ===== Listado ===== -->
+      <div class="barra-lista">
+        <mat-form-field appearance="outline" class="campo-filtro">
+          <mat-label>Buscar</mat-label>
+          <input matInput [(ngModel)]="filtro" placeholder="Nombre, apellido o DNI" autocomplete="off">
+          <mat-icon matSuffix>search</mat-icon>
+        </mat-form-field>
+        <span class="resumen">{{ cantidadActivos }} activo(s)</span>
+        <mat-checkbox *ngIf="cantidadInactivos" [(ngModel)]="verInactivos">
+          Ver dados de baja ({{ cantidadInactivos }})
+        </mat-checkbox>
+      </div>
+
+      <div *ngIf="cargando" class="text-muted py-3">Cargando…</div>
+
+      <table class="table table-sm align-middle" *ngIf="!cargando && visibles.length">
+        <thead>
+          <tr><th>Apellido y nombre</th><th>DNI</th><th>Estado</th><th class="text-end">Acciones</th></tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let c of visibles" [class.inactivo]="c.activo === false" [class.seleccionado]="editando?.id === c.id">
+            <td><strong>{{ c.apellido }}</strong>, {{ c.nombre }}</td>
+            <td>{{ c.dni }}</td>
+            <td>
+              <span *ngIf="c.activo !== false" class="estado activo"><i class="fas fa-check-circle"></i> Activo</span>
+              <span *ngIf="c.activo === false" class="estado baja"><i class="fas fa-ban"></i> Dado de baja</span>
+            </td>
+            <td class="text-end acciones">
+              <ng-container *ngIf="c.activo !== false">
+                <button mat-icon-button type="button" (click)="editar(c)" title="Editar">
+                  <i class="fas fa-pen"></i>
+                </button>
+                <button mat-icon-button type="button" (click)="darDeBaja(c)" title="Dar de baja">
+                  <i class="fas fa-user-slash"></i>
+                </button>
+              </ng-container>
+              <button *ngIf="c.activo === false" mat-stroked-button type="button" (click)="reactivar(c)">
+                <i class="fas fa-undo"></i> Reactivar
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div *ngIf="!cargando && !visibles.length" class="vacio">
+        {{ cajeros.length ? 'No hay cajeros que coincidan.' : 'Todavía no cargaste cajeros. Dá de alta el primero arriba.' }}
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

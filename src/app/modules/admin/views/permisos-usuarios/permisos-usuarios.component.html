@@ -1,0 +1,110 @@
+<app-encabezado>
+  Permisos de usuarios
+</app-encabezado>
+
+<div class="container-fluid permisos py-3">
+  <p class="text-muted mb-3">
+    Elegí un administrador y marcá a qué secciones puede entrar. Solo aparecen los usuarios que son administradores
+    (eso se cambia en Gestiones → Clientes).
+  </p>
+
+  <div class="layout">
+    <!-- ===== Administradores ===== -->
+    <div class="tarjeta lista">
+      <mat-form-field appearance="outline" class="w-100 campo-filtro">
+        <mat-label>Buscar</mat-label>
+        <input matInput [(ngModel)]="filtro" placeholder="Usuario, nombre o mail" autocomplete="off">
+        <mat-icon matSuffix>search</mat-icon>
+      </mat-form-field>
+
+      <div *ngIf="cargando && !admins.length" class="text-muted p-2">Cargando…</div>
+
+      <button type="button" class="admin" *ngFor="let a of visibles" (click)="elegir(a)"
+        [class.activo]="seleccionado?.id === a.id" [class.deshabilitado]="!a.habilitado">
+        <div class="admin-linea">
+          <strong>{{ a.usuario || a.nombre || a.mail }}</strong>
+          <span *ngIf="a.dueno" class="badge bg-dark">Dueño</span>
+          <span *ngIf="a.superAdmin && !a.dueno" class="badge bg-primary">Superadmin</span>
+          <span *ngIf="a.id === miUid" class="badge bg-light text-dark">Vos</span>
+        </div>
+        <div class="small text-muted">{{ a.nombre }}<span *ngIf="!a.habilitado"> · deshabilitado</span></div>
+        <div class="small">{{ resumen(a) }}</div>
+      </button>
+
+      <div *ngIf="!cargando && !visibles.length" class="text-muted p-2">No hay administradores que coincidan.</div>
+    </div>
+
+    <!-- ===== Permisos del elegido ===== -->
+    <div class="tarjeta editor">
+      <div *ngIf="!seleccionado" class="vacio">
+        <i class="fa-solid fa-user-lock"></i>
+        <p>Elegí un administrador de la lista para ver y cambiar sus permisos.</p>
+      </div>
+
+      <ng-container *ngIf="seleccionado">
+        <div class="encabezado">
+          <div>
+            <h3>{{ seleccionado.usuario || seleccionado.nombre }}</h3>
+            <div class="small text-muted">{{ seleccionado.nombre }} · {{ seleccionado.mail }}</div>
+          </div>
+        </div>
+
+        <div *ngIf="seleccionado.dueno" class="alert alert-dark py-2">
+          <i class="fa-solid fa-crown"></i> Es el <strong>dueño</strong>: tiene acceso total y no se puede modificar desde la app.
+        </div>
+        <div *ngIf="!seleccionado.habilitado" class="alert alert-warning py-2">
+          Este usuario está <strong>deshabilitado</strong>: no puede entrar aunque tenga permisos.
+        </div>
+
+        <!-- Superadmin -->
+        <label class="fila-super" [class.bloqueada]="soloLectura || (esYo && seleccionado.superAdmin)">
+          <input type="checkbox" class="form-check-input" [(ngModel)]="superAdmin"
+            [disabled]="soloLectura || (esYo && seleccionado.superAdmin)">
+          <div>
+            <strong>Superadministrador</strong>
+            <div class="small text-muted">
+              Ve todas las secciones y administra los permisos de los demás.
+              <span *ngIf="esYo && seleccionado.superAdmin && !seleccionado.dueno"> No te lo podés quitar a vos mismo.</span>
+            </div>
+          </div>
+        </label>
+
+        <!-- Secciones -->
+        <div class="barra-secciones">
+          <h4>Secciones</h4>
+          <div class="acciones-rapidas" *ngIf="!seccionesBloqueadas">
+            <button mat-button type="button" (click)="todas()">Todas</button>
+            <button mat-button type="button" (click)="ninguna()">Ninguna</button>
+            <button mat-button type="button" (click)="porDefecto()" title="Todas menos las sensibles">Por defecto</button>
+          </div>
+        </div>
+        <p *ngIf="superAdmin && !soloLectura" class="small text-muted">Como superadministrador ve todas las secciones.</p>
+
+        <div class="grilla">
+          <label class="seccion" *ngFor="let s of secciones" [class.marcada]="marcado(s.clave)" [class.bloqueada]="seccionesBloqueadas">
+            <input type="checkbox" class="form-check-input" [checked]="marcado(s.clave)"
+              [disabled]="seccionesBloqueadas" (change)="alternar(s.clave)">
+            <div>
+              <strong>{{ s.titulo }}</strong>
+              <span *ngIf="exclusivas.includes(s.clave)" class="sensible" title="Sección sensible">sensible</span>
+              <div class="small text-muted">{{ s.descripcion }}</div>
+            </div>
+          </label>
+        </div>
+
+        <div class="pie" *ngIf="!soloLectura">
+          <span class="small" [class.text-warning]="hayCambios" [class.text-muted]="!hayCambios">
+            {{ hayCambios ? 'Hay cambios sin guardar' : 'Sin cambios' }}
+          </span>
+          <button mat-button type="button" (click)="descartar()" [disabled]="!hayCambios || guardando">Descartar</button>
+          <button mat-raised-button color="primary" type="button" (click)="guardar()" [disabled]="!hayCambios || guardando">
+            {{ guardando ? 'Guardando…' : 'Guardar permisos' }}
+          </button>
+        </div>
+        <p class="small text-muted mt-2 mb-0" *ngIf="!soloLectura">
+          Los cambios se aplican la próxima vez que esa persona entre a una sección (como máximo en un minuto).
+        </p>
+      </ng-container>
+    </div>
+  </div>
+</div>

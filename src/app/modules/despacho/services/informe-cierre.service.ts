@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { imprimirEnPagina } from 'src/app/shared/utils/imprimir';
 
 /**
  * Genera el informe de cierre de caja para imprimir.
@@ -15,14 +16,11 @@ export class InformeCierreService {
       return;
     }
 
-    const win = window.open('', '_blank', formato === 'ticket' ? 'width=420,height=700' : 'width=900,height=1000');
-    if (!win) {
-      alert('El navegador bloqueó la ventana del informe. Permití las ventanas emergentes para este sitio.');
-      return;
-    }
-
-    win.document.write(this.html(caja, nombreSucursal, formato));
-    win.document.close();
+    // Sin ventana aparte (la ventana aparte congelaba la página)
+    imprimirEnPagina(this.html(caja, nombreSucursal, formato)).catch(err => {
+      console.error('No se pudo imprimir el informe', err);
+      alert('No se pudo imprimir el informe. Probá de nuevo.');
+    });
   }
 
   private html(caja: any, nombreSucursal: string, formato: 'ticket' | 'a4'): string {
@@ -100,13 +98,17 @@ export class InformeCierreService {
     <tr><td>Tarjeta</td><td class="der">${$(m.tarjeta)}</td></tr>
     <tr><td>Transferencia / QR</td><td class="der">${$(m.transferencia)}</td></tr>
     ${m.otros ? `<tr><td>Otros</td><td class="der">${$(m.otros)}</td></tr>` : ''}
+    ${m.cuentacorriente ? `<tr><td>A cuenta corriente (no ingresa)</td><td class="der">${$(m.cuentacorriente)}</td></tr>` : ''}
+    ${m.creditocasa ? `<tr><td>Crédito de la casa (no ingresa)</td><td class="der">${$(m.creditocasa)}</td></tr>` : ''}
+    ${m.canje ? `<tr><td>Plan canje (equipos, no ingresa)</td><td class="der">${$(m.canje)}</td></tr>` : ''}
     <tr class="total"><td>Total vendido</td><td class="der">${$(r.totalVendido)}</td></tr>
+    ${r.cobrosCuentaCorriente ? `<tr><td>Cobros de cuentas corrientes<br><small>(incluidos en los medios de arriba)</small></td><td class="der">${$(r.cobrosCuentaCorriente)}</td></tr>` : ''}
   </table>
 
   <h2>Efectivo en caja</h2>
   <table>
     <tr><td>Monto inicial</td><td class="der">${$(r.montoInicial)}</td></tr>
-    <tr><td>+ Ventas en efectivo</td><td class="der">${$(m.efectivo)}</td></tr>
+    <tr><td>+ Ventas y cobros en efectivo</td><td class="der">${$(m.efectivo)}</td></tr>
     ${mv.ingresos ? `<tr><td>+ Ingresos de efectivo</td><td class="der">${$(mv.ingresos)}</td></tr>` : ''}
     ${mv.retiros ? `<tr><td>− Retiros de efectivo</td><td class="der">${$(mv.retiros)}</td></tr>` : ''}
     ${mv.gastos ? `<tr><td>− Gastos</td><td class="der">${$(mv.gastos)}</td></tr>` : ''}

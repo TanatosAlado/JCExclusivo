@@ -8,6 +8,13 @@ import { collection, doc, Firestore, getDoc, getDocs, limit, query, setDoc, wher
 import { GeneralService } from 'src/app/shared/services/general.service';
 import { AuditoriaService } from 'src/app/shared/services/auditoria.service';
 
+/** Error de login con el motivo, para mostrar un mensaje claro */
+export class LoginError extends Error {
+  constructor(public motivo: 'usuario' | 'clave' | 'bloqueado', mensaje: string) {
+    super(mensaje);
+  }
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -54,13 +61,30 @@ export class AuthService {
   // la colección Clientes completa (que tiene datos personales).
   // =====================================================
 
-  /** Busca el mail asociado a un nombre de usuario */
+  /**
+   * Variantes de mayúsculas/minúsculas a probar en el índice.
+   * El índice se guarda en MAYÚSCULAS, pero hay entradas viejas con otra combinación.
+   */
+  static variantesUsuario(usuario: string): string[] {
+    const limpio = (usuario || '').trim();
+    const minus = limpio.toLowerCase();
+    return [...new Set([
+      limpio.toUpperCase(),                         // NANOX108 (formato actual)
+      limpio,                                       // tal como lo escribió
+      minus,                                        // nanox108
+      minus.charAt(0).toUpperCase() + minus.slice(1) // Nanox108
+    ])].filter(v => v && !v.includes('/'));
+  }
+
+  /** Busca el mail asociado a un nombre de usuario (sin importar mayúsculas/minúsculas) */
   async obtenerMailDeUsuario(usuarioNormalizado: string): Promise<string | null> {
 
-    // 1) Índice nuevo
-    const indice = await getDoc(doc(this.firestore, 'Usuarios', usuarioNormalizado));
-    if (indice.exists()) {
-      return (indice.data() as any).mail || null;
+    // 1) Índice: primero en MAYÚSCULAS y después las otras variantes (entradas viejas)
+    for (const variante of AuthService.variantesUsuario(usuarioNormalizado)) {
+      const indice = await getDoc(doc(this.firestore, 'Usuarios', variante));
+      if (indice.exists()) {
+        return (indice.data() as any).mail || null;
+      }
     }
 
     // 2) Compatibilidad: búsqueda vieja en Clientes.
@@ -133,7 +157,7 @@ export class AuthService {
     }
 
     if (duplicados.length) {
-      console.warn('Nombres de usuario repetidos (revisar a mano):', duplicados);
+   //   console.warn('Nombres de usuario repetidos (revisar a mano):', duplicados);
     }
 
     return { creados, duplicados };
@@ -141,23 +165,34 @@ export class AuthService {
 
   async login(username: string, clave: string): Promise<Cliente | null> {
 
+    // El nombre de usuario NO distingue mayúsculas: Nanox108 = NANOX108 = nanox108
     const usuarioNormalizado = username
       .trim()
       .toUpperCase();
 
-    const email = await this.obtenerMailDeUsuario(usuarioNormalizado);
+    const email = await this.obtenerMailDeUsuario(username);
 
     if (!email) {
-      throw new Error(
-        'Nombre de usuario no encontrado'
-      );
+      throw new LoginError('usuario', 'No encontramos ese nombre de usuario.');
     }
 
-    const cred = await signInWithEmailAndPassword(
-      this.auth,
-      email,
-      clave
-    );
+    // La contraseña SÍ distingue mayúsculas (la valida Firebase)
+    let cred;
+    try {
+      cred = await signInWithEmailAndPassword(this.auth, email, clave);
+    } catch (err: any) {
+      const codigo = err?.code || '';
+      if (['auth/wrong-password', 'auth/invalid-credential', 'auth/invalid-login-credentials'].includes(codigo)) {
+        throw new LoginError('clave', 'La contraseña no es correcta (ojo con las mayúsculas).');
+      }
+      if (codigo === 'auth/too-many-requests') {
+        throw new LoginError('bloqueado', 'Demasiados intentos fallidos. Esperá unos minutos o recuperá la contraseña.');
+      }
+      if (codigo === 'auth/user-disabled') {
+        throw new LoginError('bloqueado', 'Esta cuenta está deshabilitada.');
+      }
+      throw err;
+    }
 
     const ref = doc(
       this.firestore,

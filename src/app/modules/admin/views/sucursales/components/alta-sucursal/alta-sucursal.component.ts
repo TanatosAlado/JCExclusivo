@@ -24,7 +24,8 @@ export class AltaSucursalComponent {
       nombre: [data?.sucursal?.nombre || '', Validators.required],
       direccion: [data?.sucursal?.direccion || '', Validators.required],
       telefono: [data?.sucursal?.telefono || ''],
-      activa: [data?.sucursal?.activa ?? true]
+      activa: [data?.sucursal?.activa ?? true],
+      retiroWeb: [data?.sucursal?.retiroWeb ?? true]
     });
   }
 
@@ -35,6 +36,8 @@ export class AltaSucursalComponent {
       direccion: [this.data?.sucursal?.direccion || '', Validators.required],
       telefono: [this.data?.sucursal?.telefono || ''],
       activa: [this.data?.sucursal?.activa ?? true],
+      // Las sucursales internas (mayorista / taller) no aparecen en la tienda online
+      retiroWeb: [this.data?.sucursal?.retiroWeb ?? true],
     });
 
     if (this.data?.sucursal) {

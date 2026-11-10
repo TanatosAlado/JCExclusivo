@@ -1,6 +1,10 @@
 import { Injectable } from '@angular/core';
 import { Firestore, collection, query, where, getDocs, doc, getDoc, Timestamp } from '@angular/fire/firestore';
-import { pagosDeVenta } from 'src/app/modules/despacho/services/pagos';
+import { pagosDeVenta, aCuentaDeVenta, esCobroDeuda, esCobroCuota, creditoDeVenta } from 'src/app/modules/despacho/services/pagos';
+import { resumenCartera } from 'src/app/modules/despacho/services/credito-casa';
+import { totalesDesglose } from 'src/app/modules/despacho/services/desglose-reparacion';
+import { sucursalTaller } from 'src/app/modules/despacho/services/cuenta-taller';
+import { FilaSucursal, filasPorSucursal, totalesTaller, totalFilas, TrabajoTaller, trabajosDelPeriodo } from './resultado-sucursales';
 
 // =====================================================================
 // Tipos del dashboard
@@ -22,7 +26,14 @@ export interface DatosCrudos {
   cajasPeriodo: any[];
   productos: any[];
   ordenesPendientes: any[];
+  cuentas?: any[];           // CuentasCorrientes (saldo actual de cada cliente)
+  equipos?: any[];           // Equipos (todos: disponibles y vendidos)
   dolar: number;
+  dolarJC?: number;          // dólar de los equipos (si no está, el común)
+  sucursales?: any[];        // Sucursales (para el resultado por sucursal)
+  cuentasInternas?: any[];   // CuentasInternas (lo que el local le debe hoy al taller)
+  trabajosTaller?: TrabajoTaller[];  // cargos del taller al local en el período
+  creditos?: any[];          // Creditos (crédito de la casa: todos, para el saldo de hoy)
 }
 
 export interface Bucket {
@@ -50,9 +61,55 @@ export interface Indicadores {
 
   reparacionesCobradas: number;
   cobrosReparacion: number;
+  // De lo cobrado en reparaciones: mano de obra, repuestos y lo cargado antes de discriminar
+  reparacionesManoObra: number;
+  reparacionesRepuestos: number;
+  reparacionesSinDiscriminar: number;
+
+  // Cuenta corriente
+  ventasACuenta: number;              // parte de las ventas del período que quedó a cuenta (no entró dinero)
+  cobrosCuenta: number;               // deudas cobradas en el período (entró dinero, no es venta nueva)
+  cantidadCobrosCuenta: number;
+  deudaCuentas: number;               // lo que deben hoy los clientes (no depende del período)
+  cuentasConDeuda: number;
+
+  // 🏠 Crédito de la casa
+  ventasACredito: number;             // financiado en el período (parte de las ventas que quedó en cuotas)
+  cantidadVentasCredito: number;
+  cobrosCuotas: number;               // cobrado de cuotas en el período (entró dinero, no es venta nueva)
+  cantidadCobrosCuotas: number;
+  recargosCuotas: number;             // de eso, recargos por pagar fuera de término
+  deudaCreditos: number;              // hoy: lo que falta cobrar de los créditos vigentes
+  deudaCreditosVencida: number;       // hoy: de eso, lo vencido
+  creditosVigentes: number;
+  creditosConAtraso: number;
+
+  // Equipos
+  equiposVendidos: number;            // en el período (local + web finalizados)
+  montoEquiposVendidos: number;       // en pesos
+  equiposDisponibles: number;         // hoy
+  stockEquiposUsd: number;            // precio minorista de los disponibles en USD
+  stockEquiposArs: number;            // ídem, los cargados en pesos
+  stockEquiposPesos: number;          // todo en pesos (USD × dólar JC)
+  equiposReservadosWeb: number;       // en pedidos web pendientes
 
   egresos: number;                    // gastos generales + gastos de caja + proveedores
-  resultado: number;                  // vendido - egresos
+  resultado: number;                  // vendido - egresos (con sucursal: el de esa sucursal, con el costo de taller)
+
+  // Taller interno (lo que el taller le cobra al local por las reparaciones)
+  costoTaller: number;                // cargado al local en el período
+  cantidadTrabajos: number;
+  presupuestoTrabajos: number;        // lo que se les cobra a los clientes por esas órdenes
+  gananciaTrabajos: number;           // presupuesto − costo de taller
+  trabajosParaLocal: number;          // visto desde el taller: lo que le cargó al local
+  cantidadTrabajosTaller: number;
+  deudaInternaTaller: number;         // hoy: lo que el local le debe al taller
+  hayTaller: boolean;                 // existe la sucursal del taller
+  esTallerSeleccionado: boolean;
+
+  // Resultado por sucursal (siempre todas, no depende del filtro)
+  porSucursal: FilaSucursal[];
+  totalSucursales: FilaSucursal;
   diferenciasCaja: number;
   cierresConDiferencia: number;
 
@@ -126,12 +183,39 @@ export class ReportesService {
       lista(col('Ordenes Pendientes')),
       getDoc(doc(this.firestore, 'InfoEmpresa/general'))
     ]);
+    // Si no se pueden leer las cuentas corrientes (permisos), el resto del dashboard sigue
+    const cuentas = await lista(col('CuentasCorrientes')).catch(() => []);
+    const equipos = await lista(col('Equipos')).catch(() => []);
+    const sucursales = await lista(col('Sucursales')).catch(() => []);
+    const creditos = await lista(col('Creditos')).catch(() => []);
+    const { cuentasInternas, trabajosTaller } = await this.cargarTrabajosTaller(rango).catch(err => {
+      console.warn('No se pudo leer la cuenta Local–Taller', err);
+      return { cuentasInternas: [], trabajosTaller: [] };
+    });
 
     return {
       ventas, pedidosFinalizados, pedidosPendientes, gastos, movimientos,
-      cajasAbiertas, cajasPeriodo, productos, ordenesPendientes,
-      dolar: Number((info as any)?.data?.()?.dolar) || 1
+      cajasAbiertas, cajasPeriodo, productos, ordenesPendientes, cuentas, equipos,
+      sucursales, cuentasInternas, trabajosTaller, creditos,
+      dolar: Number((info as any)?.data?.()?.dolar) || 1,
+      dolarJC: Number((info as any)?.data?.()?.dolarJC) || 0
     };
+  }
+
+  /** Cuentas Local–Taller y los trabajos (cargos) del período, de todas las cuentas */
+  private async cargarTrabajosTaller(rango: RangoFechas): Promise<{ cuentasInternas: any[]; trabajosTaller: TrabajoTaller[] }> {
+    const cuentas = (await getDocs(collection(this.firestore, 'CuentasInternas'))).docs
+      .map((d: any) => ({ id: d.id, ...d.data() }));
+    const porCuenta = await Promise.all(cuentas.map(async (c: any) => {
+      const snap = await getDocs(query(
+        collection(this.firestore, 'CuentasInternas', c.id, 'Movimientos'),
+        where('fecha', '>=', rango.inicio.toISOString()),
+        where('fecha', '<=', rango.fin.toISOString())
+      ));
+      const movs = snap.docs.map((d: any) => ({ id: d.id, cuentaId: c.id, deudor: c.deudor, acreedor: c.acreedor, ...d.data() }));
+      return trabajosDelPeriodo(movs, rango.inicio, rango.fin);
+    }));
+    return { cuentasInternas: cuentas, trabajosTaller: porCuenta.flat() };
   }
 
   // =====================================================================
@@ -147,11 +231,17 @@ export class ReportesService {
     // ---------- Ventas del local (incluye cobros de reparación) ----------
     const ventasPeriodo = d.ventas.filter(v => deSucursal(v) && enRango(new Date(v.fecha), rango));
     const vigentes = ventasPeriodo.filter(v => v.anulada !== true);
-    const ventasProductos = vigentes.filter(v => v.tipoVenta !== 'reparacion');
+    // Los cobros de cuenta corriente no son ventas (la venta se contó cuando se llevó la mercadería)
+    const cobrosCuentaPeriodo = vigentes.filter(v => v.tipoVenta === 'cobrocuenta');
+    const ventasProductos = vigentes.filter(v => v.tipoVenta !== 'reparacion' && !esCobroDeuda(v));
+    const cobrosCuotasPeriodo = vigentes.filter(v => esCobroCuota(v));
+    const ventasCredito = ventasProductos.filter(v => creditoDeVenta(v) > 0);
+    const cartera = resumenCartera((d.creditos || []).filter(c => deSucursal(c)));
     const reparaciones = vigentes.filter(v => v.tipoVenta === 'reparacion');
 
     const ventasLocal = this.sumar(ventasProductos, v => v.total);
     const reparacionesCobradas = this.sumar(reparaciones, v => v.total);
+    const desgloseReparaciones = totalesDesglose(reparaciones);
 
     // ---------- Pedidos web finalizados (no tienen sucursal: siempre se suman) ----------
     const fechaPedido = (p: any) => this.parseFechaPedido(p.fecha);
@@ -161,7 +251,7 @@ export class ReportesService {
     const totalVendido = ventasLocal + reparacionesCobradas + ventasWeb;
 
     // ---------- Período anterior (para la variación) ----------
-    const ventasAnt = d.ventas.filter(v => deSucursal(v) && v.anulada !== true && enRango(new Date(v.fecha), anterior));
+    const ventasAnt = d.ventas.filter(v => deSucursal(v) && v.anulada !== true && !esCobroDeuda(v) && enRango(new Date(v.fecha), anterior));
     const webAnt = d.pedidosFinalizados.filter(p => enRango(fechaPedido(p), anterior));
     const totalVendidoAnterior = this.sumar(ventasAnt, v => v.total) + this.sumar(webAnt, p => p.total);
     const variacion = totalVendidoAnterior > 0
@@ -171,9 +261,32 @@ export class ReportesService {
     // ---------- Egresos ----------
     const gastosGenerales = this.sumar(d.gastos.filter(g => g.anulado !== true), g => g.monto);
     const movVigentes = d.movimientos.filter(m => m.anulado !== true && deSucursal(m));
-    const gastosCaja = this.sumar(movVigentes.filter(m => m.tipo === 'gasto' || m.tipo === 'proveedor'), m => m.importe);
+    // Los pagos del local al taller (cuenta interna) no son gastos del negocio: es plata que pasa de una caja a otra
+    const gastosCaja = this.sumar(movVigentes.filter(m => (m.tipo === 'gasto' || m.tipo === 'proveedor') && m.interno !== true), m => m.importe);
     // Los gastos generales no tienen sucursal: con filtro de sucursal se toman solo los de caja
     const egresos = (sucursalId ? 0 : gastosGenerales) + gastosCaja;
+
+    // ---------- Resultado por sucursal y taller interno ----------
+    const taller = sucursalTaller(d.sucursales || []);
+    const listaSucursales = (d.sucursales || [])
+      .filter((s: any) => s.activa !== false || d.ventas.some(v => v.sucursalId === s.id))
+      .map((s: any) => ({ id: s.id, nombre: s.nombre || s.id, esTaller: !!taller && s.id === taller.id }));
+    const trabajosPeriodo = d.trabajosTaller || [];
+    const porSucursal = filasPorSucursal({
+      sucursales: listaSucursales,
+      ventas: d.ventas.filter(v => v.anulada !== true && enRango(new Date(v.fecha), rango)),
+      movimientos: d.movimientos.filter(m => m.anulado !== true),
+      trabajos: trabajosPeriodo,
+      ventasWeb: this.sumar(d.pedidosFinalizados.filter(p => enRango(this.parseFechaPedido(p.fecha), rango)), p => p.total),
+      pedidosWeb: d.pedidosFinalizados.filter(p => enRango(this.parseFechaPedido(p.fecha), rango)).length,
+      gastosGenerales: this.sumar(d.gastos.filter(g => g.anulado !== true), g => g.monto)
+    });
+    const totalSucursales = totalFilas(porSucursal);
+    const filaElegida = sucursalId ? porSucursal.find(f => f.id === sucursalId) : null;
+    const tTaller = totalesTaller(trabajosPeriodo, sucursalId);
+    const deudaInternaTaller = this.redondear(this.sumar(
+      (d.cuentasInternas || []).filter(c => !sucursalId || c.deudor?.id === sucursalId || c.acreedor?.id === sucursalId),
+      c => Math.max(0, num(c.saldo))));
 
     // ---------- Cajas ----------
     const cierres = d.cajasPeriodo.filter(c => deSucursal(c) && c.cierre && !c.cierre.administrativo);
@@ -192,17 +305,22 @@ export class ReportesService {
       m.monto += monto; m.cantidad++;
       metodos.set(metodo, m);
     };
-    // Una venta pagada con varios medios suma cada parte a su medio
-    vigentes.forEach(v => pagosDeVenta(v).forEach(p => sumarMetodo(this.nombreMetodo(p.metodo), p.monto)));
+    // Una venta pagada con varios medios suma cada parte a su medio.
+    // Es cómo se pagaron las ventas: incluye "Cuenta corriente" y no los cobros de deudas (no duplicar)
+    vigentes.filter(v => !esCobroDeuda(v))
+      .forEach(v => pagosDeVenta(v).forEach(p => sumarMetodo(this.nombreMetodo(p.metodo), p.monto)));
     webPeriodo.forEach(p => sumarMetodo(this.nombreMetodo(p.pago), num(p.total)));
     const porMetodo = [...metodos.entries()]
       .map(([metodo, x]) => ({ metodo, monto: this.redondear(x.monto), cantidad: x.cantidad }))
       .sort((a, b) => b.monto - a.monto);
 
-    // ---------- Vendedores (local) ----------
+    // ---------- Cajeros (local) ----------
+    // Desde que existen los cajeros se agrupa por quién cobró; las ventas viejas, por el usuario de la sesión
     const vendedores = new Map<string, { monto: number; tickets: number }>();
-    vigentes.forEach(v => {
-      const nombre = v.usuario?.nombre || v.usuario?.usuario || 'Sin registrar';
+    vigentes.filter(v => !esCobroDeuda(v)).forEach(v => {
+      const nombre = v.cajero
+        ? [v.cajero.nombre, v.cajero.apellido].filter(Boolean).join(' ')
+        : (v.usuario?.nombre || v.usuario?.usuario || 'Sin registrar') + (v.usuario ? ' (usuario)' : '');
       const x = vendedores.get(nombre) || { monto: 0, tickets: 0 };
       x.monto += num(v.total); x.tickets++;
       vendedores.set(nombre, x);
@@ -285,8 +403,33 @@ export class ReportesService {
       pedidosWeb: webPeriodo.length,
       reparacionesCobradas: this.redondear(reparacionesCobradas),
       cobrosReparacion: reparaciones.length,
+      reparacionesManoObra: desgloseReparaciones.manoObra,
+      reparacionesRepuestos: desgloseReparaciones.repuestos,
+      reparacionesSinDiscriminar: desgloseReparaciones.sinDiscriminar,
+      ventasACuenta: this.redondear(this.sumar(vigentes, v => aCuentaDeVenta(v))),
+      cobrosCuenta: this.redondear(this.sumar(cobrosCuentaPeriodo, v => v.total)),
+      cantidadCobrosCuenta: cobrosCuentaPeriodo.length,
+      ventasACredito: this.redondear(this.sumar(ventasCredito, v => creditoDeVenta(v))),
+      cantidadVentasCredito: ventasCredito.length,
+      cobrosCuotas: this.redondear(this.sumar(cobrosCuotasPeriodo, v => v.total)),
+      cantidadCobrosCuotas: cobrosCuotasPeriodo.length,
+      recargosCuotas: this.redondear(this.sumar(cobrosCuotasPeriodo, v => v.cuotaCredito?.recargo)),
+      deudaCreditos: cartera.saldo,
+      deudaCreditosVencida: cartera.vencido,
+      creditosVigentes: cartera.vigentes,
+      creditosConAtraso: cartera.conAtraso,
+      ...this.indicadoresEquipos(d, vigentes, webPeriodo),
+      deudaCuentas: this.redondear(this.sumar((d.cuentas || []).filter(c => num(c.saldo) > 0.004), c => c.saldo)),
+      cuentasConDeuda: (d.cuentas || []).filter(c => num(c.saldo) > 0.004).length,
       egresos: this.redondear(egresos),
-      resultado: this.redondear(totalVendido - egresos),
+      // Con sucursal: su resultado propio (sin la tienda web ni los gastos generales, con el costo de taller)
+      resultado: filaElegida ? filaElegida.resultado : this.redondear(totalVendido - egresos),
+      ...tTaller,
+      deudaInternaTaller,
+      hayTaller: !!taller,
+      esTallerSeleccionado: !!taller && sucursalId === taller.id,
+      porSucursal,
+      totalSucursales,
       diferenciasCaja,
       cierresConDiferencia,
       porDia,
@@ -306,6 +449,49 @@ export class ReportesService {
       ordenesPorEstado,
       pedidosWebPendientes: d.pedidosPendientes.length,
       totalPedidosWebPendientes: this.redondear(this.sumar(d.pedidosPendientes, p => p.total))
+    };
+  }
+
+  // =====================================================================
+  // EQUIPOS
+  // =====================================================================
+
+  /** Equipos vendidos en el período (local + web), stock disponible valorizado y reservados por pedidos web */
+  private indicadoresEquipos(d: DatosCrudos, ventasLocal: any[], webPeriodo: any[]) {
+    const num = (n: any) => Number(n) || 0;
+    const dolarJC = num(d.dolarJC) > 0 ? num(d.dolarJC) : d.dolar;
+    let equiposVendidos = 0, montoEquiposVendidos = 0;
+
+    // Local: ítems 'equipo' de las ventas vigentes (con el descuento manual de equipos, si hubo)
+    for (const v of ventasLocal) {
+      const factor = 1 - num(v.porcentajeDescuentoEquipos) / 100;
+      for (const i of (v.items || []).filter((x: any) => x.tipo === 'equipo')) {
+        equiposVendidos++;
+        montoEquiposVendidos += num(i.subtotal) * factor;
+      }
+    }
+    // Web: pedidos finalizados del período
+    for (const p of webPeriodo) {
+      for (const i of (p.carrito || []).filter((x: any) => x.tipo === 'equipo')) {
+        equiposVendidos++;
+        montoEquiposVendidos += num(i.precioFinal) * (i.moneda === 'USD' ? (num(i.cotizacionDolar) || dolarJC) : 1);
+      }
+    }
+
+    const disponibles = (d.equipos || []).filter(e => e.estado === 'disponible');
+    const stockEquiposUsd = this.sumar(disponibles.filter(e => e.moneda !== 'ARS'), e => e.precioMinorista);
+    const stockEquiposArs = this.sumar(disponibles.filter(e => e.moneda === 'ARS'), e => e.precioMinorista);
+    const equiposReservadosWeb = d.pedidosPendientes
+      .reduce((a, p) => a + (p.carrito || []).filter((x: any) => x.tipo === 'equipo').length, 0);
+
+    return {
+      equiposVendidos,
+      montoEquiposVendidos: this.redondear(montoEquiposVendidos),
+      equiposDisponibles: disponibles.length,
+      stockEquiposUsd: this.redondear(stockEquiposUsd),
+      stockEquiposArs: this.redondear(stockEquiposArs),
+      stockEquiposPesos: this.redondear(stockEquiposArs + stockEquiposUsd * dolarJC),
+      equiposReservadosWeb
     };
   }
 
@@ -385,6 +571,7 @@ export class ReportesService {
 
   nombreMetodo(metodo: any): string {
     const m = String(metodo || '').toLowerCase();
+    if (m.includes('cuenta')) return 'Cuenta corriente';
     if (m.includes('efectivo')) return 'Efectivo';
     if (m.includes('tarjeta')) return 'Tarjeta';
     if (m.includes('transferencia') || m.includes('qr')) return 'Transferencia / QR';

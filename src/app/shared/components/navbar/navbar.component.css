@@ -270,3 +270,36 @@ img.logo {
     padding: 0.30rem 0.6rem; /* menos padding */
   }
 }
+
+
+/* Acceso a "Mi cuenta" (nombre del cliente logueado) */
+.mi-cuenta-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  color: #fff;
+  text-decoration: none;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  transition: background-color 0.2s, border-color 0.2s;
+  max-width: 180px;
+}
+
+.mi-cuenta-link i { font-size: 1.1rem; }
+
+.mi-cuenta-link .nombre {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mi-cuenta-link:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+@media (max-width: 400px) {
+  .mi-cuenta-link .nombre { display: none; }   /* en pantallas muy chicas, solo el ícono */
+}

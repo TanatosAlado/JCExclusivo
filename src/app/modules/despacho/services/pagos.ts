@@ -9,14 +9,36 @@
  * Funciones puras (sin Angular) para poder probarlas.
  */
 
-export type MetodoPago = 'efectivo' | 'tarjeta' | 'transferencia';
+export type MetodoPago = 'efectivo' | 'tarjeta' | 'transferencia' | 'cuentacorriente' | 'creditocasa' | 'canje';
 export type MetodoNormalizado = MetodoPago | 'otros';
 
+/** Medios con los que entra dinero a la caja */
 export const METODOS_PAGO: { valor: MetodoPago; nombre: string; icono: string }[] = [
   { valor: 'efectivo', nombre: 'Efectivo', icono: '💵' },
   { valor: 'tarjeta', nombre: 'Tarjeta', icono: '💳' },
   { valor: 'transferencia', nombre: 'Transferencia', icono: '🏦' }
 ];
+
+/**
+ * "Cuenta corriente": el cliente se lleva la mercadería y lo debe (solo clientes mayoristas).
+ * NO es dinero: no entra a la caja el día de la venta, entra cuando se cobra la deuda.
+ */
+export const METODO_CUENTA_CORRIENTE: { valor: MetodoPago; nombre: string; icono: string } =
+  { valor: 'cuentacorriente', nombre: 'Cuenta corriente', icono: '📒' };
+
+/**
+ * "Crédito de la casa": lo que el cliente financia en cuotas (ver credito-casa.ts).
+ * NO es dinero: entra a la caja a medida que paga las cuotas.
+ */
+export const METODO_CREDITO_CASA: { valor: MetodoPago; nombre: string; icono: string } =
+  { valor: 'creditocasa', nombre: 'Crédito de la casa', icono: '🏠' };
+
+/** "Plan canje": el cliente entrega un equipo usado como parte de pago. NO es dinero. */
+export const METODO_CANJE: { valor: MetodoPago; nombre: string; icono: string } =
+  { valor: 'canje', nombre: 'Plan canje', icono: '📲' };
+
+/** Medios que NO son dinero (no entran a la caja) */
+export const METODOS_SIN_DINERO: MetodoNormalizado[] = ['cuentacorriente', 'creditocasa', 'canje'];
 
 /** Un pago guardado en la venta */
 export interface PagoVenta {
@@ -24,6 +46,7 @@ export interface PagoVenta {
   monto: number;                 // lo que efectivamente pagó con ese medio
   porcentajeDescuento: number;   // % de descuento de ese medio (0 si no corresponde)
   descuento: number;             // $ de descuento que generó esa parte
+  detalle?: string;              // tarjeta: nº de operación del posnet u otra observación (opcional)
 }
 
 /** Una línea que carga el vendedor (monto null = sin cargar) */
@@ -45,11 +68,16 @@ const r2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
 
 export function nombreMetodo(m: any): string {
   const n = normalizarMetodo(m);
-  return n === 'otros' ? (m ? String(m) : 'Sin especificar') : METODOS_PAGO.find(x => x.valor === n)!.nombre;
+  if (n === 'otros') return m ? String(m) : 'Sin especificar';
+  return [...METODOS_PAGO, METODO_CUENTA_CORRIENTE, METODO_CREDITO_CASA, METODO_CANJE].find(x => x.valor === n)!.nombre;
 }
 
 export function normalizarMetodo(m: any): MetodoNormalizado {
   const s = String(m || '').toLowerCase();
+  // Exactos: "tarjeta de crédito" es tarjeta, no crédito de la casa
+  if (s === 'creditocasa' || s.includes('de la casa')) return 'creditocasa';
+  if (s === 'canje' || s.includes('plan canje')) return 'canje';
+  if (s.includes('cuenta')) return 'cuentacorriente';
   if (s.includes('efectivo')) return 'efectivo';
   if (s.includes('tarjeta')) return 'tarjeta';
   if (s.includes('transferencia') || s.includes('qr')) return 'transferencia';
@@ -126,9 +154,13 @@ export function calcularPagos(
  * Pagos de una venta guardada. Las ventas viejas (antes de los pagos divididos)
  * solo tienen metodoPago + total: se toman como un único pago.
  */
-export function pagosDeVenta(venta: any): { metodo: MetodoNormalizado; monto: number }[] {
+export function pagosDeVenta(venta: any): { metodo: MetodoNormalizado; monto: number; detalle?: string }[] {
   if (Array.isArray(venta?.pagos) && venta.pagos.length) {
-    return venta.pagos.map((p: any) => ({ metodo: normalizarMetodo(p.metodo), monto: Number(p.monto) || 0 }));
+    return venta.pagos.map((p: any) => ({
+      metodo: normalizarMetodo(p.metodo),
+      monto: Number(p.monto) || 0,
+      ...(p.detalle ? { detalle: String(p.detalle) } : {})
+    }));
   }
   return [{ metodo: normalizarMetodo(venta?.metodoPago), monto: Number(venta?.total) || 0 }];
 }
@@ -141,11 +173,63 @@ export function metodoResumen(pagos: { metodo: string }[]): string {
 /** Texto para listados/tickets: "Efectivo" o "Efectivo $54.000 + Tarjeta $40.000" */
 export function textoPagos(venta: any, moneda: (n: number) => string): string {
   const pagos = pagosDeVenta(venta);
-  if (pagos.length === 1) return nombreMetodo(Array.isArray(venta?.pagos) && venta.pagos.length ? venta.pagos[0].metodo : venta?.metodoPago);
-  return pagos.map(p => `${nombreMetodo(p.metodo)} ${moneda(p.monto)}`).join(' + ');
+  const op = (p: { detalle?: string }) => p.detalle ? ` (${p.detalle})` : '';
+  if (pagos.length === 1) {
+    return nombreMetodo(Array.isArray(venta?.pagos) && venta.pagos.length ? venta.pagos[0].metodo : venta?.metodoPago) + op(pagos[0]);
+  }
+  return pagos.map(p => `${nombreMetodo(p.metodo)} ${moneda(p.monto)}${op(p)}`).join(' + ');
+}
+
+/** Máximo de caracteres del detalle de un pago con tarjeta */
+export const MAX_DETALLE_PAGO = 120;
+
+/** Limpia el detalle que escribió el cajero ('' si no hay) */
+export function limpiarDetalle(texto: any): string {
+  return String(texto ?? '').replace(/\s+/g, ' ').trim().slice(0, MAX_DETALLE_PAGO);
+}
+
+/** Agrega el detalle (nº de operación del posnet) al pago con tarjeta. Si está vacío no agrega nada. */
+export function conDetalleTarjeta<T extends { metodo: string }>(pagos: T[], detalle: any): (T & { detalle?: string })[] {
+  const d = limpiarDetalle(detalle);
+  return pagos.map(p => p.metodo === 'tarjeta' && d ? { ...p, detalle: d } : p);
 }
 
 /** Importe pagado en efectivo (el que mueve la caja física) */
 export function efectivoDeVenta(venta: any): number {
   return r2(pagosDeVenta(venta).filter(p => p.metodo === 'efectivo').reduce((a, p) => a + p.monto, 0));
+}
+
+/** Pagos con los que entró dinero (sin cuenta corriente, crédito de la casa ni plan canje) */
+export function pagosEnCaja(venta: any): { metodo: MetodoNormalizado; monto: number; detalle?: string }[] {
+  return pagosDeVenta(venta).filter(p => !METODOS_SIN_DINERO.includes(p.metodo));
+}
+
+/** Parte de la venta financiada con el crédito de la casa */
+export function creditoDeVenta(venta: any): number {
+  return r2(pagosDeVenta(venta).filter(p => p.metodo === 'creditocasa').reduce((a, p) => a + p.monto, 0));
+}
+
+/** Parte de la venta pagada con un equipo usado (plan canje) */
+export function canjeDeVenta(venta: any): number {
+  return r2(pagosDeVenta(venta).filter(p => p.metodo === 'canje').reduce((a, p) => a + p.monto, 0));
+}
+
+/** Parte de la venta que quedó a cuenta corriente (deuda del cliente) */
+export function aCuentaDeVenta(venta: any): number {
+  return r2(pagosDeVenta(venta).filter(p => p.metodo === 'cuentacorriente').reduce((a, p) => a + p.monto, 0));
+}
+
+/** ¿Es el cobro de una deuda de cuenta corriente? (no es una venta: no se cuenta como vendido) */
+export function esCobroCuenta(venta: any): boolean {
+  return venta?.tipoVenta === 'cobrocuenta';
+}
+
+/** ¿Es el cobro de cuotas del crédito de la casa? (no es una venta: la venta se contó al financiar) */
+export function esCobroCuota(venta: any): boolean {
+  return venta?.tipoVenta === 'cobrocuota';
+}
+
+/** Cobro de una deuda (cuenta corriente o cuotas): entra a la caja pero no es una venta nueva */
+export function esCobroDeuda(venta: any): boolean {
+  return esCobroCuenta(venta) || esCobroCuota(venta);
 }

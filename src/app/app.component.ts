@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { AnalyticsService } from './shared/services/analytics.service';
 
 @Component({
   selector: 'app-root',
@@ -7,4 +8,9 @@ import { Component } from '@angular/core';
 })
 export class AppComponent {
   title = 'jcexclusivo';
+
+  constructor(analytics: AnalyticsService) {
+    // Google Analytics: solo la tienda (ver AnalyticsService)
+    analytics.iniciar();
+  }
 }

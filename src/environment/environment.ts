@@ -6,7 +6,8 @@ export const environment = {
         projectId: "storejcexclusivo",
         storageBucket: "storejcexclusivo.firebasestorage.app",
         messagingSenderId: "740660291155",
-        appId: "1:740660291155:web:8c9f5bf764ab98606488a6"
+        appId: "1:740660291155:web:8c9f5bf764ab98606488a6",
+        measurementId: "G-84CJ0JHLJV"
     },
 
     passGenerica:'Jcexclusivo123',

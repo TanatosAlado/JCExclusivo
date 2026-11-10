@@ -8,6 +8,7 @@ import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { ComprobanteOrdenComponent } from '../comprobante-orden/comprobante-orden.component';
 import { collection, Firestore, getDocs, query, where } from '@angular/fire/firestore';
 import { BuscadorClientesService, ClienteEncontrado } from 'src/app/shared/services/buscador-clientes.service';
+import { datosPresupuesto } from 'src/app/modules/despacho/services/desglose-reparacion';
 
 @Component({
   selector: 'app-alta-orden',
@@ -41,6 +42,11 @@ export class AltaOrdenComponent {
     private buscadorClientes: BuscadorClientesService
   ) { }
 
+  /** Presupuesto total = mano de obra + repuestos */
+  get presupuestoTotal(): number {
+    return datosPresupuesto(this.ordenForm?.value?.manoObra, this.ordenForm?.value?.repuestos, 0).presupuesto;
+  }
+
   ngOnInit(): void {
     this.ordenForm = this.fb.group({
       dniCliente: [null, [Validators.required]],
@@ -52,7 +58,9 @@ export class AltaOrdenComponent {
       motivoIngreso: ['', [Validators.required]],
       codigoDesbloqueo: [''],
       colorEquipo: [''],
-      presupuesto: [0],
+      // Presupuesto = mano de obra + repuestos (se calcula solo)
+      manoObra: [null, [Validators.min(0)]],
+      repuestos: [null, [Validators.min(0)]],
       esGremio: [false],
       gremioNombre: [{ value: '', disabled: true }],
       garantia: [false],
@@ -183,7 +191,7 @@ export class AltaOrdenComponent {
         imei: this.ordenForm.value.imei,
         equipo: this.ordenForm.value.equipo,
         motivoIngreso: this.ordenForm.value.motivoIngreso,
-        presupuesto: this.ordenForm.value.presupuesto,
+        ...datosPresupuesto(this.ordenForm.value.manoObra, this.ordenForm.value.repuestos, 0),
         codigoDesbloqueo: this.ordenForm.value.codigoDesbloqueo,
         colorEquipo: this.ordenForm.value.colorEquipo,
         estado: 'Pendiente',

@@ -1,6 +1,7 @@
 import { Component, ElementRef, Inject, ViewChild } from '@angular/core';
 import { MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { QRCodeComponent } from 'angularx-qrcode';
+import { desgloseDeOrden } from 'src/app/modules/despacho/services/desglose-reparacion';
 
 @Component({
   selector: 'app-ver-orden',
@@ -15,6 +16,11 @@ export class VerOrdenComponent {
   /** Artículos de stock usados en la reparación (los devueltos no se muestran) */
   get articulosUsados(): any[] {
     return (this.orden?.articulos || []).filter((a: any) => !a.devuelto);
+  }
+
+  /** Mano de obra / repuestos (null: sin discriminar) */
+  get desglose() {
+    return desgloseDeOrden(this.orden);
   }
 
   constructor(@Inject(MAT_DIALOG_DATA) public orden: any) {

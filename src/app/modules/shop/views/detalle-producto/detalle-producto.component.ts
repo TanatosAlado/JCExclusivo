@@ -8,6 +8,9 @@ import { LoginComponent } from 'src/app/modules/auth/views/login/login.component
 import { Cliente } from 'src/app/modules/auth/models/cliente.model';
 import { ProductosService } from '../../services/productos.service';
 import { InfoEmpresaService } from 'src/app/shared/services/info-empresa.service';
+import { fotosDe, unicas } from 'src/app/shared/utils/fotos';
+import { AnalyticsService } from 'src/app/shared/services/analytics.service';
+import { itemAnalytics } from 'src/app/shared/utils/analytics-tienda';
 
 @Component({
   selector: 'app-detalle-producto',
@@ -32,6 +35,7 @@ export class DetalleProductoComponent {
 
 
   constructor(
+    private analytics: AnalyticsService,
     private route: ActivatedRoute,
     private generalService: GeneralService,
     private toastService: ToastService,
@@ -68,12 +72,20 @@ export class DetalleProductoComponent {
 
         this.producto = data;
         this.configurarVariantes();
+
+        // Analytics: una vez por producto (no cada vez que se actualiza el stock)
+        if (this.productoVisto !== data.id) {
+          this.productoVisto = data.id;
+          this.analytics.verProducto(itemAnalytics(data, this.precioVisible, 1));
+        }
       });
     });
   }
 
 
 configurarVariantes() {
+
+  this.indiceFoto = 0;
 
   const variantes = this.producto.variantes || [];
 
@@ -157,6 +169,7 @@ configurarVariantes() {
 
 seleccionarModelo(modelo: string) {
   this.modeloSeleccionado = modelo;
+  this.indiceFoto = 0;   // vuelve a la primera foto (la de la variante)
 
   const variantesModelo =
     this.producto.variantes?.filter(v => v.modelo === modelo) || [];
@@ -179,6 +192,7 @@ seleccionarModelo(modelo: string) {
 seleccionarVariante(variante: VarianteProducto) {
 
   this.selectedVariante = variante;
+  this.indiceFoto = 0;   // vuelve a la primera foto (la de la variante)
 
   const totalStock = this.stockVisible;
 
@@ -257,6 +271,7 @@ private procesarProductoEnCarrito(cliente: Cliente, producto: Producto) {
   this.generalService.cargarProductoCarrito(productoFinal, this.cantidad)
     .then(() => {
       this.toastService.toastMessage('Producto agregado al carrito', 'green', 2000);
+      this.analytics.agregarAlCarrito(itemAnalytics(productoFinal, this.precioVisible, this.cantidad));
     })
     .catch(err => {
 
@@ -354,8 +369,39 @@ puedeAgregar(): boolean {
     return precio;
   }
 
+/** Último producto registrado en Analytics */
+private productoVisto: string | null = null;
+
 get imagenVisible(): string {
-  return this.selectedVariante?.imagen || this.producto.imagen;
+  const fotos = this.fotos;
+  return fotos[this.indiceFoto] || fotos[0] || this.selectedVariante?.imagen || this.producto?.imagen;
+}
+
+// =====================================================
+// FOTOS (varias: flechas, miniaturas y galería en grande)
+// =====================================================
+
+indiceFoto = 0;
+verGaleria = false;
+
+/** Primero la foto de la variante elegida (si tiene) y después la galería del producto */
+get fotos(): string[] {
+  return unicas([this.selectedVariante?.imagen, ...fotosDe(this.producto as any)]);
+}
+
+cambiarFoto(dir: number, evento?: Event) {
+  evento?.stopPropagation();
+  const n = this.fotos.length;
+  if (n < 2) return;
+  this.indiceFoto = (this.indiceFoto + dir + n) % n;
+}
+
+irAFoto(i: number) {
+  this.indiceFoto = i;
+}
+
+abrirGaleria() {
+  if (this.fotos.length) this.verGaleria = true;
 }
 
 

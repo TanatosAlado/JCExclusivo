@@ -29,6 +29,7 @@ export class EmpresaComponent {
       alias: ['', [Validators.required]],
       email: ['', [Validators.required, Validators.email]],
       dolar: [0, [Validators.required, Validators.min(1)]],
+      dolarJC: [null, [Validators.min(0)]],   // equipos (si queda vacío, se usa el dólar común)
       descuentoEnEfectivo: [0, [Validators.min(0)]],
       descuentoEnTransferencia: [0, [Validators.min(0)]]
     });
@@ -38,6 +39,10 @@ export class EmpresaComponent {
     this.infoService.obtenerInfoGeneral().subscribe((data) => {
       if (data) {
         this.infoForm.patchValue(data);
+        // Si todavía no se cargó el dólar JC, se propone el dólar común
+        if (!(Number((data as any).dolarJC) > 0) && this.infoForm.get('dolarJC')?.pristine) {
+          this.infoForm.get('dolarJC')?.setValue((data as any).dolar ?? null);
+        }
       }
       this.cargando = false;
     });
@@ -48,6 +53,7 @@ export class EmpresaComponent {
 
     const data: InfoEmpresa = {
       ...this.infoForm.value,
+      dolarJC: Number(this.infoForm.value.dolarJC) > 0 ? Number(this.infoForm.value.dolarJC) : null,
       dolarActualizado: new Date()
     };
 
@@ -61,7 +67,7 @@ export class EmpresaComponent {
         accion: 'modificar',
         entidad: 'InfoEmpresa',
         entidadId: 'general',
-        descripcion: 'Modificó la información de la empresa (dólar, descuentos, datos de pago)',
+        descripcion: 'Modificó la información de la empresa (dólar, dólar JC, descuentos, datos de pago)',
         antes,
         despues: datosAuditables
       });

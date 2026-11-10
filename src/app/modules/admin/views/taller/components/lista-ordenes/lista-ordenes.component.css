@@ -224,3 +224,19 @@ color:var(--color-primario)
   line-height: 16px;
   text-align: center;
 }
+
+
+/* Trabajo terminado por el taller (con su costo) */
+.trabajo-terminado {
+  display: inline-block;
+  margin-top: 2px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #e7f5ec;
+  color: #1e5c34;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+a.terminar i { color: #1e8e4a; }

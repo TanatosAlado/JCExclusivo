@@ -7,6 +7,8 @@ import { Cliente } from '../../models/cliente.model';
 import { MatDialogRef } from '@angular/material/dialog';
 import { AuthService } from '../../services/auth.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { AnalyticsService } from 'src/app/shared/services/analytics.service';
+import { errorDatosSolicitud, limpiarCuit, nuevaSolicitud } from 'src/app/shared/utils/solicitud-mayorista';
 
 @Component({
   selector: 'app-registro',
@@ -18,6 +20,7 @@ export class RegistroComponent {
   error: string | null = null;
 
   constructor(
+    private analytics: AnalyticsService,
     private fb: FormBuilder,
     private auth: Auth,
     private firestore: Firestore,
@@ -46,7 +49,7 @@ export class RegistroComponent {
 
       if (esMayorista) {
         razonSocial?.setValidators([Validators.required]);
-        cuit?.setValidators([Validators.required, Validators.pattern(/^\d{11}$/)]);
+        cuit?.setValidators([Validators.required, Validators.pattern(/^\d{2}-?\d{8}-?\d$/)]);
       } else {
         razonSocial?.clearValidators();
         cuit?.clearValidators();
@@ -67,6 +70,16 @@ export class RegistroComponent {
 
       dni: Number(this.formRegistroCliente.value.dni)  
     };
+
+    // Mayorista: se valida el CUIT (con su dígito verificador) antes de crear nada
+    const pideMayorista = form.esMayorista === true;
+    if (pideMayorista) {
+      const errorSolicitud = errorDatosSolicitud(form);
+      if (errorSolicitud) {
+        this.error = errorSolicitud;
+        return;
+      }
+    }
 
     // 1. Validar que el nombre de usuario no exista (índice 'Usuarios', sin leer Clientes)
     if (!form.usuario || form.usuario.includes('/')) {
@@ -90,23 +103,25 @@ export class RegistroComponent {
         false,             // administrador
         form.apellido,
         [],                // carrito
-        form.cuit || '',
+        pideMayorista ? limpiarCuit(form.cuit) : '',
         form.direccion,
         form.dni,
-        form.esMayorista,
+        false,             // esMayorista: siempre minorista hasta que un administrador apruebe la solicitud
         true,
         [],                // historial
         uid,
         form.mail,
         form.nombre,
         0,                 // puntos
-        form.razonSocial || '',
+        pideMayorista ? String(form.razonSocial || '').trim() : '',
         form.telefono,
         form.usuario,
       );
 
-      // 4. Guardar en Firestore
-      await setDoc(doc(this.firestore, 'Clientes', uid), { ...nuevoCliente });
+      // 4. Guardar en Firestore (si pidió ser mayorista, la solicitud queda pendiente)
+      const datosCliente: any = { ...nuevoCliente };
+      if (pideMayorista) datosCliente.solicitudMayorista = nuevaSolicitud(form);
+      await setDoc(doc(this.firestore, 'Clientes', uid), datosCliente);
 
       // 4.b Índice de usuario → mail (para poder iniciar sesión con el nombre de usuario)
       await this.authService.registrarEnIndice(form.usuario, uid, cred.user.email || form.mail);
@@ -116,8 +131,17 @@ export class RegistroComponent {
 
       if (clienteLogueado) {
         this.authService.setUsuarioActual(clienteLogueado);
-        this.snackBar.open('Registro exitoso. Bienvenido/a, ' + form.nombre + '!', 'Cerrar', {
-          duration: 4000,
+        this.analytics.registro();
+        const mensaje = pideMayorista
+          ? `¡Bienvenido/a, ${form.nombre}! Tu solicitud de cuenta mayorista quedó en revisión: ` +
+            'te avisamos cuando esté aprobada. Mientras tanto ves los precios minoristas.'
+          : 'Registro exitoso. Bienvenido/a, ' + form.nombre + '!';
+        // Así no se le vuelve a mostrar el mismo aviso al iniciar sesión
+        if (pideMayorista) {
+          try { localStorage.setItem(`avisoMayorista:${uid}:pendiente:${datosCliente.solicitudMayorista.fecha}`, '1'); } catch { }
+        }
+        this.snackBar.open(mensaje, 'Cerrar', {
+          duration: pideMayorista ? 9000 : 4000,
           horizontalPosition: 'center',
           verticalPosition: 'bottom',
           panelClass: ['snackbar-success']

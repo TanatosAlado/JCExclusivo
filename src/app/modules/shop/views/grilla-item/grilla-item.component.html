@@ -219,7 +219,12 @@
                         class="col-6 col-sm-6 col-md-4 col-xl-3 col-5-per-row mb-4"
                         *ngFor="let producto of productosPaginados">
 
-                        <app-item
+                        <app-item-equipo *ngIf="$any(producto).esEquipo"
+                            [equipo]="$any(producto).equipo"
+                            [esMayorista]="esMayorista">
+                        </app-item-equipo>
+
+                        <app-item *ngIf="!$any(producto).esEquipo"
                             [producto]="producto"
                             [esMayorista]="esMayorista"
                             [estadoGrilla]="{
@@ -316,4 +321,4 @@
 
 </div>
 
-<app-whatsapp></app-whatsapp>
+<app-whatsapp></app-whatsapp>

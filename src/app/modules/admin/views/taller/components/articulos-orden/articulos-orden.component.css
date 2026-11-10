@@ -20,7 +20,6 @@
   flex-wrap: wrap;
 }
 
-.campo-sucursal { width: 200px; }
 .campo-busqueda { flex: 1; min-width: 240px; }
 .campo-cantidad { width: 110px; margin-bottom: -1.25em; }
 
@@ -117,4 +116,57 @@
   margin-top: 12px;
   font-size: 0.82rem;
   color: #888;
+}
+
+.origen-stock {
+  font-size: 0.88rem;
+  color: #555;
+  margin-bottom: 8px;
+}
+
+.origen-stock i {
+  color: #2a78d6;
+  margin-right: 4px;
+}
+
+/* ---------- Código de barras ---------- */
+.boton-buscar {
+  margin-top: 6px;
+  height: 48px;
+}
+
+.link-buscar {
+  border: 0;
+  background: none;
+  padding: 0;
+  margin: 2px 0 10px;
+  color: #2a78d6;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.link-buscar:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.link-buscar i {
+  margin-right: 4px;
+}
+
+.busqueda-nombre {
+  margin-top: 8px;
+}
+
+.aviso-codigo {
+  background: #fff4d6;
+  color: #6b4a00;
+  border: 1px solid #f3dc9c;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.88rem;
+  margin-bottom: 10px;
+}
+
+.aviso-codigo i {
+  margin-right: 6px;
 }

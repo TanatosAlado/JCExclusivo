@@ -11,6 +11,99 @@ export class PedidosService {
 
   constructor(private firestore: Firestore, private auditoria: AuditoriaService) { }
 
+  // =====================================================
+  // 📱 EQUIPOS EN PEDIDOS WEB
+  // Al hacer el pedido el equipo queda "vendido" (reservado para ese pedido).
+  // Si el pedido se cancela (o se le quita el equipo), vuelve a estar a la venta.
+  // =====================================================
+
+  private esEquipo(item: any): boolean {
+    return item?.tipo === 'equipo' && !!item?.equipoId;
+  }
+
+  /** Devuelve a la venta los equipos del pedido que siguen reservados por ESE pedido. Devuelve los nombres. */
+  async devolverEquiposPedido(pedidoId: string, items: any[], motivo: string): Promise<string[]> {
+    const equipos = (items || []).filter(i => this.esEquipo(i));
+    if (!equipos.length) return [];
+    const devueltos: string[] = [];
+
+    await runTransaction(this.firestore, async tx => {
+      devueltos.length = 0;
+      const lecturas: { item: any; ref: any; data: any; imeiRef: any; imeiData: any }[] = [];
+      for (const item of equipos) {
+        const ref = doc(this.firestore, 'Equipos', item.equipoId);
+        const snap = await tx.get(ref);
+        const data: any = snap.exists() ? snap.data() : null;
+        const imeiRef = data?.imei ? doc(this.firestore, 'EquiposIMEI', String(data.imei)) : null;
+        const imeiSnap = imeiRef ? await tx.get(imeiRef) : null;
+        lecturas.push({ item, ref, data, imeiRef, imeiData: imeiSnap?.exists() ? imeiSnap.data() : null });
+      }
+      for (const l of lecturas) {
+        if (!l.data || l.data.estado !== 'vendido' || l.data.venta?.pedidoId !== pedidoId) continue;
+        // Mientras tanto cargaron otro equipo disponible con el mismo IMEI: no puede haber dos
+        if (l.imeiData && l.imeiData.equipoId !== l.item.equipoId) {
+          throw new Error(`Ya hay otro equipo disponible con el IMEI ${l.data.imei}. Revisalo en Gestiones → Equipos.`);
+        }
+        tx.update(l.ref, {
+          estado: 'disponible',
+          venta: null,
+          ventasAnuladas: [...(l.data.ventasAnuladas || []), {
+            pedidoId,
+            nroPedido: l.data.venta?.nroPedido ?? null,
+            fecha: l.data.venta?.fecha ?? null,
+            anuladaEn: new Date().toISOString(),
+            motivo
+          }]
+        });
+        if (l.imeiRef) tx.set(l.imeiRef, { equipoId: l.item.equipoId, modelo: l.data.modelo || '' });
+        devueltos.push(l.item.nombre);
+      }
+    });
+    return devueltos;
+  }
+
+  /** Vuelve a reservar los equipos de un pedido que se restaura (tienen que seguir disponibles) */
+  private async reservarEquiposPedido(pedidoId: string, pedido: any): Promise<void> {
+    const equipos = (pedido.carrito || []).filter((i: any) => this.esEquipo(i));
+    if (!equipos.length) return;
+
+    await runTransaction(this.firestore, async tx => {
+      const lecturas: { item: any; ref: any; data: any; imeiRef: any; imeiData: any }[] = [];
+      for (const item of equipos) {
+        const ref = doc(this.firestore, 'Equipos', item.equipoId);
+        const snap = await tx.get(ref);
+        const data: any = snap.exists() ? snap.data() : null;
+        const imeiRef = data?.imei ? doc(this.firestore, 'EquiposIMEI', String(data.imei)) : null;
+        const imeiSnap = imeiRef ? await tx.get(imeiRef) : null;
+        lecturas.push({ item, ref, data, imeiRef, imeiData: imeiSnap?.exists() ? imeiSnap.data() : null });
+      }
+      for (const l of lecturas) {
+        // Ya está reservado por este mismo pedido: nada que hacer
+        if (l.data?.estado === 'vendido' && l.data?.venta?.pedidoId === pedidoId) continue;
+        if (!l.data || l.data.estado !== 'disponible') {
+          throw new Error(`No se puede restaurar el pedido: el equipo "${l.item.nombre}" ya no está disponible.`);
+        }
+      }
+      for (const l of lecturas) {
+        if (l.data?.estado !== 'disponible') continue;
+        tx.update(l.ref, {
+          estado: 'vendido',
+          venta: {
+            ventaId: null,
+            pedidoId,
+            nroPedido: pedido.nroPedido ?? null,
+            fecha: new Date().toISOString(),
+            origen: 'web',
+            cliente: { id: pedido.clienteId || null, nombre: pedido.nombreCliente || pedido.user || '' },
+            precio: l.item.precioFinal ?? null,
+            moneda: l.item.moneda ?? null
+          }
+        });
+        if (l.imeiRef && l.imeiData?.equipoId === l.item.equipoId) tx.delete(l.imeiRef);
+      }
+    });
+  }
+
   //SERVICE PARA CREAR PEDIDO
   createPedido(pedido: Pedido): Promise<any> {
     const clienteRef = collection(this.firestore, 'Pedidos Pendientes');
@@ -48,8 +141,13 @@ export class PedidosService {
 
     //SERVICIO PARA ACTUALIZAR LA CANTIDAD DE PRODUCTOS Y TOTAL EN PEDIDOS PENDIENTES
   async updateCarroEnPedido(idPedido: string, nuevoCarro: any[]) {
+    // Un equipo es una unidad única: la cantidad siempre es 1
+    nuevoCarro = (nuevoCarro || []).map(i => this.esEquipo(i) ? { ...i, cantidad: 1 } : i);
     const nuevoTotal = nuevoCarro.reduce((acc, item) => acc + item.precioFinal * item.cantidad, 0);
     const antes = await this.auditoria.capturar('Pedidos Pendientes', idPedido);
+    // Equipos que se sacaron del pedido: vuelven a la venta
+    const quitados = (antes?.carrito || []).filter((i: any) => this.esEquipo(i) && !nuevoCarro.some(n => n.equipoId === i.equipoId));
+    if (quitados.length) await this.devolverEquiposPedido(idPedido, quitados, `Quitado del pedido #${antes?.nroPedido ?? '?'}`);
     const pedidoRef = doc(this.firestore, 'Pedidos Pendientes', idPedido);
     await updateDoc(pedidoRef, {
       carrito: nuevoCarro,
@@ -73,12 +171,16 @@ export class PedidosService {
     deleteProductoDelCarrito(idPedido: string, idProducto: string) {
     const pedidoRef = doc(this.firestore, 'Pedidos Pendientes', idPedido);
 
-    return getDoc(pedidoRef).then((docSnap) => {
+    return getDoc(pedidoRef).then(async (docSnap) => {
       if (!docSnap.exists()) {
         throw new Error('Pedido no encontrado');
       }
       const pedidoData = docSnap.data();
       const quitado = (pedidoData['carrito'] || []).find((p: any) => p.id === idProducto);
+      // 📱 Si es un equipo, vuelve a estar a la venta
+      if (this.esEquipo(quitado)) {
+        await this.devolverEquiposPedido(idPedido, [quitado], `Quitado del pedido #${pedidoData['nroPedido'] ?? '?'}`);
+      }
       this.auditoria.registrar({
         accion: 'modificar',
         entidad: 'Pedidos Pendientes',
@@ -130,6 +232,13 @@ export class PedidosService {
         destino === 'Pedidos Eliminados'
       ) {
 
+        // 📱 Equipos: vuelven a la venta (una sola vez)
+        if (data.equiposDevueltos !== true) {
+          const devueltos = await this.devolverEquiposPedido(id, data.carrito || [], `Pedido #${data.nroPedido ?? '?'} eliminado`);
+          data.equiposDevueltos = true;
+          if (devueltos.length) data.equiposDevueltosNombres = devueltos;
+        }
+
         // Evitamos devolver dos veces
         if (data.stockDevuelto !== true) {
 
@@ -145,6 +254,13 @@ export class PedidosService {
           );
 
         }
+      }
+
+      // 📱 Pedido eliminado que se restaura: los equipos se vuelven a reservar (tienen que seguir disponibles)
+      if (origen === 'Pedidos Eliminados' && destino === 'Pedidos Pendientes'
+        && (data.carrito || []).some((i: any) => this.esEquipo(i))) {
+        await this.reservarEquiposPedido(id, data);
+        data.equiposDevueltos = false;
       }
 
       // =====================================================

@@ -1,0 +1,131 @@
+<app-encabezado>
+  Cuenta Local – Taller
+</app-encabezado>
+
+<div class="container py-3 cuenta-taller">
+
+  <div class="cargando" *ngIf="cargando">
+    <mat-spinner diameter="32"></mat-spinner><span>Cargando…</span>
+  </div>
+
+  <div class="alert alert-danger" *ngIf="error">{{ error }}</div>
+
+  <ng-container *ngIf="!cargando && !error">
+
+    <div class="alert alert-warning" *ngIf="!taller">
+      No encontré la sucursal del taller. En <b>Gestiones → Sucursales</b> tiene que haber una sola sucursal interna
+      (sin "Disponible para retiro en la tienda online").
+    </div>
+
+    <div class="vacio" *ngIf="taller && !cuentas.length">
+      <i class="fas fa-handshake"></i>
+      <p>Todavía no hay deudas con {{ taller.nombre }}.</p>
+      <p class="subtexto">Se generan cuando el taller marca una orden como <b>Trabajo terminado</b> (Gestiones → Taller, botón <i class="fa-solid fa-flag-checkered"></i>).</p>
+    </div>
+
+    <ng-container *ngIf="cuenta">
+      <!-- Si hay más de un local -->
+      <div class="selector" *ngIf="cuentas.length > 1">
+        <button type="button" *ngFor="let c of cuentas" [class.activo]="c.id === cuenta.id" (click)="elegirCuenta(c)">
+          {{ c.deudor?.nombre }} → {{ c.acreedor?.nombre }}
+        </button>
+      </div>
+
+      <!-- Saldo -->
+      <div class="cabecera">
+        <div class="saldo-tarjeta" [class.cero]="cuenta.saldo <= 0">
+          <div class="etiqueta">{{ cuenta.deudor?.nombre }} le debe a {{ cuenta.acreedor?.nombre }}</div>
+          <div class="saldo">{{ cuenta.saldo | currency:'ARS':'symbol':'1.0-2' }}</div>
+          <div class="subtexto">{{ resumen.pendientes }} orden(es) sin pagar del todo</div>
+        </div>
+        <div class="resumen">
+          <div><span>Órdenes terminadas</span><b>{{ resumen.ordenes }}</b></div>
+          <div><span>Cobrado / a cobrar a clientes</span><b>{{ resumen.presupuesto | currency:'ARS':'symbol':'1.0-0' }}</b></div>
+          <div><span>Costo del taller</span><b>{{ resumen.costo | currency:'ARS':'symbol':'1.0-0' }}</b></div>
+          <div class="ganancia" [class.negativa]="resumen.ganancia < 0"><span>Ganancia del local</span><b>{{ resumen.ganancia | currency:'ARS':'symbol':'1.0-0' }}</b></div>
+        </div>
+        <div class="acciones">
+          <button mat-raised-button color="primary" type="button" (click)="pagar()" [disabled]="procesando || cuenta.saldo <= 0">
+            <i class="fas fa-money-bill-wave"></i> Registrar pago
+          </button>
+          <button mat-stroked-button type="button" (click)="cargar()" [disabled]="procesando">
+            <i class="fas fa-sync-alt" [class.fa-spin]="cargando || cargandoMovs"></i> Actualizar
+          </button>
+        </div>
+      </div>
+
+      <!-- Pestañas -->
+      <div class="pestanas" role="tablist">
+        <button type="button" [class.activa]="vista === 'pendientes'" (click)="vista = 'pendientes'">
+          Por pagar <span class="contador" *ngIf="cargosPendientes.length">{{ cargosPendientes.length }}</span>
+        </button>
+        <button type="button" [class.activa]="vista === 'todas'" (click)="vista = 'todas'">Todas las órdenes</button>
+        <button type="button" [class.activa]="vista === 'pagos'" (click)="vista = 'pagos'">Pagos</button>
+      </div>
+
+      <!-- Órdenes -->
+      <ng-container *ngIf="vista !== 'pagos'">
+        <div class="vacio chico" *ngIf="!listaCargos.length">
+          {{ vista === 'pendientes' ? 'No hay órdenes por pagar. ¡Al día!' : 'Todavía no hay órdenes terminadas.' }}
+        </div>
+        <div class="tabla-scroll" *ngIf="listaCargos.length">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>Orden</th><th>Terminado</th>
+                <th class="num">Cliente paga</th><th class="num">Costo taller</th><th class="num">Ganancia local</th>
+                <th class="num">Falta pagar</th><th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let c of listaCargos; trackBy: trackId" [class.anulado]="c.anulado">
+                <td>
+                  <b>#{{ c.numeroOrden }}</b> · {{ c.equipo }}
+                  <div class="subtexto">{{ c.cliente }}<span *ngIf="c.nota"> · {{ c.nota }}</span></div>
+                </td>
+                <td class="text-nowrap">{{ c.fecha | date:'dd/MM/yy' }}<div class="subtexto">{{ c.usuario?.nombre }}</div></td>
+                <td class="num">{{ c.presupuesto | currency:'ARS':'symbol':'1.0-0' }}</td>
+                <td class="num">{{ c.importe | currency:'ARS':'symbol':'1.0-0' }}
+                  <div class="subtexto" *ngIf="c.correcciones?.length" title="Costo corregido">corregido</div>
+                </td>
+                <td class="num" [class.text-danger]="ganancia(c) < 0">{{ ganancia(c) | currency:'ARS':'symbol':'1.0-0' }}</td>
+                <td class="num">
+                  <span class="estado" [ngClass]="estadoCargo(c)">
+                    {{ estadoCargo(c) === 'pagado' ? 'Pagado' : estadoCargo(c) === 'anulado' ? 'Anulado' : (c.pendiente | currency:'ARS':'symbol':'1.0-0') }}
+                  </span>
+                </td>
+                <td class="text-end">
+                  <button *ngIf="sinPagos(c)" type="button" class="btn btn-sm btn-outline-secondary" title="Corregir o anular el costo" (click)="corregir(c)" [disabled]="procesando">✏️</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </ng-container>
+
+      <!-- Pagos -->
+      <ng-container *ngIf="vista === 'pagos'">
+        <div class="vacio chico" *ngIf="!pagos.length">Todavía no hay pagos.</div>
+        <div class="tabla-scroll" *ngIf="pagos.length">
+          <table class="table table-sm align-middle">
+            <thead><tr><th>Fecha</th><th>Cómo</th><th>Órdenes</th><th class="num">Importe</th><th></th></tr></thead>
+            <tbody>
+              <tr *ngFor="let p of pagos; trackBy: trackId" [class.anulado]="p.anulado">
+                <td class="text-nowrap">{{ p.fecha | date:'dd/MM/yy HH:mm' }}<div class="subtexto">{{ p.usuario?.nombre }}</div></td>
+                <td>{{ p.metodo === 'efectivo' ? 'Efectivo entre cajas' : 'Transferencia' }}
+                  <div class="subtexto" *ngIf="p.nota">{{ p.nota }}</div>
+                  <div class="subtexto text-danger" *ngIf="p.anulado">Anulado: {{ p.motivoAnulacion }}</div>
+                </td>
+                <td><span *ngFor="let a of p.aplicaciones; let ultimo = last">#{{ a.numeroOrden }}{{ ultimo ? '' : ', ' }}</span></td>
+                <td class="num"><b>{{ p.importe | currency:'ARS':'symbol':'1.0-2' }}</b></td>
+                <td class="text-end">
+                  <button *ngIf="!p.anulado" type="button" class="btn btn-sm btn-outline-danger" title="Anular pago" (click)="anularPago(p)" [disabled]="procesando">⊘</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </ng-container>
+    </ng-container>
+  </ng-container>
+</div>

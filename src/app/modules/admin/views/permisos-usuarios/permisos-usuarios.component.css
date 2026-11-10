@@ -1,0 +1,144 @@
+.permisos {
+  max-width: 1200px;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.tarjeta {
+  background: #fff;
+  border: 1px solid #e3e6eb;
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.lista {
+  max-height: 75vh;
+  overflow-y: auto;
+}
+
+.campo-filtro {
+  margin-bottom: -0.5em;
+}
+
+.admin {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  padding: 8px 10px;
+  margin-bottom: 4px;
+}
+
+.admin:hover { background: #f4f7fb; }
+.admin.activo { background: #eef4fc; border-color: #2a78d6; }
+.admin.deshabilitado { opacity: 0.6; }
+
+.admin-linea {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.vacio {
+  text-align: center;
+  color: #888;
+  padding: 48px 16px;
+}
+
+.vacio i {
+  font-size: 2.2rem;
+  margin-bottom: 8px;
+  color: #b9c3d0;
+}
+
+.encabezado h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.encabezado {
+  margin-bottom: 12px;
+}
+
+.fila-super, .seccion {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  border: 1px solid #e3e6eb;
+  border-radius: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.fila-super {
+  margin-bottom: 16px;
+  background: #fafbfc;
+}
+
+.fila-super .form-check-input, .seccion .form-check-input {
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+.bloqueada { cursor: default; opacity: 0.75; }
+
+.barra-secciones {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.barra-secciones h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.grilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 8px;
+}
+
+.seccion.marcada {
+  border-color: #2a78d6;
+  background: #f3f8fe;
+}
+
+.sensible {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #8a5a00;
+  background: #fff4d6;
+  border-radius: 4px;
+  padding: 1px 5px;
+  margin-left: 6px;
+}
+
+.pie {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  border-top: 1px solid #eee;
+  padding-top: 12px;
+}
+
+.pie span { margin-right: auto; }
+
+@media (max-width: 860px) {
+  .layout { grid-template-columns: 1fr; }
+  .lista { max-height: none; }
+}

@@ -104,6 +104,9 @@
 
         <!-- Checkbox mayorista -->
         <mat-checkbox formControlName="esMayorista" class="fadeIn fourth">¿Sos mayorista?</mat-checkbox>
+        <p *ngIf="formRegistroCliente.get('esMayorista')?.value" class="aviso-mayorista fadeIn fourth">
+          Revisamos tu solicitud y te habilitamos los precios mayoristas. Mientras tanto podés comprar como minorista.
+        </p>
 
         <!-- Campos condicionales -->
         <div *ngIf="formRegistroCliente.get('esMayorista')?.value" class="fadeIn fourth">
@@ -119,12 +122,12 @@
           <!-- CUIT -->
           <mat-form-field appearance="outline" color="accent">
             <mat-label>CUIT</mat-label>
-            <input matInput formControlName="cuit" />
+            <input matInput formControlName="cuit" placeholder="20-12345678-6" inputmode="numeric" />
             <mat-error *ngIf="formRegistroCliente.get('cuit')?.hasError('required')">
               CUIT es obligatorio
             </mat-error>
             <mat-error *ngIf="formRegistroCliente.get('cuit')?.hasError('pattern')">
-              Debe tener 11 números
+              Debe tener 11 números (con o sin guiones)
             </mat-error>
           </mat-form-field>
         </div>
@@ -147,4 +150,4 @@
       </mat-error>
     </form>
   </mat-card>
-</div>
+</div>

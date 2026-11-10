@@ -1,176 +1,477 @@
-.form-grid {
+/* =====================================================================
+   Edición de producto
+   ===================================================================== */
+
+:host {
+  --borde: #e3e6eb;
+  --fondo-suave: #f7f9fc;
+  --tinta: #1f2430;
+  --tinta-2: #5b6170;
+  --tinta-3: #8a909c;
+  --acento: #2a78d6;
+  --acento-suave: #eaf2fd;
+  display: flex;
+  flex-direction: column;
+  max-height: 92vh;
+}
+
+/* ---------- Encabezado ---------- */
+.encabezado {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 24px 14px;
+  border-bottom: 1px solid var(--borde);
+}
+
+.miniatura {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  border: 1px solid var(--borde);
+  background: var(--fondo-suave);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.miniatura img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.miniatura mat-icon {
+  color: var(--tinta-3);
+}
+
+.titulo {
+  flex: 1;
+  min-width: 0;
+}
+
+.sobretitulo {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--acento);
+}
+
+.titulo h2 {
+  margin: 2px 0 6px;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--tinta);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
-  margin-bottom: 16px;
+  gap: 6px;
 }
 
-.form-field {
-  flex: 1 1 250px;
+.chip {
+  font-size: 0.75rem;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--fondo-suave);
+  border: 1px solid var(--borde);
+  color: var(--tinta-2);
 }
 
-.full-width {
+.chip-oferta { background: #fff4d6; border-color: #f3dc9c; color: #6b4a00; }
+.chip-destacado { background: var(--acento-suave); border-color: #c9ddf7; color: #1d5aa6; }
+
+.cerrar {
+  align-self: flex-start;
+  color: var(--tinta-3);
+}
+
+/* ---------- Contenido ---------- */
+.contenido {
+  padding: 18px 24px !important;
+  margin: 0 !important;
+  max-height: none !important;
+  flex: 1;
+  overflow: auto;
+  background: #fbfcfd;
+}
+
+.columnas {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 18px;
+  align-items: start;
+}
+
+.lateral {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.principal {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+
+.seccion {
+  background: #fff;
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  padding: 16px 18px 6px;
+}
+
+.lateral .seccion {
+  padding-bottom: 16px;
+}
+
+.seccion h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--tinta);
+}
+
+.seccion h3 mat-icon {
+  color: var(--acento);
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+}
+
+.total {
+  margin-left: 8px;
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--tinta-2);
+  background: var(--fondo-suave);
+  border-radius: 999px;
+  padding: 1px 10px;
+}
+
+.ayuda {
+  margin: -6px 0 12px;
+  font-size: 0.82rem;
+  color: var(--tinta-3);
+}
+
+.grilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  column-gap: 14px;
+}
+
+.grilla-stock {
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+}
+
+.ancho-completo {
+  grid-column: 1 / -1;
   width: 100%;
 }
 
-/* Imagen superior (logo o preview) */
-.imagen-central {
-  display: flex;
-  justify-content: center;
-  align-items: center;
+mat-form-field {
+  width: 100%;
+}
+
+/* ---------- Listas de precio ---------- */
+.listas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.lista {
+  border: 1px dashed var(--borde);
+  border-radius: 10px;
+  padding: 12px 12px 0;
+  min-height: 56px;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.lista.activa {
+  border-style: solid;
+  border-color: #c9ddf7;
+  background: var(--acento-suave);
+}
+
+.lista mat-slide-toggle {
+  display: block;
   margin-bottom: 12px;
 }
 
-.imagen-central img {
-  width: 100px;
-  height: auto;
-  border-radius: 20%;
-  object-fit: cover;
-}
-
-/* Variantes */
-.variante-lista {
-  margin-top: 20px;
-  padding: 12px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  border: 1px solid #e0e0e0;
-}
-
-.variante-row {
+/* ---------- Foto ---------- */
+.foto {
+  height: 220px;
+  border-radius: 10px;
+  border: 1px solid var(--borde);
+  background: var(--fondo-suave);
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 10px;
-  flex-wrap: wrap;
+  justify-content: center;
+  overflow: hidden;
+  margin-bottom: 12px;
 }
 
-.variante-input {
-  flex: 1 1 200px;
+.foto.vacia {
+  border-style: dashed;
 }
 
-.color-picker-container {
+.foto img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.sin-foto, .subiendo {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
+  gap: 8px;
+  color: var(--tinta-3);
+  font-size: 0.85rem;
 }
 
-.color-picker {
-  width: 50px;
-  height: 36px;
-  border: none;
-  cursor: pointer;
-  border-radius: 6px;
-  box-shadow: 0 0 2px rgba(0, 0, 0, 0.3);
+.sin-foto mat-icon {
+  font-size: 40px;
+  width: 40px;
+  height: 40px;
 }
 
-/* Botones de acciones de variantes */
-.btn-variant {
+.link-url {
+  margin-top: 4px;
+  font-size: 0.8rem;
+  color: var(--tinta-2);
+}
+
+/* ---------- Selector de color ---------- */
+.selector-color {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  background-color: #1976d2;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.25s;
-}
-
-.btn-variant:hover {
-  background-color: #1565c0;
-}
-
-.btn-remove {
-  background-color: #e53935;
-}
-
-.btn-remove:hover {
-  background-color: #c62828;
-}
-
-/* Imagen preview de la variante */
-.preview-img {
-  margin-top: 8px;
-}
-
-.preview-img img {
-  border-radius: 4px;
-  border: 1px solid #ccc;
-  width: 70px;
-  height: 70px;
-  object-fit: cover;
-}
-
-/* Sección de acciones del modal */
-.acciones {
-  margin-top: 24px;
-  display: flex;
-  justify-content: flex-end;
   gap: 10px;
+  cursor: pointer;
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  padding: 8px 12px;
+  background: #fff;
 }
 
-/* Animaciones */
-.fadeInDown {
-  -webkit-animation-name: fadeInDown;
-  animation-name: fadeInDown;
-  -webkit-animation-duration: 1s;
-  animation-duration: 1s;
-  -webkit-animation-fill-mode: both;
-  animation-fill-mode: both;
+.selector-color:hover {
+  border-color: var(--acento);
 }
 
-@-webkit-keyframes fadeInDown {
-  0% {
-    opacity: 0;
-    -webkit-transform: translate3d(0, -100%, 0);
-    transform: translate3d(0, -100%, 0);
-  }
-
-  100% {
-    opacity: 1;
-    -webkit-transform: none;
-    transform: none;
-  }
-}
-
-@keyframes fadeInDown {
-  0% {
-    opacity: 0;
-    transform: translate3d(0, -100%, 0);
-  }
-
-  100% {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-.fadeIn {
+.selector-color input[type="color"] {
+  position: absolute;
+  inset: 0;
   opacity: 0;
-  animation: fadeIn ease-in 1;
-  animation-fill-mode: forwards;
-  animation-duration: 1s;
+  cursor: pointer;
 }
 
-.fadeIn.first {
-  animation-delay: 0.4s;
+.muestra {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  box-shadow: 0 0 0 2px #fff inset;
+  flex-shrink: 0;
 }
 
-.fadeIn.second {
-  animation-delay: 0.5s;
+.hex {
+  margin-left: auto;
+  color: var(--tinta-3);
+  font-family: monospace;
 }
 
-.fadeIn.third {
-  animation-delay: 0.6s;
+.selector-color.chico {
+  padding: 4px 8px;
+  border-radius: 8px;
+  gap: 8px;
+  font-size: 0.85rem;
+  min-width: 120px;
 }
 
-.fadeIn.fourth {
-  animation-delay: 0.7s;
+.selector-color.chico .muestra {
+  width: 18px;
+  height: 18px;
 }
 
+/* ---------- Variantes ---------- */
+.variantes {
+  margin-top: 18px;
+  padding-bottom: 16px;
+}
 
-.color-principal{
-  margin-top: 20px;
+.ms-auto {
+  margin-left: auto;
+}
+
+.tabla-scroll {
+  overflow-x: auto;
+}
+
+.tabla-variantes {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.88rem;
+}
+
+.tabla-variantes th {
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--tinta-2);
+  padding: 8px;
+  border-bottom: 1px solid var(--borde);
+  white-space: nowrap;
+}
+
+.tabla-variantes td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #f0f2f5;
+  vertical-align: middle;
+}
+
+.tabla-variantes tr.actual td {
+  background: var(--acento-suave);
+}
+
+.tabla-variantes .num {
+  text-align: right;
+}
+
+.celda {
+  width: 100%;
+  min-width: 70px;
+  border: 1px solid var(--borde);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 0.88rem;
+  background: #fff;
+}
+
+.celda:focus {
+  outline: none;
+  border-color: var(--acento);
+  box-shadow: 0 0 0 3px rgba(42, 120, 214, 0.15);
+}
+
+.celda.num {
+  max-width: 90px;
+  text-align: right;
+}
+
+.modelo, .etiqueta-actual {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.75rem;
+  color: var(--tinta-3);
+}
+
+.etiqueta-actual {
+  color: var(--acento);
+  font-weight: 600;
+}
+
+.acciones {
+  width: 48px;
+  text-align: center;
+}
+
+/* ---------- Avisos ---------- */
+.aviso-carga {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--tinta-2);
+  margin: 6px 0;
+}
+
+.aviso-error {
+  background: #fdecea;
+  color: #8a1c13;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  margin: 6px 0;
+}
+
+.aviso-eliminadas {
+  background: #fff4d6;
+  color: #6b4a00;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  margin: 6px 0 10px;
+}
+
+/* ---------- Pie ---------- */
+.acciones-pie {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px !important;
+  margin: 0 !important;
+  border-top: 1px solid var(--borde);
+  background: #fff;
+  min-height: auto !important;
+}
+
+.acciones-pie button mat-icon {
+  margin-right: 4px;
+}
+
+.motivo-espera {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--tinta-2);
+}
+
+.espacio {
+  flex: 1;
+}
+
+/* ---------- Pantallas chicas ---------- */
+@media (max-width: 900px) {
+  .columnas {
+    grid-template-columns: 1fr;
+  }
+  .lateral {
+    position: static;
+  }
+  .foto {
+    height: 180px;
+  }
+}
+
+@media (max-width: 560px) {
+  .encabezado, .contenido, .acciones-pie {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+  }
+  .miniatura {
+    width: 48px;
+    height: 48px;
+  }
 }

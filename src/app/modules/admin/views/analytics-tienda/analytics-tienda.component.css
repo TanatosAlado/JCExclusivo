@@ -1,0 +1,267 @@
+/* Analytics de la tienda: usa los mismos tokens y piezas que el Dashboard (tablero.component.css) */
+
+.kpis {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.fila-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+/* En pantallas chicas, el selector de período se desliza de costado */
+.filtros mat-button-toggle-group {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+/* ---------- "Personas ahora" ---------- */
+.ahora {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  font-size: 0.88rem;
+  color: var(--tinta-2);
+}
+
+.ahora b {
+  color: var(--tinta);
+  font-variant-numeric: tabular-nums;
+}
+
+.punto-vivo {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--base);
+}
+
+.punto-vivo.activo {
+  background: var(--bien);
+  box-shadow: 0 0 0 0 rgba(12, 163, 12, 0.5);
+  animation: latido 1.8s infinite;
+}
+
+@keyframes latido {
+  0% { box-shadow: 0 0 0 0 rgba(12, 163, 12, 0.45); }
+  70% { box-shadow: 0 0 0 8px rgba(12, 163, 12, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(12, 163, 12, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .punto-vivo.activo { animation: none; }
+}
+
+/* ---------- Aviso sin datos ---------- */
+.aviso-sin-datos {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  border-radius: 10px;
+  background: #fff8e6;
+  border: 1px solid #f3dc9c;
+}
+
+.aviso-sin-datos > i {
+  color: #b27800;
+  margin-top: 3px;
+}
+
+/* ---------- Configuración pendiente ---------- */
+.configuracion {
+  border-color: #c9ddf7;
+  margin-bottom: 16px;
+}
+
+.pasos {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.paso {
+  display: flex;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--borde);
+  background: var(--superficie);
+}
+
+.paso.falta {
+  border-color: var(--serie-1);
+  box-shadow: 0 0 0 2px rgba(42, 120, 214, 0.15);
+}
+
+.paso.pendiente {
+  opacity: 0.75;
+}
+
+.paso-icono {
+  flex: 0 0 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  background: var(--fondo);
+  color: var(--tinta-3);
+}
+
+.paso.listo .paso-icono { background: #e7f5ec; color: var(--bien); }
+.paso.falta .paso-icono { background: var(--serie-1); color: #fff; }
+.paso.pendiente .paso-icono i { font-size: 0.45rem; }
+
+.paso-cuerpo { flex: 1; min-width: 0; }
+
+.paso-titulo {
+  font-weight: 600;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.paso-estado {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #e7f5ec;
+  color: #1e5c34;
+}
+
+.paso-estado.falta { background: #eaf2fd; color: #1d5aa6; }
+
+.paso-detalle {
+  margin-top: 4px;
+  font-size: 0.88rem;
+  color: var(--tinta-2);
+}
+
+.paso-codigo {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.paso-codigo pre {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #1f2430;
+  color: #f4f4f1;
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.paso-link {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 0.88rem;
+}
+
+/* ---------- Embudo ---------- */
+.embudo {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.paso-embudo-cab {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.88rem;
+  margin-bottom: 4px;
+}
+
+.paso-embudo-nombre { color: var(--tinta-2); }
+
+.paso-embudo-cab b { font-variant-numeric: tabular-nums; }
+
+.embudo .barra-pista {
+  height: 24px;
+}
+
+.embudo .barra {
+  height: 22px;
+}
+
+.conversion {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--grilla);
+  font-size: 0.9rem;
+  color: var(--tinta-2);
+}
+
+.conversion b { color: var(--tinta); }
+
+/* ---------- Listas ---------- */
+.nombre-largo {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.barra-fila {
+  grid-template-columns: minmax(90px, 160px) 1fr auto;
+}
+
+.barra-valor { min-width: 48px; }
+
+.vacio-lista {
+  padding: 16px 0;
+  color: var(--tinta-3);
+  font-size: 0.88rem;
+  text-align: center;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 992px) {
+  .fila-2 { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 700px) {
+  .kpis { grid-template-columns: 1fr 1fr; }
+  .barra-fila { grid-template-columns: 90px 1fr auto; }
+  .ahora { order: 10; }
+}
+
+/* Respuesta de Google (diagnóstico) */
+.detalle-tecnico {
+  margin: 0 0 14px;
+  font-size: 0.82rem;
+  color: var(--tinta-2);
+}
+
+.detalle-tecnico summary { cursor: pointer; }
+
+.detalle-tecnico code {
+  display: block;
+  margin-top: 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--fondo);
+  color: var(--tinta);
+  white-space: pre-wrap;
+  word-break: break-word;
+}

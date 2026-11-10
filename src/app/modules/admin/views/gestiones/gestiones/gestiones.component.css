@@ -17,3 +17,22 @@
   pointer-events: none; /* no se puede hacer click */
   cursor: not-allowed;
 }
+
+/* Pendientes (ej: solicitudes mayoristas por revisar) */
+.badge-pendientes {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #d03b3b;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(208, 59, 59, 0.35);
+}

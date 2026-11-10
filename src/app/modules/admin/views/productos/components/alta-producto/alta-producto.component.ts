@@ -10,6 +10,7 @@ import { ProductosService } from 'src/app/modules/shop/services/productos.servic
 import { v4 as uuidv4 } from 'uuid';
 import { Storage, ref, uploadBytes, getDownloadURL } from '@angular/fire/storage';
 import { AuditoriaService } from 'src/app/shared/services/auditoria.service';
+import Swal from 'sweetalert2';
 
 
 @Component({
@@ -61,6 +62,8 @@ export class AltaProductoComponent implements OnInit {
 
   imagenSeleccionada: File | null = null;
   imagenPreview: string | null = null;
+  /** Fotos del producto (varias; la primera es la principal). Se suben al elegirlas. */
+  fotosProducto: string[] = [];
   subiendoImagen = false;
 
   rubros: string[] = [];
@@ -360,23 +363,16 @@ export class AltaProductoComponent implements OnInit {
 
 async guardarProducto() {
 
-  let urlImagen: string | null = null;
-
-  if (this.imagenSeleccionada) {
-    urlImagen = await this.subirImagenProducto();
-
-    if (urlImagen) {
-      // producto único
-      if (this.tipoSeleccionado === 'none') {
-        this.producto.imagen = urlImagen;
-      }
-
-      // variantes
-      if (this.form && (this.tipoSeleccionado === 'color' || this.tipoSeleccionado === 'modelo+color')) {
-        this.form.get('imagen')?.setValue(urlImagen);
-      }
-    }
+  if (this.subiendoImagen) {
+    Swal.fire('Subiendo fotos', 'Esperá a que terminen de subirse las fotos.', 'info');
+    return;
   }
+
+  // 📷 Fotos: la primera es la principal ("imagen", la que usan carrito, despacho, etc.)
+  const fotos = [...this.fotosProducto];
+  const principal = fotos[0] || '';
+  this.producto.imagen = principal;
+  this.form?.get('imagen')?.setValue(principal);
 
   const formValue = this.form ? this.form.value : {};
   try {
@@ -398,6 +394,7 @@ async guardarProducto() {
         precioOferta: this.producto.oferta ? Number(this.producto.precioOferta || 0) : null,
         destacado: Boolean(this.producto.destacado),
         imagen: this.producto.imagen || '',
+        imagenes: fotos,
         rubro: this.producto.rubro || '',
         subrubro: this.producto.subrubro || '',
         marca: this.producto.marca || '',
@@ -448,7 +445,8 @@ async guardarProducto() {
           oferta: Boolean(base.oferta),
           precioOferta: base.oferta ? Number(base.precioOferta || 0) : null,
           destacado: Boolean(base.destacado),
-          imagen: base.imagen || '',
+          imagen: principal,
+          imagenes: fotos,
           rubro: base.rubro || '',
           subrubro: base.subrubro || '',
           marca: base.marca || '',
@@ -493,7 +491,8 @@ async guardarProducto() {
           oferta: Boolean(base.oferta),
           precioOferta: base.oferta ? Number(base.precioOferta || 0) : null,
           destacado: Boolean(base.destacado),
-          imagen: base.imagen || '',
+          imagen: principal,
+          imagenes: fotos,
           rubro: base.rubro || '',
           subrubro: base.subrubro || '',
           marca: base.marca || '',
@@ -546,7 +545,8 @@ async guardarProducto() {
             oferta: Boolean(base.oferta),
             precioOferta: base.oferta ? Number(base.precioOferta || 0) : null,
             destacado: Boolean(base.destacado),
-            imagen: base.imagen || '',
+            imagen: principal,
+            imagenes: fotos,
             rubro: base.rubro || '',
             subrubro: base.subrubro || '',
             marca: base.marca || '',

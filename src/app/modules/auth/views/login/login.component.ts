@@ -1,11 +1,12 @@
 import { Component, Inject } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogRef } from '@angular/material/dialog';
-import { AuthService } from '../../services/auth.service';
+import { AuthService, LoginError } from '../../services/auth.service';
 import { Router } from '@angular/router';
 import { LoginRequest } from '../../models/loginRequest.model';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Cliente } from '../../models/cliente.model';
 import { signOut } from '@angular/fire/auth';
+import { AnalyticsService } from 'src/app/shared/services/analytics.service';
 
 @Component({
   selector: 'app-login',
@@ -17,11 +18,14 @@ export class LoginComponent {
   usuario: string = '';
   contrasena: string = '';
   loginFail: boolean = false
+  /** Qué falló: usuario, contraseña, etc. */
+  mensajeError = 'Datos de acceso incorrectos';
   public loginMayorista: boolean = false;
   emailRecuperacion: string = '';
   mostrarRecuperacion: boolean = false;
 
-  constructor(private authService: AuthService, 
+  constructor(private analytics: AnalyticsService,
+              private authService: AuthService, 
               private dialogRef: MatDialogRef<LoginComponent>, 
               private dialog: MatDialog,
               private router: Router,
@@ -41,14 +45,11 @@ export class LoginComponent {
    
   async login() {
     try {
-      const usuarioNormalizado = this.usuario
-      .trim()
-      .toUpperCase();
-
-    const loginRequest = new LoginRequest(
-      usuarioNormalizado,
-      this.contrasena
-    );
+      // El usuario no distingue mayúsculas (el servicio prueba todas las variantes)
+      const loginRequest = new LoginRequest(
+        this.usuario.trim(),
+        this.contrasena
+      );
 
       const cliente = await this.authService.login(loginRequest.user, loginRequest.password);
 
@@ -57,6 +58,7 @@ export class LoginComponent {
         // Redirigir al dashboard o página principal
         //this.router.navigate(['/home']); // Cambia según tu ruta
         this.authService.setUsuarioActual(cliente);
+        this.analytics.login('cuenta');   // los administradores no se miden (lo filtra el servicio)
         this.snackBar.open('Login exitoso. ¡Bienvenido!', 'Cerrar', {
           duration: 3000,
           panelClass: ['snackbar-success'],
@@ -64,9 +66,11 @@ export class LoginComponent {
       this.dialogRef.close(cliente);  
       } else {
         this.loginFail = true;
+        this.mensajeError = 'No encontramos los datos de esa cuenta.';
       }
     } catch (error) {
       this.loginFail = true;
+      this.mensajeError = error instanceof LoginError ? error.message : 'Datos de acceso incorrectos';
       console.error('Error en login:', error);
     }
   }
@@ -102,6 +106,7 @@ export class LoginComponent {
     );
 
     this.authService.setUsuarioActual(clienteInvitado);
+    this.analytics.login('invitado');
     this.dialogRef.close(clienteInvitado);
   }
 

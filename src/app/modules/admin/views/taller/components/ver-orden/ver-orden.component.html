@@ -48,6 +48,9 @@
 
       <p *ngIf="orden.presupuesto && orden.presupuesto > 0">
         <strong>Presupuesto:</strong> {{ orden.presupuesto | currency }}
+        <span *ngIf="desglose as d" class="text-muted small">
+          (mano de obra {{ d.manoObra | currency }} · repuestos {{ d.repuestos | currency }})
+        </span>
       </p>
 
       <p>

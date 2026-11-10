@@ -1,0 +1,281 @@
+<app-encabezado>
+  Equipos
+</app-encabezado>
+
+<div class="container mt-4 mb-5">
+
+  <!-- ===================== FORMULARIO (alta / edición) ===================== -->
+  <mat-card *ngIf="mostrarForm" class="mb-4 tarjeta-form">
+    <div class="form-encabezado">
+      <div>
+        <div class="sobretitulo">{{ editando ? 'Editar equipo' : 'Nuevo equipo' }}</div>
+        <h2>{{ editando ? nombreEquipo(editando) : 'Alta de equipo para la venta' }}</h2>
+      </div>
+      <button mat-icon-button type="button" (click)="cancelar()" [disabled]="guardando || subiendoFoto" title="Cerrar">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    <form (ngSubmit)="guardar()" class="form-equipo" autocomplete="off">
+      <div class="columnas">
+
+        <!-- Datos -->
+        <div class="datos">
+          <!-- Nuevo / usado -->
+          <div class="condicion" [class.falta]="erroresForm.length && !form.condicion">
+            <span class="titulo-bloque">Condición</span>
+            <mat-button-toggle-group name="condicion" [value]="form.condicion" (change)="elegirCondicion($event.value)"
+              aria-label="Condición del equipo">
+              <mat-button-toggle *ngFor="let c of condiciones" [value]="c.valor">
+                {{ c.valor === 'nuevo' ? '✨' : '♻️' }} {{ c.nombre }}
+              </mat-button-toggle>
+            </mat-button-toggle-group>
+          </div>
+
+          <div class="grilla">
+            <mat-form-field appearance="outline" class="ancho-2">
+              <mat-label>Modelo</mat-label>
+              <input matInput name="modelo" [(ngModel)]="form.modelo" required maxlength="80" placeholder="Ej: 15 PRO MAX">
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Color</mat-label>
+              <input matInput name="color" [(ngModel)]="form.color" required maxlength="40" placeholder="Ej: NATURAL">
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Capacidad</mat-label>
+              <mat-select name="capacidad" [(ngModel)]="form.capacidad" required>
+                <mat-option *ngFor="let c of capacidades" [value]="c">{{ c }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="ancho-2">
+              <mat-label>IMEI / Nº de serie</mat-label>
+              <input matInput name="imei" [(ngModel)]="form.imei" required maxlength="24" inputmode="text">
+              <mat-hint *ngIf="avisoImei" class="aviso">{{ avisoImei }}</mat-hint>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Batería</mat-label>
+              <input matInput type="number" name="bateria" [(ngModel)]="form.bateria" min="0" max="100" required>
+              <span matSuffix>%&nbsp;</span>
+            </mat-form-field>
+            <mat-form-field appearance="outline" *ngIf="form.condicion !== 'nuevo'">
+              <mat-label>Grado</mat-label>
+              <mat-select name="grado" [(ngModel)]="form.grado" required>
+                <mat-option *ngFor="let g of grados" [value]="g">{{ g }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="ancho-completo">
+              <mat-label>Observaciones</mat-label>
+              <textarea matInput name="observaciones" [(ngModel)]="form.observaciones" rows="2" maxlength="300"
+                placeholder="Ej: COMPLETO EN CAJA, módulo cambiado"></textarea>
+            </mat-form-field>
+          </div>
+
+          <div class="bloque-precios">
+            <div class="titulo-bloque">Precios de venta</div>
+            <div class="grilla">
+              <mat-form-field appearance="outline">
+                <mat-label>Moneda</mat-label>
+                <mat-select name="moneda" [(ngModel)]="form.moneda" required>
+                  <mat-option *ngFor="let m of monedas" [value]="m">{{ m === 'USD' ? 'Dólares (USD)' : 'Pesos (ARS)' }}</mat-option>
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Precio minorista</mat-label>
+                <span matPrefix>{{ form.moneda === 'ARS' ? '$' : 'US$' }}&nbsp;</span>
+                <input matInput type="number" name="precioMinorista" [(ngModel)]="form.precioMinorista" min="0" step="0.01" required>
+                <mat-hint *ngIf="form.moneda === 'USD' && dolar && form.precioMinorista">
+                  ≈ {{ enPesos(form, form.precioMinorista) | currency:'ARS':'symbol-narrow':'1.0-0' }} (dólar JC)
+                </mat-hint>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Precio mayorista</mat-label>
+                <span matPrefix>{{ form.moneda === 'ARS' ? '$' : 'US$' }}&nbsp;</span>
+                <input matInput type="number" name="precioMayorista" [(ngModel)]="form.precioMayorista" min="0" step="0.01" required>
+                <mat-hint *ngIf="form.moneda === 'USD' && dolar && form.precioMayorista">
+                  ≈ {{ enPesos(form, form.precioMayorista) | currency:'ARS':'symbol-narrow':'1.0-0' }} (dólar JC)
+                </mat-hint>
+              </mat-form-field>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fotos (la primera es la principal) -->
+        <div class="lateral">
+          <div class="foto" [class.vacia]="!fotos.length">
+            <img *ngIf="fotoGrande" [src]="fotoGrande" alt="Foto del equipo">
+            <span *ngIf="fotos.length && fotoSeleccionada === 0" class="sello-principal">Principal</span>
+            <div *ngIf="subiendoFoto" class="foto-estado subiendo"><mat-spinner diameter="32"></mat-spinner>Subiendo…</div>
+            <div *ngIf="!fotos.length && !subiendoFoto" class="foto-estado">
+              <mat-icon>photo_camera</mat-icon>Sin fotos
+            </div>
+          </div>
+
+          <!-- Miniaturas: elegir, ordenar, principal, quitar -->
+          <div class="miniaturas" *ngIf="fotos.length">
+            <div class="mini" *ngFor="let f of fotos; let i = index; let primera = first; let ultima = last"
+              [class.activa]="i === fotoSeleccionada">
+              <button type="button" class="mini-img" (click)="fotoSeleccionada = i" [title]="primera ? 'Foto principal' : 'Ver foto ' + (i + 1)">
+                <img [src]="f" [alt]="'Foto ' + (i + 1)">
+                <span *ngIf="primera" class="estrella">★</span>
+              </button>
+              <div class="mini-acciones">
+                <button type="button" (click)="moverFoto(i, -1)" [disabled]="primera || guardando" title="Mover a la izquierda">‹</button>
+                <button type="button" *ngIf="!primera" (click)="hacerPrincipal(i)" [disabled]="guardando" title="Hacer principal">★</button>
+                <button type="button" (click)="moverFoto(i, 1)" [disabled]="ultima || guardando" title="Mover a la derecha">›</button>
+                <button type="button" class="quitar" (click)="quitarFoto(i)" [disabled]="subiendoFoto || guardando" title="Quitar">✕</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="botones-foto">
+            <button mat-stroked-button type="button" (click)="inputFoto.click()"
+              [disabled]="subiendoFoto || guardando || fotos.length >= maxFotos">
+              <mat-icon>add_photo_alternate</mat-icon> {{ fotos.length ? 'Agregar fotos' : 'Subir fotos' }}
+            </button>
+            <input #inputFoto type="file" accept="image/*" multiple hidden (change)="onFoto($event)">
+          </div>
+          <div class="nota">
+            {{ fotos.length }} de {{ maxFotos }} fotos. Podés elegir varias a la vez. La ★ es la principal (la que se ve primero).
+          </div>
+          <div class="nota">Rubro: <strong>Equipos</strong></div>
+        </div>
+      </div>
+
+      <div *ngIf="erroresForm.length" class="errores">
+        <mat-icon>error_outline</mat-icon>
+        <ul><li *ngFor="let e of erroresForm">{{ e }}</li></ul>
+      </div>
+
+      <div class="acciones-form">
+        <button mat-button type="button" (click)="cancelar()" [disabled]="guardando || subiendoFoto">Cancelar</button>
+        <span class="espacio"></span>
+        <button *ngIf="editando" mat-button color="warn" type="button" (click)="eliminar(editando)" [disabled]="guardando || subiendoFoto">
+          <mat-icon>delete_outline</mat-icon> Dar de baja
+        </button>
+        <button mat-raised-button color="primary" type="submit" [disabled]="guardando || subiendoFoto">
+          <mat-icon>{{ editando ? 'save' : 'add' }}</mat-icon>
+          {{ guardando ? 'Guardando…' : (editando ? 'Guardar cambios' : 'Dar de alta') }}
+        </button>
+      </div>
+    </form>
+  </mat-card>
+
+  <!-- ===================== LISTADO ===================== -->
+  <mat-card>
+    <div class="listado-encabezado">
+      <div>
+        <mat-card-title>📱 Equipos para la venta</mat-card-title>
+        <mat-card-subtitle>Cada equipo es una unidad única (IMEI). Cuando se vende, deja de estar a la venta.</mat-card-subtitle>
+      </div>
+      <button mat-raised-button color="primary" type="button" (click)="nuevo()" [disabled]="mostrarForm && !editando">
+        <mat-icon>add</mat-icon> Nuevo equipo
+      </button>
+    </div>
+
+    <mat-card-content>
+      <div class="indicadores">
+        <div class="indicador destacado">
+          <span class="etiqueta">Disponibles</span>
+          <strong>{{ disponibles.length }}</strong>
+        </div>
+        <div class="indicador">
+          <span class="etiqueta">Valor en stock (minorista)</span>
+          <strong>
+            <ng-container *ngIf="valorStock.usd">{{ precio(monedaUsd, valorStock.usd) }}</ng-container>
+            <ng-container *ngIf="valorStock.usd && valorStock.ars"> + </ng-container>
+            <ng-container *ngIf="valorStock.ars">{{ valorStock.ars | currency:'ARS':'symbol-narrow':'1.0-0' }}</ng-container>
+            <ng-container *ngIf="!valorStock.usd && !valorStock.ars">—</ng-container>
+          </strong>
+          <span class="sub" *ngIf="valorStock.usd && dolar">≈ {{ valorStock.totalPesos | currency:'ARS':'symbol-narrow':'1.0-0' }} (dólar JC)</span>
+        </div>
+        <div class="indicador">
+          <span class="etiqueta">Vendidos</span>
+          <strong>{{ cantidadVendidos }}</strong>
+        </div>
+        <div class="indicador" *ngIf="sinFoto">
+          <span class="etiqueta">Sin foto</span>
+          <strong class="texto-alerta">{{ sinFoto }}</strong>
+        </div>
+      </div>
+
+      <div class="barra-lista">
+        <mat-form-field appearance="outline" class="campo-filtro">
+          <mat-label>Buscar</mat-label>
+          <input matInput [(ngModel)]="filtro" placeholder="Modelo, color, IMEI…" autocomplete="off">
+          <mat-icon matSuffix>search</mat-icon>
+        </mat-form-field>
+        <mat-button-toggle-group [(ngModel)]="filtroEstado" aria-label="Estado" class="toggle-estado">
+          <mat-button-toggle value="disponible">Disponibles</mat-button-toggle>
+          <mat-button-toggle value="vendido">Vendidos</mat-button-toggle>
+          <mat-button-toggle value="todos">Todos</mat-button-toggle>
+        </mat-button-toggle-group>
+        <mat-button-toggle-group [(ngModel)]="filtroCondicion" aria-label="Condición" class="toggle-estado">
+          <mat-button-toggle value="todas">Nuevos y usados</mat-button-toggle>
+          <mat-button-toggle value="nuevo">Nuevos</mat-button-toggle>
+          <mat-button-toggle value="usado">Usados</mat-button-toggle>
+        </mat-button-toggle-group>
+        <mat-form-field appearance="outline" class="campo-orden">
+          <mat-label>Ordenar</mat-label>
+          <mat-select [(ngModel)]="orden">
+            <mat-option value="recientes">Más recientes</mat-option>
+            <mat-option value="modelo">Modelo</mat-option>
+            <mat-option value="precio">Mayor precio</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <span class="espacio"></span>
+        <button mat-stroked-button type="button" (click)="cargar()" [disabled]="cargando"><mat-icon>refresh</mat-icon> Actualizar</button>
+        <button mat-stroked-button type="button" (click)="exportarExcel()" [disabled]="cargando || !visibles.length"><mat-icon>download</mat-icon> Excel</button>
+      </div>
+
+      <div *ngIf="cargando" class="text-muted py-3"><span class="spinner-border spinner-border-sm"></span> Cargando…</div>
+      <div *ngIf="error" class="alert alert-danger">{{ error }}</div>
+
+      <div class="grilla-equipos" *ngIf="!cargando && visibles.length">
+        <div class="equipo" *ngFor="let e of visibles" [class.vendido]="e.estado === 'vendido'"
+          [class.seleccionado]="editando?.id === e.id">
+          <div class="equipo-foto">
+            <img *ngIf="fotosDe(e)[0] as principal" [src]="principal" [alt]="e.modelo" loading="lazy">
+            <mat-icon *ngIf="!fotosDe(e).length">smartphone</mat-icon>
+            <span *ngIf="fotosDe(e).length > 1" class="cantidad-fotos" [title]="fotosDe(e).length + ' fotos'">📷 {{ fotosDe(e).length }}</span>
+            <span *ngIf="e.estado === 'vendido'" class="sello">VENDIDO</span>
+          </div>
+          <div class="equipo-cuerpo">
+            <div class="equipo-modelo" [title]="e.modelo">{{ e.modelo }}</div>
+            <div class="chips">
+              <span class="chip condicion" [ngClass]="condicionDe(e)">{{ nombreCondicion(e) }}</span>
+              <span class="chip">{{ e.color }}</span>
+              <span class="chip">{{ e.capacidad }}</span>
+              <span class="chip grado" *ngIf="e.grado">Grado {{ e.grado }}</span>
+              <span class="chip bateria" [ngClass]="claseBateria(e.bateria)">🔋 {{ e.bateria }}%</span>
+            </div>
+            <div class="imei">IMEI {{ e.imei }}</div>
+            <div class="obs" *ngIf="e.observaciones" [title]="e.observaciones">{{ e.observaciones }}</div>
+            <div class="vendido-info" *ngIf="e.estado === 'vendido' && e.venta">
+              Vendido el {{ e.venta.fecha | date:'dd/MM/yyyy' }}
+              <span *ngIf="e.venta.nroTicket"> · Ticket {{ e.venta.nroTicket.toString().padStart(8, '0') }}</span>
+              <span *ngIf="e.venta.cliente?.nombre"> · {{ e.venta.cliente.nombre }}</span>
+            </div>
+            <div class="precios">
+              <div><span class="etq">Minorista</span><strong>{{ precio(e, e.precioMinorista) }}</strong></div>
+              <div><span class="etq">Mayorista</span><strong>{{ precio(e, e.precioMayorista) }}</strong></div>
+            </div>
+          </div>
+          <div class="equipo-acciones" *ngIf="e.estado === 'disponible'">
+            <button mat-stroked-button type="button" (click)="editar(e)"><mat-icon>edit</mat-icon> Editar</button>
+            <button mat-icon-button type="button" color="warn" (click)="eliminar(e)" title="Dar de baja"><mat-icon>delete_outline</mat-icon></button>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="!cargando && !error && !visibles.length" class="vacio">
+        <mat-icon>smartphone</mat-icon>
+        <div>{{ filtro ? 'No hay equipos que coincidan con la búsqueda.' : (filtroEstado === 'vendido' ? 'Todavía no se vendió ningún equipo.' : 'No hay equipos cargados.') }}</div>
+        <button *ngIf="!filtro && filtroEstado !== 'vendido'" mat-stroked-button color="primary" type="button" (click)="nuevo()">
+          <mat-icon>add</mat-icon> Cargar el primero
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

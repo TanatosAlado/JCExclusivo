@@ -36,6 +36,8 @@
             <span [ngClass]="element.activa ? 'estado-activa' : 'estado-inactiva'">
               {{ element.activa ? 'Activa' : 'Inactiva' }}
             </span>
+            <span *ngIf="element.retiroWeb === false" class="chip-interna"
+              title="No aparece en la tienda online para retirar pedidos">Interna · sin retiro web</span>
           </td>
         </ng-container>
 

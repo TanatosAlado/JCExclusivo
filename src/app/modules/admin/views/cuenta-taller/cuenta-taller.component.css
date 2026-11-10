@@ -1,0 +1,128 @@
+.cuenta-taller {
+  --borde: #e3e6eb;
+  --suave: #f7f9fc;
+  --tinta: #1f2430;
+  --tinta-2: #5b6170;
+  --tinta-3: #8a909c;
+  max-width: 1100px;
+}
+
+.subtexto { color: var(--tinta-3); font-size: 0.8rem; }
+
+.cargando, .vacio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 36px 0;
+  color: var(--tinta-2);
+  text-align: center;
+}
+
+.vacio i { font-size: 2.2rem; color: #c3c7ce; }
+.vacio.chico { padding: 20px 0; }
+
+.selector { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+
+.selector button {
+  border: 1px solid var(--borde);
+  background: #fff;
+  border-radius: 999px;
+  padding: 4px 12px;
+  cursor: pointer;
+}
+
+.selector button.activo { background: var(--tinta); border-color: var(--tinta); color: #fff; }
+
+.cabecera {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(260px, 1.4fr) auto;
+  gap: 16px;
+  align-items: stretch;
+  margin-bottom: 16px;
+}
+
+.saldo-tarjeta {
+  padding: 16px 18px;
+  border-radius: 12px;
+  background: #fff4d6;
+  border: 1px solid #f3dc9c;
+}
+
+.saldo-tarjeta.cero { background: #e7f5ec; border-color: #bfe3cb; }
+
+.saldo-tarjeta .etiqueta { font-size: 0.85rem; color: var(--tinta-2); }
+.saldo-tarjeta .saldo { font-size: 2rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+.resumen {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--borde);
+  background: #fff;
+  font-size: 0.9rem;
+}
+
+.resumen div { display: flex; justify-content: space-between; gap: 12px; }
+.resumen span { color: var(--tinta-2); }
+.resumen b { font-variant-numeric: tabular-nums; }
+.resumen .ganancia b { color: #1e5c34; }
+.resumen .ganancia.negativa b { color: #8a1c13; }
+
+.acciones { display: flex; flex-direction: column; gap: 8px; justify-content: center; }
+
+.pestanas { display: flex; gap: 4px; border-bottom: 1px solid var(--borde); margin-bottom: 10px; overflow-x: auto; }
+
+.pestanas button {
+  border: 0;
+  background: none;
+  padding: 8px 14px;
+  font-weight: 600;
+  color: var(--tinta-2);
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.pestanas button.activa { color: var(--tinta); border-bottom-color: #034f70; }
+
+.contador {
+  display: inline-block;
+  min-width: 20px;
+  padding: 0 6px;
+  margin-left: 4px;
+  border-radius: 999px;
+  background: #d03b3b;
+  color: #fff;
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.tabla-scroll { overflow-x: auto; }
+
+.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+tr.anulado td { color: var(--tinta-3); text-decoration: line-through; }
+tr.anulado td .subtexto, tr.anulado td .estado { text-decoration: none; }
+
+.estado {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.estado.pendiente { background: #fff4d6; color: #6b4a00; }
+.estado.parcial { background: #eaf2fd; color: #1d5aa6; }
+.estado.pagado { background: #e7f5ec; color: #1e5c34; }
+.estado.anulado { background: #f1f2f4; color: var(--tinta-3); }
+
+@media (max-width: 900px) {
+  .cabecera { grid-template-columns: 1fr; }
+  .acciones { flex-direction: row; flex-wrap: wrap; }
+}

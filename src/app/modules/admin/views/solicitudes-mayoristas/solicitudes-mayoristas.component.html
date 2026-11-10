@@ -1,0 +1,114 @@
+<app-encabezado>
+  Solicitudes mayoristas
+</app-encabezado>
+
+<div class="container py-3 solicitudes">
+
+  <div class="barra">
+    <div class="pestanas" role="tablist">
+      <button type="button" role="tab" [class.activa]="vista === 'pendientes'" (click)="vista = 'pendientes'">
+        Pendientes <span class="contador" *ngIf="pendientes.length">{{ pendientes.length }}</span>
+      </button>
+      <button type="button" role="tab" [class.activa]="vista === 'resueltas'" (click)="verResueltas()">
+        Historial
+      </button>
+    </div>
+    <button mat-stroked-button type="button" (click)="cargar()" [disabled]="cargando">
+      <i class="fas fa-sync-alt" [class.fa-spin]="cargando"></i> Actualizar
+    </button>
+  </div>
+
+  <p class="subtexto">
+    Los clientes que se registran como mayoristas (o lo piden desde "Mi cuenta") compran como minoristas hasta que los aprobás acá.
+  </p>
+
+  <div class="alert alert-danger" *ngIf="error">{{ error }}</div>
+
+  <div class="cargando" *ngIf="cargando && ((vista === 'pendientes' && !pendientes.length) || (vista === 'resueltas' && !resueltas))">
+    <mat-spinner diameter="32"></mat-spinner><span>Cargando…</span>
+  </div>
+
+  <!-- ===================== PENDIENTES ===================== -->
+  <ng-container *ngIf="vista === 'pendientes'">
+    <div class="vacio" *ngIf="!pendientes.length && !cargando && !error">
+      <i class="fas fa-check-circle"></i>
+      <p>No hay solicitudes pendientes.</p>
+    </div>
+
+    <div class="lista">
+      <div class="solicitud" *ngFor="let c of pendientes; trackBy: trackId" [class.procesando]="procesando === c.id">
+        <div class="sol-cabecera">
+          <div>
+            <div class="sol-nombre">{{ nombre(c) }}</div>
+            <div class="subtexto">
+              Usuario {{ c.usuario }} · pidió el {{ c.solicitudMayorista.fecha | date:'dd/MM/yyyy HH:mm' }}
+            </div>
+          </div>
+          <span class="estado pendiente">Pendiente</span>
+        </div>
+
+        <div class="sol-datos">
+          <div><span class="etq">Razón social</span><b>{{ c.solicitudMayorista.razonSocial }}</b></div>
+          <div>
+            <span class="etq">CUIT</span>
+            <b>{{ formatearCuit(c.solicitudMayorista.cuit) }}</b>
+            <span class="cuit-mal" *ngIf="!cuitValido(c.solicitudMayorista.cuit)" title="El dígito verificador no coincide">
+              <i class="fas fa-exclamation-triangle"></i> revisar
+            </span>
+          </div>
+          <div><span class="etq">DNI</span>{{ c.dni || '-' }}</div>
+          <div><span class="etq">Teléfono</span>{{ c.telefono || '-' }}</div>
+          <div><span class="etq">Mail</span>{{ c.mail || '-' }}</div>
+          <div><span class="etq">Dirección</span>{{ c.direccion || '-' }}</div>
+        </div>
+
+        <div class="sol-acciones">
+          <a *ngIf="whatsapp(c) as wa" [href]="wa" target="_blank" rel="noopener" class="btn btn-sm btn-outline-success">
+            <i class="fab fa-whatsapp"></i> Consultar
+          </a>
+          <span class="espacio"></span>
+          <button mat-stroked-button color="warn" type="button" (click)="rechazar(c)" [disabled]="!!procesando">
+            <i class="fas fa-times"></i> Rechazar
+          </button>
+          <button mat-raised-button color="primary" type="button" class="aprobar" (click)="aprobar(c)" [disabled]="!!procesando">
+            <mat-spinner *ngIf="procesando === c.id" diameter="16" class="d-inline-block me-1"></mat-spinner>
+            <i *ngIf="procesando !== c.id" class="fas fa-check"></i> Aprobar
+          </button>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- ===================== HISTORIAL ===================== -->
+  <ng-container *ngIf="vista === 'resueltas' && resueltas">
+    <div class="vacio" *ngIf="!resueltas.length">
+      <i class="far fa-folder-open"></i>
+      <p>Todavía no se resolvió ninguna solicitud.</p>
+    </div>
+
+    <div class="tabla-scroll" *ngIf="resueltas.length">
+      <table class="table table-sm align-middle">
+        <thead>
+          <tr><th>Cliente</th><th>Razón social / CUIT</th><th>Resultado</th><th>Quién y cuándo</th></tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let c of resueltas; trackBy: trackId">
+            <td>{{ nombre(c) }}<div class="subtexto">{{ c.usuario }}</div></td>
+            <td>{{ c.solicitudMayorista.razonSocial }}<div class="subtexto">{{ formatearCuit(c.solicitudMayorista.cuit) }}</div></td>
+            <td>
+              <span class="estado" [ngClass]="c.solicitudMayorista.estado">
+                {{ c.solicitudMayorista.estado === 'aprobada' ? 'Aprobada' : 'Rechazada' }}
+              </span>
+              <div class="subtexto motivo" *ngIf="c.solicitudMayorista.motivo">{{ c.solicitudMayorista.motivo }}</div>
+            </td>
+            <td>
+              {{ c.solicitudMayorista.resueltaPor?.nombre || '-' }}
+              <div class="subtexto">{{ c.solicitudMayorista.resueltaEn | date:'dd/MM/yyyy HH:mm' }}</div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="subtexto" *ngIf="resueltas.length">Se muestran las últimas 50. Para quitarle la cuenta mayorista a alguien, editalo en Clientes.</p>
+  </ng-container>
+</div>

@@ -42,7 +42,7 @@
       <div class="d-flex flex-wrap align-items-center gap-3">
         <mat-form-field appearance="outline" class="campo-texto">
           <mat-label>Cliente, DNI, vendedor o producto</mat-label>
-          <input matInput [(ngModel)]="filtroTexto" (ngModelChange)="aplicarFiltros()" placeholder="Ej: Pérez, 30123456, funda">
+          <input matInput [(ngModel)]="filtroTexto" (ngModelChange)="aplicarFiltros()" placeholder="Ej: Pérez, 30123456, funda, nº de operación">
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="filtro">
@@ -84,7 +84,7 @@
               <th>Fecha</th>
               <th>Sucursal</th>
               <th>Cliente</th>
-              <th>Atendió</th>
+              <th>Cajero</th>
               <th>Pago</th>
               <th class="text-end">Total</th>
               <th>Estado</th>
@@ -96,6 +96,9 @@
               <td class="fw-bold text-nowrap">
                 {{ ticketsService.numeroFormateado(t) }}
                 <div *ngIf="t.tipoVenta === 'reparacion'" class="badge bg-info text-dark">🔧 Reparación #{{ t.orden?.numeroOrden }}</div>
+                <div *ngIf="t.tipoVenta === 'cobrocuenta'" class="badge bg-warning text-dark">📒 Cobro cuenta corriente</div>
+                <div *ngIf="t.tipoVenta === 'cobrocuota'" class="badge bg-primary">🏠 Cobro cuota</div>
+                <div *ngIf="t.credito" class="badge bg-light text-dark border">🏠 Venta a crédito</div>
               </td>
               <td class="text-nowrap">{{ t.fecha | date:'dd/MM/yyyy HH:mm' }}</td>
               <td>{{ nombresSucursales[t.sucursalId] || '-' }}</td>
@@ -103,7 +106,10 @@
                 {{ t.cliente?.nombre || 'Consumidor final' }}
                 <div class="small text-muted" *ngIf="t.cliente?.dni">DNI {{ t.cliente.dni }}</div>
               </td>
-              <td>{{ t.usuario?.nombre || t.usuario?.usuario || '-' }}</td>
+              <td>
+                {{ t.cajero ? t.cajero.nombre + ' ' + t.cajero.apellido : '-' }}
+                <div class="small text-muted" *ngIf="t.usuario">sesión: {{ t.usuario.usuario || t.usuario.nombre }}</div>
+              </td>
               <td>{{ pagos(t) }}</td>
               <td class="text-end text-nowrap">{{ t.total | currency:'ARS' }}</td>
               <td>

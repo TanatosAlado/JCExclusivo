@@ -3,7 +3,7 @@ import { take } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 import { TicketsService, TicketError } from 'src/app/modules/despacho/services/tickets.service';
 import { SucursalesService } from '../../services/sucursales.service';
-import { textoPagos, efectivoDeVenta } from 'src/app/modules/despacho/services/pagos';
+import { textoPagos, efectivoDeVenta, aCuentaDeVenta } from 'src/app/modules/despacho/services/pagos';
 
 /**
  * Tickets de venta del local: búsqueda por número, fecha y cliente,
@@ -100,9 +100,11 @@ export class TicketsComponent implements OnInit {
       (!this.filtroEstado || (this.filtroEstado === 'anulados' ? t.anulada === true : t.anulada !== true)) &&
       (!texto || [
         t.cliente?.nombre, t.cliente?.dni, t.usuario?.nombre, t.usuario?.usuario,
+        t.cajero?.nombre, t.cajero?.apellido,
         this.ticketsService.numeroFormateado(t), t.nroTicket,
         t.orden?.numeroOrden, t.orden?.equipo, t.orden?.imei,
-        ...(t.items || []).map((i: any) => i.nombre)
+        ...(t.items || []).map((i: any) => i.nombre),
+        ...(t.pagos || []).map((p: any) => p.detalle)   // nº de operación del posnet
       ].some(v => String(v ?? '').toLowerCase().includes(texto)))
     );
   }
@@ -144,7 +146,13 @@ export class TicketsComponent implements OnInit {
              ${t.cliente ? `Cliente: ${t.cliente.nombre}<br>` : ''}
              <br><small>${t.tipoVenta === 'reparacion'
                ? 'Es un cobro de reparación: se descuenta de la orden y el saldo vuelve a quedar pendiente.'
-               : 'Se devuelve el stock, se revierten los puntos del cliente y el uso del cupón.'}<br>
+               : t.tipoVenta === 'cobrocuenta'
+                 ? 'Es un cobro de cuenta corriente: la deuda que pagó vuelve a quedar pendiente en la cuenta del cliente.'
+               : t.tipoVenta === 'cobrocuota'
+                 ? 'Es un cobro de cuotas del crédito de la casa: las cuotas que pagó vuelven a quedar pendientes.'
+                 : 'Se devuelve el stock, se revierten los puntos del cliente y el uso del cupón.' +
+                   ((t.items || []).some((i: any) => i.tipo === 'equipo') ? ' Los equipos vuelven a estar a la venta.' : '') +
+                   (aCuentaDeVenta(t) > 0 ? ` Se descuentan ${this.moneda(aCuentaDeVenta(t))} de la cuenta corriente del cliente.` : '')}<br>
              El ticket no se borra: queda registrado como ANULADO.</small>`,
       icon: 'warning',
       input: 'text',
@@ -164,8 +172,17 @@ export class TicketsComponent implements OnInit {
       const avisos: string[] = [];
       if (res.stockDevuelto.length) avisos.push(`✔ Stock devuelto: ${res.stockDevuelto.join(', ')}`);
       if (res.stockNoDevuelto.length) avisos.push(`⚠ No se devolvió stock (el producto ya no existe): ${res.stockNoDevuelto.join(', ')}`);
+      if (res.equiposDevueltos?.length) avisos.push(`✔ Volvieron a estar a la venta: ${res.equiposDevueltos.join(', ')}`);
       if (res.puntosRevertidos) avisos.push('✔ Puntos del cliente revertidos');
       if (res.cuponDevuelto) avisos.push('✔ Uso del cupón devuelto');
+      if (res.cuentaCorriente?.tipo === 'cargo') {
+        avisos.push(`✔ Se descontaron ${this.moneda(res.cuentaCorriente.importe)} de la cuenta corriente de ${res.cuentaCorriente.cliente}`);
+      }
+      if (res.cuentaCorriente?.tipo === 'pago') {
+        avisos.push(`✔ La deuda de ${res.cuentaCorriente.cliente} volvió a aumentar ${this.moneda(res.cuentaCorriente.importe)} (el cobro quedó sin efecto)`);
+      }
+      if (res.creditoAnulado) avisos.push('✔ El crédito de la casa de este ticket quedó anulado');
+      if (res.cuotasRevertidas) avisos.push(`✔ Las cuotas ${res.cuotasRevertidas} del crédito de ${t.cliente?.nombre || 'el cliente'} volvieron a quedar pendientes`);
       if (res.ordenReparacion) avisos.push(`✔ Se descontó el cobro de la orden de reparación #${res.ordenReparacion} (el saldo vuelve a quedar pendiente)`);
       const efectivo = efectivoDeVenta(t);
       if (res.cajaCerrada && efectivo > 0) {

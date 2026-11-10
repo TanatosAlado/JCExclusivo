@@ -256,3 +256,616 @@
 .item-cliente:focus {
   background: #eef4fc;
 }
+
+/* ===== Color de la variante ===== */
+.color-dot {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  vertical-align: -2px;
+  margin-right: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.25);   /* que se vea también el blanco */
+  box-shadow: 0 0 0 2px #fff;               /* separa del fondo/hover del botón */
+  flex-shrink: 0;
+}
+
+/* ===== Producto cargado a mano ===== */
+.encabezado-carrito {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.badge-manual {
+  display: inline-block;
+  margin-top: 2px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #6b4a00;
+  background: #fff4d6;
+  border: 1px solid #f3dc9c;
+  border-radius: 999px;
+  padding: 0 8px;
+}
+
+/* ===== Vuelto ===== */
+.vuelto {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid #d6e9d9;
+  background: #f4faf5;
+  border-radius: 8px;
+}
+
+.vuelto.con-error {
+  border-color: #f1c4bf;
+  background: #fdf3f2;
+}
+
+.vuelto-fila {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.paga-con {
+  display: flex;
+  align-items: center;
+  width: 160px;
+}
+
+.paga-con .input-group-text {
+  padding: 2px 8px;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.paga-con input {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  text-align: right;
+}
+
+.sugerencias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.sugerencias .btn-light {
+  border: 1px solid #ddd;
+}
+
+.vuelto-resultado {
+  margin-top: 8px;
+  text-align: right;
+  font-size: 1.25rem;
+  color: #0b6b1f;
+}
+
+/* ===== Cuenta corriente ===== */
+.aviso-cuenta {
+  background: #fff8e1;
+  border: 1px solid #f3dc9c;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.92rem;
+}
+
+.cuenta-modal .orden-elegida {
+  background: #fffaf0;
+  border-color: #f3e2b8;
+}
+
+.lista-cuentas {
+  max-height: 52vh;
+  overflow-y: auto;
+  border: 1px solid #e3e6eb;
+  border-radius: 8px;
+}
+
+.item-cuenta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 12px;
+  border: 0;
+  border-bottom: 1px solid #f0f2f5;
+  background: #fff;
+  text-align: left;
+}
+
+.item-cuenta:hover,
+.item-cuenta:focus {
+  background: #fff8e1;
+  outline: none;
+}
+
+.item-cuenta:last-child {
+  border-bottom: 0;
+}
+
+.tabla-pendientes td,
+.tabla-pendientes th {
+  white-space: nowrap;
+}
+
+/* ===== Encabezado del POS ===== */
+.pos-barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px 24px;
+  padding: 14px 18px;
+  background: #fff;
+  border: 1px solid #e3e6eb;
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+}
+
+.pos-identidad {
+  min-width: 0;
+}
+
+.pos-titulo-linea {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+}
+
+.pos-titulo {
+  margin: 0;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.estado-caja {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.estado-caja .punto {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.estado-caja.abierta {
+  background: #e7f5ec;
+  color: #1e7d43;
+}
+
+.estado-caja.cerrada {
+  background: #fff4d6;
+  color: #8a5a00;
+}
+
+.pos-sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin-top: 4px;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.pos-sub .separador {
+  color: #c3c7ce;
+}
+
+.link-suave {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: #2a78d6;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.link-suave:hover {
+  text-decoration: underline;
+}
+
+.pos-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 18px;
+}
+
+.grupo-acciones {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.grupo-acciones + .grupo-acciones {
+  padding-left: 18px;
+  border-left: 1px solid #e3e6eb;
+}
+
+.grupo-titulo {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #8a909c;
+}
+
+.grupo-botones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.accion {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid #d5d9e0;
+  border-radius: 8px;
+  background: #fff;
+  color: #1f2430;
+  font-size: 0.88rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.accion .ico {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.accion:hover:not(:disabled) {
+  background: #f3f7fd;
+  border-color: #2a78d6;
+}
+
+.accion:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(42, 120, 214, 0.2);
+}
+
+.accion:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.accion-peligro {
+  border-color: #f1b8b4;
+  color: #b3261e;
+}
+
+.accion-peligro:hover:not(:disabled) {
+  background: #dc3545;
+  border-color: #dc3545;
+  color: #fff;
+}
+
+@media (max-width: 768px) {
+  .pos-barra {
+    padding: 12px;
+  }
+  .pos-acciones {
+    width: 100%;
+  }
+  .grupo-acciones {
+    width: 100%;
+  }
+  .grupo-acciones + .grupo-acciones {
+    padding-left: 0;
+    border-left: 0;
+  }
+  .grupo-botones .accion {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+}
+
+/* ===== Descuento en efectivo (cobro de cuenta corriente) ===== */
+.descuento-efectivo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px dashed #bfe3cb;
+  border-radius: 8px;
+  background: #f4fbf6;
+}
+
+.descuento-efectivo.con-error {
+  border-color: #f1b8b4;
+  background: #fdf3f2;
+}
+
+.descuento-efectivo .porcentaje {
+  max-width: 110px;
+}
+
+.resumen-descuento {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #f7f9fc;
+}
+
+.descuento-efectivo .porcentaje .form-control {
+  border-radius: 6px 0 0 6px;
+}
+
+.descuento-efectivo .porcentaje .input-group-text {
+  border-radius: 0 6px 6px 0;
+  border-left: 0;
+}
+
+/* ===== Tarjeta: nº de operación del posnet ===== */
+.detalle-tarjeta {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px dashed #c9ddf7;
+  border-radius: 8px;
+  background: #f3f8fe;
+}
+
+.detalle-tarjeta label {
+  display: block;
+}
+
+/* ===== Descuento por medio de pago (editable) ===== */
+.descuentos-medio {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.descuento-medio {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  padding: 6px 10px;
+  border: 1px dashed #bfe3cb;
+  border-radius: 8px;
+  background: #f4fbf6;
+}
+
+.descuento-medio.con-error {
+  border-color: #f1b8b4;
+  background: #fdf3f2;
+}
+
+.descuento-medio label {
+  min-width: 150px;
+}
+
+.descuento-medio .porcentaje {
+  max-width: 110px;
+}
+
+.descuento-medio .porcentaje .form-control {
+  border-radius: 6px 0 0 6px;
+}
+
+.descuento-medio .porcentaje .input-group-text {
+  border-radius: 0 6px 6px 0;
+  border-left: 0;
+}
+
+/* ===== Equipos ===== */
+.badge-equipo {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: #eaf2fd;
+  color: #1d5aa6;
+  border: 1px solid #c9ddf7;
+}
+
+.cantidad-fija {
+  display: inline-block;
+  min-width: 34px;
+  padding: 3px 8px;
+  border: 1px solid #e3e6eb;
+  border-radius: 6px;
+  background: #f7f9fc;
+  text-align: center;
+}
+
+.descuento-equipos {
+  border-color: #c9ddf7;
+  background: #f3f8fe;
+}
+
+.equipos-modal {
+  max-width: 760px;
+}
+
+.lista-equipos {
+  max-height: 60vh;
+  overflow-y: auto;
+  border: 1px solid #e3e6eb;
+  border-radius: 8px;
+}
+
+.item-equipo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 12px;
+  border: 0;
+  border-bottom: 1px solid #f0f2f5;
+  background: #fff;
+  text-align: left;
+}
+
+.item-equipo:last-child {
+  border-bottom: 0;
+}
+
+.item-equipo:hover,
+.item-equipo:focus {
+  background: #f3f8fe;
+  outline: none;
+}
+
+.miniatura-equipo {
+  flex: 0 0 52px;
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+  border: 1px solid #e3e6eb;
+  background: #f7f9fc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-size: 22px;
+}
+
+.miniatura-equipo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.datos-equipo {
+  flex: 1;
+  min-width: 0;
+}
+
+.obs-equipo {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.precio-equipo {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.dolar-equipos {
+  border-color: #f3dc9c;
+  background: #fffaf0;
+}
+
+/* ===== Equipo: precio en dólares y nuevo/usado ===== */
+.precio-usd {
+  display: flex;
+  align-items: stretch;
+  min-width: 110px;
+}
+
+.precio-usd .moneda-usd {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 6px;
+  border: 1px solid #1e8e4a;
+  border-right: 0;
+  border-radius: 6px 0 0 6px;
+  background: #e7f5ec;
+  color: #1e5c34;
+  font-weight: 700;
+  font-size: 0.78rem;
+}
+
+.precio-usd input {
+  border-color: #1e8e4a;
+  border-radius: 0 6px 6px 0;
+  font-weight: 600;
+}
+
+.nota-usd {
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.badge-condicion {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #fff;
+}
+
+.badge-condicion.nuevo { background: #1e8e4a; }
+.badge-condicion.usado { background: #d9822b; }
+
+.datos-equipo .badge-condicion {
+  margin: 0 6px 0 0;
+}
+
+
+/* ---------- Mano de obra / repuestos (cobro de reparaciones) ---------- */
+.desglose-presupuesto td {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.desglose-cobro {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  align-items: center;
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #f4f7fb;
+  border: 1px solid #e3e8f0;
+}
+
+
+/* ===== 📲 Plan canje y 🏠 crédito de la casa ===== */
+.panel-credito .form-check-label { cursor: pointer; }
+.bloque-credito {
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px solid #dfe7f3;
+  border-radius: 8px;
+  background: #f7faff;
+}
+.bloque-credito .fila-campos { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.bloque-credito .campo { flex: 1 1 140px; min-width: 0; }
+.bloque-credito .campo.ancho { flex: 2 1 200px; }
+.bloque-credito .paga-con { width: 100%; }
+.bloque-credito .cuotas .btn { min-width: 40px; }
+.plan-credito {
+  background: #fff;
+  border: 1px solid #dfe7f3;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 0.92rem;
+}
+.plan-credito td { padding: 3px 4px; }

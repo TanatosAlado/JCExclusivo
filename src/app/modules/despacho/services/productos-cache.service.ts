@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { Firestore, collection, getDocs } from '@angular/fire/firestore';
 import { openDB } from 'idb';
 import { Producto, VarianteProducto } from '../../shop/models/producto.model';
+import { buscarProductosFlexible } from 'src/app/shared/utils/busqueda';
 
 @Injectable({
   providedIn: 'root'
@@ -111,13 +112,11 @@ export class ProductosCacheService {
     return productos.find((p: any) => p.codigoBarras === codigo) || null;
   }
 
-  // 🔹 Buscar por descripción localmente
-  async buscarProductos(termino: string) {
-    termino = termino.toLowerCase();
-    const productos = await this.getProductos();
-    return productos.filter((p: any) =>
-      p.descripcion.toLowerCase().includes(termino)
-    );
+  // 🔹 Buscar localmente: palabras en cualquier orden, sin tildes ni mayúsculas,
+  //    en descripción, código, marca, modelo, rubro y color (ver shared/utils/busqueda.ts)
+  async buscarProductos(termino: string): Promise<any[]> {
+    const productos: any[] = await this.getProductos();
+    return buscarProductosFlexible<any>(productos, termino);
   }
 
   async actualizarProducto(
@@ -138,4 +137,4 @@ export class ProductosCacheService {
   }
 
 
-}
+}

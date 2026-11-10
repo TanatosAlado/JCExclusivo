@@ -1,0 +1,159 @@
+:host {
+  display: block;
+  --borde: #e3e6eb;
+  --suave: #f7f9fc;
+  --acento: #2a78d6;
+  --acento-suave: #eaf2fd;
+  --tinta-2: #5b6170;
+  --tinta-3: #8a909c;
+}
+
+.foto-grande {
+  position: relative;
+  height: 220px;
+  border-radius: 10px;
+  border: 1px solid var(--borde);
+  background: var(--suave);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.foto-grande.vacia {
+  border-style: dashed;
+}
+
+.foto-grande img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.estado {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: var(--tinta-3);
+  font-size: 0.85rem;
+}
+
+.estado mat-icon {
+  font-size: 40px;
+  width: 40px;
+  height: 40px;
+}
+
+.estado.subiendo {
+  position: absolute;
+  inset: 0;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.sello-principal {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #1f2430;
+  color: #fff;
+}
+
+.miniaturas {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.mini {
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.mini.activa {
+  border-color: var(--acento);
+  box-shadow: 0 0 0 2px rgba(42, 120, 214, 0.2);
+}
+
+.mini-img {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 60px;
+  padding: 0;
+  border: 0;
+  background: var(--suave);
+  cursor: pointer;
+}
+
+.mini-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.estrella {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  color: #f2b01e;
+  font-size: 0.9rem;
+  text-shadow: 0 0 2px #fff;
+}
+
+.mini-acciones {
+  display: flex;
+  border-top: 1px solid var(--borde);
+}
+
+.mini-acciones button {
+  flex: 1;
+  border: 0;
+  background: #fff;
+  padding: 2px 0;
+  font-size: 0.85rem;
+  color: var(--tinta-2);
+  cursor: pointer;
+}
+
+.mini-acciones button:hover:not(:disabled) {
+  background: var(--acento-suave);
+  color: var(--acento);
+}
+
+.mini-acciones button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.mini-acciones .quitar:hover:not(:disabled) {
+  background: #fdecea;
+  color: #b3261e;
+}
+
+.botones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.url {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.nota {
+  margin-top: 8px;
+  font-size: 0.78rem;
+  color: var(--tinta-3);
+}

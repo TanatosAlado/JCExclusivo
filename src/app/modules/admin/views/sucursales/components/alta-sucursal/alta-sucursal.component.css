@@ -8,3 +8,13 @@
 mat-form-field {
   width: 100%;
 }
+
+.opcion-retiro {
+  margin-top: 4px;
+}
+
+.opcion-retiro .ayuda {
+  margin: 2px 0 0 32px;
+  font-size: 0.8rem;
+  color: #6c757d;
+}

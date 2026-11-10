@@ -3,6 +3,10 @@ import { Producto } from '../../models/producto.model';
 import { ProductosService } from '../../services/productos.service';
 import { AuthService } from 'src/app/modules/auth/services/auth.service';
 import { ActivatedRoute } from '@angular/router';
+import { EquiposService, RUBRO_EQUIPOS } from 'src/app/modules/admin/services/equipos.service';
+import { InfoEmpresaService } from 'src/app/shared/services/info-empresa.service';
+import { precioEquipoEnPesos, cotizacionEquipos } from 'src/app/shared/utils/equipos-tienda';
+import { AnalyticsService } from 'src/app/shared/services/analytics.service';
 
 @Component({
   selector: 'app-grilla-item',
@@ -41,9 +45,62 @@ export class GrillaItemComponent {
   scrollActual: number = 0;
   //public productos: Producto[] = [];
 
-  constructor(private productosService: ProductosService, private authService: AuthService, private route: ActivatedRoute) { }
+  /** 📱 Equipos disponibles (se muestran como un rubro más: "Equipos") */
+  private equiposTienda: any[] = [];
+  private productosSolo: Producto[] = [];
+  dolar = 0;
+
+  constructor(
+    private analytics: AnalyticsService,
+    private productosService: ProductosService,
+    private authService: AuthService,
+    private route: ActivatedRoute,
+    private equiposService: EquiposService,
+    private infoEmpresaService: InfoEmpresaService
+  ) { }
+
+  /** Equipo convertido al formato de la grilla (para filtros y búsqueda) */
+  private equipoComoProducto(e: any): any {
+    return {
+      id: e.id,
+      esEquipo: true,
+      equipo: e,
+      descripcion: [e.modelo, e.capacidad, e.color, e.condicion === 'nuevo' ? 'nuevo' : 'usado', e.grado ? 'grado ' + e.grado : '']
+        .filter(Boolean).join(' '),
+      rubro: RUBRO_EQUIPOS,
+      subrubro: '',
+      marca: '',
+      ventaMinorista: true,
+      ventaMayorista: true,
+      destacado: false,
+      imagen: e.imagen || ''
+    };
+  }
+
+  /** Productos + equipos (los equipos van al final; con el filtro de rubro "Equipos" se ven solos) */
+  private unirCatalogo() {
+    this.productosOriginal = [...this.productosSolo, ...this.equiposTienda.map(e => this.equipoComoProducto(e))];
+    this.rubros = [...new Set(this.productosOriginal.map(p => p.rubro))];
+    this.marcas = [...new Set(this.productosSolo.map(p => p.marca))];
+  }
+
+  private async cargarEquipos() {
+    try {
+      this.equiposTienda = await this.equiposService.listarDisponibles();
+    } catch (e) {
+      console.error('No se pudieron cargar los equipos', e);
+      this.equiposTienda = [];
+    }
+    this.unirCatalogo();
+    this.filtrarProductos(false);
+  }
 
   ngOnInit(): void {
+
+    this.infoEmpresaService.obtenerInfoGeneral().subscribe(info => {
+      this.dolar = cotizacionEquipos(info);   // dólar JC (para filtrar equipos por precio)
+    });
+    this.cargarEquipos();
 
      this.route.queryParams.subscribe(params => {
 
@@ -67,10 +124,8 @@ export class GrillaItemComponent {
 
       this.productosService.obtenerProductosAgrupados().subscribe(productos => {
 
-        this.productosOriginal = productos;
-
-        this.rubros = [...new Set(productos.map(p => p.rubro))];
-        this.marcas = [...new Set(productos.map(p => p.marca))];
+        this.productosSolo = productos;
+        this.unirCatalogo();
 
         // 🔥 restaurar filtros
         if (estado) {
@@ -105,6 +160,9 @@ export class GrillaItemComponent {
 
   filtrarProductos(resetPagina: boolean = true) {
 
+    // Analytics: qué buscan (se registra cuando dejan de escribir)
+    this.analytics.buscar(this.filtroNombre);
+
     if (this.filtroRubro) {
       this.subrubros = [
         ...new Set(
@@ -130,8 +188,10 @@ export class GrillaItemComponent {
       ? this.coincideBusqueda(p.descripcion, this.filtroNombre)
       : true;
 
-      // 👇 precio correcto según tipo de cliente
-      const precios = p.variantes?.length
+      // 👇 precio correcto según tipo de cliente (los equipos, convertidos a pesos)
+      const precios = (p as any).esEquipo
+        ? [precioEquipoEnPesos((p as any).equipo, this.esMayorista, this.dolar)]
+        : p.variantes?.length
         ? p.variantes.map(v =>
           this.esMayorista ? v.precioMayorista : v.precioMinorista
         )

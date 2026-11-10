@@ -34,30 +34,62 @@
        =========================== -->
   <div *ngIf="selectedSucursal" class="row">
 
-    <div class="col-12 mb-3 d-flex justify-content-between align-items-center">
-      <div>
-        <h4>POS - {{ selectedSucursal.nombre }}</h4>
-        <small class="text-muted">Sucursal: {{ selectedSucursal.direccion || '-' }}</small>
-      </div>
-      <div>
-        <button class="btn btn-sm btn-outline-secondary me-2" (click)="cambiarSucursal()">Cambiar sucursal</button>
-        <span *ngIf="!cajaActiva" class="badge bg-warning text-dark">Caja no abierta</span>
-        <span *ngIf="cajaActiva" class="badge bg-success">Caja abierta</span>
-        <button class="btn btn-sm btn-outline-dark ms-2" (click)="abrirBuscadorTickets()" title="Buscar, reimprimir o anular tickets">
-          🧾 Tickets
-        </button>
-        <button *ngIf="cajaActiva" class="btn btn-sm btn-outline-info ms-2" (click)="abrirReparaciones()"
-          [disabled]="procesandoVenta || mostrarCierre">
-          🔧 Cobrar reparación
-        </button>
-        <button *ngIf="cajaActiva" class="btn btn-sm btn-outline-primary ms-2" (click)="abrirMovimientos()"
-          [disabled]="procesandoVenta || mostrarCierre">
-          💵 Movimientos
-        </button>
-        <button *ngIf="cajaActiva" class="btn btn-sm btn-danger ms-2" (click)="iniciarCierre()"
-          [disabled]="procesandoVenta || mostrarCierre">
-          🔒 Cerrar caja
-        </button>
+    <!-- ===== Encabezado del POS: sucursal, estado de la caja y acciones ===== -->
+    <div class="col-12 mb-3">
+      <div class="pos-barra">
+
+        <div class="pos-identidad">
+          <div class="pos-titulo-linea">
+            <h4 class="pos-titulo">POS · {{ selectedSucursal.nombre }}</h4>
+            <span *ngIf="!cajaActiva" class="estado-caja cerrada"><i class="punto"></i>Caja no abierta</span>
+            <span *ngIf="cajaActiva" class="estado-caja abierta"><i class="punto"></i>Caja abierta</span>
+          </div>
+          <div class="pos-sub">
+            <span><i class="fas fa-map-marker-alt"></i> {{ selectedSucursal.direccion || '-' }}</span>
+            <span class="separador">·</span>
+            <button type="button" class="link-suave" (click)="cambiarSucursal()">
+              <i class="fas fa-exchange-alt"></i> Cambiar sucursal
+            </button>
+          </div>
+        </div>
+
+        <div class="pos-acciones">
+          <div class="grupo-acciones" *ngIf="cajaActiva">
+            <span class="grupo-titulo">Cobrar</span>
+            <div class="grupo-botones">
+              <button type="button" class="accion" (click)="abrirReparaciones()"
+                [disabled]="procesandoVenta || mostrarCierre" title="Cobrar una orden del taller">
+                <span class="ico">🔧</span> Reparación
+              </button>
+              <button type="button" class="accion" (click)="abrirCobroCuenta()"
+                [disabled]="procesandoVenta || mostrarCierre" title="Cobrar total o parcialmente la deuda de un cliente">
+                <span class="ico">📒</span> Cuenta corriente
+              </button>
+              <button type="button" class="accion" (click)="abrirCobroCuota()"
+                [disabled]="procesandoVenta || mostrarCierre" title="Cobrar cuotas del crédito de la casa">
+                <span class="ico">🏠</span> Cuota
+              </button>
+            </div>
+          </div>
+
+          <div class="grupo-acciones">
+            <span class="grupo-titulo">Caja</span>
+            <div class="grupo-botones">
+              <button type="button" class="accion" (click)="abrirBuscadorTickets()" title="Buscar, reimprimir o anular tickets">
+                <span class="ico">🧾</span> Tickets
+              </button>
+              <button *ngIf="cajaActiva" type="button" class="accion" (click)="abrirMovimientos()"
+                [disabled]="procesandoVenta || mostrarCierre" title="Ingresos, retiros, gastos y pagos a proveedores">
+                <span class="ico">💵</span> Movimientos
+              </button>
+              <button *ngIf="cajaActiva" type="button" class="accion accion-peligro" (click)="iniciarCierre()"
+                [disabled]="procesandoVenta || mostrarCierre">
+                <span class="ico">🔒</span> Cerrar caja
+              </button>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -136,6 +168,15 @@
         <!-- Resultado exitoso -->
         <div *ngIf="clienteActual" class="mt-2 alert alert-success p-2">
           Cliente: <strong>{{ clienteActual.nombre }}</strong> - Tipo: {{ clienteActual.tipo }}
+          <div *ngIf="clienteActual.tipo === 'mayorista'" class="small mt-1">
+            📒 Cuenta corriente:
+            <ng-container *ngIf="clienteActual.saldoCuenta === null"><span class="spinner-border spinner-border-sm"></span></ng-container>
+            <ng-container *ngIf="clienteActual.saldoCuenta !== null && clienteActual.saldoCuenta !== undefined">
+              <strong *ngIf="clienteActual.saldoCuenta > 0.004" class="text-danger">debe {{ clienteActual.saldoCuenta | currency }}</strong>
+              <span *ngIf="clienteActual.saldoCuenta <= 0.004">sin deuda</span>
+            </ng-container>
+            <span *ngIf="clienteActual.saldoCuenta === undefined" class="text-muted">no se pudo consultar</span>
+          </div>
         </div>
 
         <!-- Resultado sin coincidencias -->
@@ -164,6 +205,8 @@
               *ngIf="getStockDisponible(prod) as stock; else sinStock"
               class="btn btn-sm btn-outline-primary me-2 mb-2"
               (click)="agregarAlCarrito(prod, true)">
+              <span *ngIf="colorValido($any(prod).color) as c" class="color-dot" [style.background]="c"
+                [title]="'Color: ' + nombreColor(c)"></span>
               {{ prod.descripcion }}
               <span class="badge bg-success ms-1">Stock: {{ stock }}</span>
             </button>
@@ -172,6 +215,7 @@
                 class="btn btn-sm btn-outline-secondary me-2 mb-2"
                 disabled
                 title="Sin stock {{ tipoPrecio === 'mayorista' ? 'mayorista' : 'en esta sucursal' }}">
+                <span *ngIf="colorValido($any(prod).color) as c" class="color-dot" [style.background]="c"></span>
                 {{ prod.descripcion }}
                 <span class="badge bg-danger ms-1">Sin stock</span>
               </button>
@@ -188,7 +232,19 @@
     <!-- 📍 Columna derecha: carrito -->
     <div class="col-md-6 p-3">
 
-      <h5>🛒 Carrito</h5>
+      <div class="encabezado-carrito">
+        <h5 class="m-0">🛒 Carrito</h5>
+        <div class="d-flex flex-wrap gap-2">
+          <button type="button" class="btn btn-sm btn-outline-primary" (click)="abrirEquipos()"
+            title="Agregar un equipo (unidad única por IMEI)">
+            📱 Agregar equipo
+          </button>
+          <button type="button" class="btn btn-sm btn-outline-secondary" (click)="agregarProductoManual()"
+            title="Para vender un producto que todavía no está cargado en el sistema (no descuenta stock)">
+            ✍️ Agregar producto a mano
+          </button>
+        </div>
+      </div>
 
       <table class="table table-sm align-middle">
         <thead>
@@ -202,18 +258,48 @@
         </thead>
         <tbody>
           <tr *ngFor="let item of carrito; let i = index">
-            <td>{{ item.nombre }}</td>
             <td>
-              <input type="number" class="form-control form-control-sm" [(ngModel)]="item.cantidad" min="1"
-                [max]="item.stockDisponible"
+              <span *ngIf="item.color" class="color-dot" [style.background]="item.color"
+                [title]="'Color: ' + nombreColor(item.color)" [attr.aria-label]="'Color ' + nombreColor(item.color)"></span>
+              {{ item.nombre }}
+              <small *ngIf="item.modelo" class="text-muted d-block">Modelo: {{ item.modelo }}</small>
+              <span *ngIf="item.manual" class="badge-manual" title="Cargado a mano: no descuenta stock">Cargado a mano · sin stock</span>
+              <ng-container *ngIf="item.equipo">
+                <span class="badge-equipo" title="Equipo: unidad única, sin descuentos automáticos">📱 Equipo</span>
+                <span class="badge-condicion" [ngClass]="condicionEquipo(item.equipo)">{{ nombreCondicionEquipo(item.equipo) }}</span>
+                <small class="text-muted d-block">IMEI {{ item.equipo.imei }}</small>
+                <small class="text-muted d-block">{{ item.equipo.color }}<span *ngIf="item.equipo.grado"> · Grado {{ item.equipo.grado }}</span> · 🔋 {{ item.equipo.bateria }}%</small>
+              </ng-container>
+            </td>
+            <td>
+              <input *ngIf="!item.equipoId" type="number" class="form-control form-control-sm" [(ngModel)]="item.cantidad" min="1"
+                [max]="item.manual ? null : item.stockDisponible"
                 (change)="editarCantidad(i, item.cantidad)">
-              <small class="text-muted">Disp.: {{ item.stockDisponible }}</small>
+              <span *ngIf="item.equipoId" class="cantidad-fija" title="Un equipo es una unidad única">1</span>
+              <small class="text-muted" *ngIf="!item.manual && !item.equipoId">Disp.: {{ item.stockDisponible }}</small>
             </td>
             <td>
-              <input type="number" class="form-control form-control-sm" [(ngModel)]="item.precioUnitario" min="0"
-                (change)="editarPrecio(i, item.precioUnitario)">
+              <!-- Equipo en dólares: el precio se carga en US$ -->
+              <ng-container *ngIf="item.equipo?.moneda === 'USD'; else precioPesos">
+                <div class="precio-usd" [title]="'Precio en dólares. Se pasa a pesos con el dólar de equipos ($' + cotizacionEquipos + ')'">
+                  <span class="moneda-usd">US$</span>
+                  <input type="number" class="form-control form-control-sm" [ngModel]="item.precioUsd" min="0" step="1"
+                    (change)="editarPrecioUsd(i, $any($event.target).value)">
+                </div>
+                <small class="text-muted d-block nota-usd">
+                  × dólar {{ cotizacionEquipos | number:'1.0-2' }}
+                  <span *ngIf="precioUsdModificado(item)" class="text-warning"> · lista US$ {{ precioListaUsd(item.equipo!) }}</span>
+                </small>
+              </ng-container>
+              <ng-template #precioPesos>
+                <input type="number" class="form-control form-control-sm" [(ngModel)]="item.precioUnitario" min="0"
+                  (change)="editarPrecio(i, item.precioUnitario)">
+              </ng-template>
             </td>
-            <td>${{ item.subtotal | number:'1.2-2' }}</td>
+            <td>
+              ${{ item.subtotal | number:'1.2-2' }}
+              <small *ngIf="item.equipo?.moneda === 'USD'" class="text-muted d-block">en pesos</small>
+            </td>
             <td>
               <button class="btn btn-sm btn-danger" (click)="eliminarDelCarrito(i)">🗑</button>
             </td>
@@ -298,20 +384,174 @@
         Precio <strong>mayorista</strong>: no aplican cupones, puntos ni descuentos por método de pago.
       </div>
 
-      <!-- Medio(s) de pago -->
-      <div class="card mb-3" style="max-width: 500px; margin: auto;">
+      <!-- 💲 Dólar para los equipos en USD (editable en esta venta) -->
+      <div *ngIf="hayEquiposEnDolares" class="card mb-3" style="max-width: 500px; margin: auto;">
+        <div class="card-body py-2">
+          <div class="descuento-medio dolar-equipos" [class.con-error]="dolarEquiposInvalido">
+            <label for="dolarEquipos" class="small mb-0">💲 Dólar para equipos</label>
+            <div class="paga-con">
+              <span class="input-group-text">$</span>
+              <input id="dolarEquipos" type="number" min="0" step="1" class="form-control form-control-sm"
+                [ngModel]="dolarEquipos ?? dolarBaseEquipos" (ngModelChange)="cambiarDolarEquipos($event)">
+            </div>
+            <ng-container *ngIf="dolarEquiposModificado">
+              <span class="small text-muted">(dólar JC {{ dolarBaseEquipos | currency:'ARS':'symbol-narrow':'1.0-2' }})</span>
+              <button type="button" class="btn btn-sm btn-link p-0" (click)="restablecerDolarEquipos()">Restablecer</button>
+            </ng-container>
+            <div *ngIf="dolarEquiposInvalido" class="text-danger small w-100">Ingresá un valor mayor a 0.</div>
+          </div>
+          <div class="small text-muted mt-1">Arranca con el dólar JC de Gestiones → Empresa. Recalcula el precio de los equipos en dólares de esta venta. No sale en el ticket ni en el presupuesto.</div>
+        </div>
+      </div>
+
+      <!-- 📱 Descuento manual para los equipos (no llevan descuentos automáticos) -->
+      <div *ngIf="hayEquiposEnCarrito" class="card mb-3" style="max-width: 500px; margin: auto;">
+        <div class="card-body py-2">
+          <div class="descuento-medio descuento-equipos" [class.con-error]="descuentoEquiposInvalido">
+            <label for="descEquipos" class="small mb-0">📱 Descuento equipos <span class="text-muted">(opcional)</span></label>
+            <div class="paga-con porcentaje">
+              <input id="descEquipos" type="number" min="0" max="99" step="0.5" class="form-control form-control-sm"
+                [ngModel]="descuentoEquipos" (ngModelChange)="descuentoEquipos = ($event === null ? '' : $event); mostrarErrorPago = false"
+                placeholder="0">
+              <span class="input-group-text">%</span>
+            </div>
+            <button type="button" class="btn btn-sm btn-link text-muted p-0" *ngIf="descuentoEquipos !== null && descuentoEquipos !== ''"
+              (click)="descuentoEquipos = null">Quitar</button>
+            <div *ngIf="descuentoEquiposInvalido" class="text-danger small w-100">Tiene que ser entre 0 y 99%.</div>
+          </div>
+          <div class="small text-muted mt-1">
+            Los equipos no llevan cupón, puntos ni descuento por efectivo / transferencia. Este % lo decide el cajero.
+          </div>
+        </div>
+      </div>
+
+      <!-- 📲 Plan canje y 🏠 crédito de la casa (solo ventas con equipo) -->
+      <div *ngIf="hayEquiposEnCarrito" class="card mb-3 panel-credito" style="max-width: 500px; margin: auto;">
+        <div class="card-body">
+
+          <!-- Plan canje -->
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" role="switch" id="usaCanje"
+              [(ngModel)]="usaCanje" (ngModelChange)="mostrarErrorPago = false">
+            <label class="form-check-label" for="usaCanje"><strong>📲 ¿Usa plan canje?</strong></label>
+          </div>
+          <div *ngIf="usaCanje" class="bloque-credito">
+            <div class="fila-campos">
+              <div class="campo">
+                <label for="canjeMonto" class="small mb-1">Se le toma en</label>
+                <div class="paga-con">
+                  <span class="input-group-text">$</span>
+                  <input id="canjeMonto" type="number" min="0" step="0.01" class="form-control form-control-sm"
+                    [(ngModel)]="canjeMonto" (ngModelChange)="mostrarErrorPago = false" placeholder="0">
+                </div>
+              </div>
+              <div class="campo ancho">
+                <label for="canjeDetalle" class="small mb-1">Equipo que entrega</label>
+                <input id="canjeDetalle" type="text" class="form-control form-control-sm" [(ngModel)]="canjeDetalle"
+                  [maxlength]="maxDetalleCanje" placeholder="Ej: iPhone 11 64 GB · IMEI 35…" autocomplete="off"
+                  (ngModelChange)="mostrarErrorPago = false">
+              </div>
+            </div>
+            <div class="small text-muted">No es dinero: no entra a la caja. Se descuenta de lo que hay que pagar.</div>
+          </div>
+
+          <hr class="my-2">
+
+          <!-- Crédito de la casa -->
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" role="switch" id="ventaCredito"
+              [ngModel]="ventaCredito" (ngModelChange)="cambiarVentaCredito($event)">
+            <label class="form-check-label" for="ventaCredito"><strong>🏠 Crédito de la casa</strong> <span class="text-muted small">(en cuotas)</span></label>
+          </div>
+          <div *ngIf="ventaCredito && !clienteActual" class="small text-danger mt-1">
+            Buscá al cliente arriba: el crédito necesita un cliente identificado.
+          </div>
+
+          <div *ngIf="ventaCredito && clienteActual" class="bloque-credito">
+            <div class="fila-campos">
+              <div class="campo">
+                <label for="creditoPrecio" class="small mb-1">Precio financiado</label>
+                <div class="paga-con">
+                  <span class="input-group-text">$</span>
+                  <input id="creditoPrecio" type="number" min="0" step="0.01" class="form-control form-control-sm"
+                    [(ngModel)]="creditoPrecio" (ngModelChange)="mostrarErrorPago = false" [placeholder]="'' + resumen.totalBase">
+                </div>
+                <div class="small text-muted">
+                  Contado: {{ resumen.totalBase | currency }}
+                  <ng-container *ngIf="resumen.credito?.recargo">
+                    · <strong>{{ resumen.credito!.recargo > 0 ? '+' : '' }}{{ porcentajeRecargo(resumen.credito!) }}%</strong>
+                  </ng-container>
+                  <button *ngIf="creditoPrecio !== null" type="button" class="btn btn-sm btn-link p-0 ms-1" (click)="restablecerPrecioCredito()">Restablecer</button>
+                </div>
+              </div>
+              <div class="campo">
+                <label for="creditoEntrega" class="small mb-1">Entrega hoy <span class="text-muted">(opcional)</span></label>
+                <div class="paga-con">
+                  <span class="input-group-text">$</span>
+                  <input id="creditoEntrega" type="number" min="0" step="0.01" class="form-control form-control-sm"
+                    [(ngModel)]="creditoEntrega" (ngModelChange)="mostrarErrorPago = false" placeholder="0">
+                </div>
+              </div>
+            </div>
+
+            <label class="small mb-1 d-block">Cuotas</label>
+            <div class="btn-group btn-group-sm cuotas" role="group" aria-label="Cantidad de cuotas">
+              <button *ngFor="let n of opcionesCuotas" type="button" class="btn"
+                [class.btn-primary]="creditoCuotas === n" [class.btn-outline-secondary]="creditoCuotas !== n"
+                (click)="creditoCuotas = n; mostrarErrorPago = false">{{ n }}</button>
+            </div>
+
+            <div class="fila-campos mt-2">
+              <div class="campo">
+                <label for="creditoTelefono" class="small mb-1">Teléfono del cliente</label>
+                <input id="creditoTelefono" type="tel" class="form-control form-control-sm" [(ngModel)]="creditoTelefono"
+                  maxlength="40" autocomplete="off" (ngModelChange)="mostrarErrorPago = false">
+              </div>
+              <div class="campo ancho">
+                <label for="creditoDireccion" class="small mb-1">Dirección</label>
+                <input id="creditoDireccion" type="text" class="form-control form-control-sm" [(ngModel)]="creditoDireccion"
+                  maxlength="200" autocomplete="off" (ngModelChange)="mostrarErrorPago = false">
+              </div>
+            </div>
+            <div class="small text-muted">DNI {{ clienteActual.dni || '— (falta)' }} · Si corregís el teléfono o la dirección, se guardan en el cliente.</div>
+
+            <!-- Plan de pagos -->
+            <div *ngIf="resumen.credito as c" class="plan-credito mt-2">
+              <div class="d-flex justify-content-between"><span>Precio financiado</span><strong>{{ c.precioFinanciado | currency }}</strong></div>
+              <div *ngIf="c.canje" class="d-flex justify-content-between text-muted"><span>− Plan canje</span><span>{{ c.canje | currency }}</span></div>
+              <div *ngIf="c.entrega" class="d-flex justify-content-between text-muted"><span>− Entrega hoy</span><span>{{ c.entrega | currency }}</span></div>
+              <div class="d-flex justify-content-between fw-bold border-top mt-1 pt-1"><span>Financia</span><span>{{ c.saldo | currency }}</span></div>
+              <table class="table table-sm mb-0 mt-1">
+                <tbody>
+                  <tr *ngFor="let q of c.cuotas">
+                    <td>Cuota {{ q.numero }} <span class="text-muted small">· {{ mesCuota(q) }}</span></td>
+                    <td class="text-muted small">del {{ textoVencimiento(q) }}</td>
+                    <td class="text-end">{{ q.importe | currency }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div *ngIf="(usaCanje || ventaCredito) && resumen.errorPago && resumen.errorPago !== 'Elegí el método de pago.'"
+               class="text-danger small mt-2">{{ resumen.errorPago }}</div>
+        </div>
+      </div>
+
+      <!-- Medio(s) de pago (con crédito de la casa: los de la entrega) -->
+      <div *ngIf="mostrarMediosPago" class="card mb-3" style="max-width: 500px; margin: auto;">
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-center mb-2">
-            <label class="form-label m-0"><strong>{{ pagoDividido ? 'Medios de pago' : 'Método de pago' }}</strong></label>
-            <button *ngIf="lineasPago.length < metodosPago.length" type="button" class="btn btn-link btn-sm p-0"
-              (click)="agregarMedioPago(lineasPago)" [disabled]="carrito.length === 0">
+            <label class="form-label m-0"><strong>{{ ventaCredito ? 'Cómo paga la entrega' : (pagoDividido ? 'Medios de pago' : 'Método de pago') }}</strong></label>
+            <button *ngIf="lineasPago.length < metodosVenta.length" type="button" class="btn btn-link btn-sm p-0"
+              (click)="agregarMedioPago(lineasPago, metodosVenta)" [disabled]="carrito.length === 0">
               <i class="fas fa-plus"></i> {{ pagoDividido ? 'Agregar otro medio' : 'Pagar con varios medios' }}
             </button>
           </div>
 
           <div class="linea-pago" *ngFor="let l of lineasPago; let i = index; let ultima = last" [class.dividido]="pagoDividido">
             <div class="btn-group btn-group-sm medios" role="group" [attr.aria-label]="'Medio ' + (i + 1)">
-              <button *ngFor="let m of metodosPago" type="button" class="btn"
+              <button *ngFor="let m of metodosVenta" type="button" class="btn"
                 [class.btn-primary]="l.metodo === m.valor" [class.btn-outline-secondary]="l.metodo !== m.valor"
                 (click)="elegirMetodo(lineasPago, i, m.valor)">
                 {{ m.icono }} {{ m.nombre }}
@@ -327,7 +567,7 @@
               </div>
               <div class="monto-pago resto" *ngIf="ultima" title="Se calcula solo con lo que falta pagar">
                 <span class="small text-muted me-1">resto</span>
-                <strong>{{ (resumen.errorPago ? 0 : resumen.pagos[i]?.monto) | currency }}</strong>
+                <strong>{{ (resumen.errorPago ? 0 : resumen.pagos[i + offsetPagos]?.monto) | currency }}</strong>
               </div>
               <button type="button" class="btn btn-sm btn-outline-danger quitar" (click)="quitarMedioPago(lineasPago, i)" title="Quitar este medio">
                 <i class="fas fa-times"></i>
@@ -337,6 +577,68 @@
 
           <div *ngIf="pagoDividido && !resumen.errorPago" class="small text-muted mt-1">
             Cada parte lleva el descuento de su medio. El último medio cubre lo que falta.
+          </div>
+
+          <!-- 🏷 Descuento por medio de pago: viene de Gestiones → Empresa, se puede cambiar en esta venta -->
+          <div *ngIf="mediosConDescuento.length" class="descuentos-medio">
+            <div *ngFor="let m of mediosConDescuento" class="descuento-medio" [class.con-error]="descuentoInvalido(m)">
+              <label [for]="'desc-' + m" class="small mb-0">
+                {{ m === 'efectivo' ? '💵 Descuento efectivo' : '🏦 Descuento transferencia' }}
+              </label>
+              <div class="paga-con porcentaje">
+                <input [id]="'desc-' + m" type="number" min="0" max="99" step="0.5" class="form-control form-control-sm"
+                  [ngModel]="descuentoManual[m] ?? porcentajeConfigurado(m)"
+                  (ngModelChange)="descuentoManual[m] = ($event === null ? '' : $event); mostrarErrorPago = false">
+                <span class="input-group-text">%</span>
+              </div>
+              <ng-container *ngIf="descuentoModificado(m)">
+                <span class="small text-muted">(configurado {{ porcentajeConfigurado(m) }}%)</span>
+                <button type="button" class="btn btn-sm btn-link p-0" (click)="restablecerDescuento(m)">Restablecer</button>
+              </ng-container>
+              <div *ngIf="descuentoInvalido(m)" class="text-danger small w-100">Tiene que ser entre 0 y 99%.</div>
+            </div>
+          </div>
+          <div *ngIf="puedeUsarCuentaCorriente && !resumen.errorPago && montoACuenta > 0" class="aviso-cuenta mt-2">
+            📒 Queda a cuenta corriente: <strong>{{ montoACuenta | currency }}</strong>
+            <span *ngIf="clienteActual?.saldoCuenta !== null && clienteActual?.saldoCuenta !== undefined" class="d-block small">
+              Deuda: {{ clienteActual!.saldoCuenta | currency }} → <strong>{{ (clienteActual!.saldoCuenta || 0) + montoACuenta | currency }}</strong>
+            </span>
+          </div>
+
+          <!-- 💳 Tarjeta: nº de operación del posnet (opcional) -->
+          <div *ngIf="pagaConTarjeta(lineasPago)" class="detalle-tarjeta">
+            <label for="detalleTarjeta" class="small mb-1">💳 Nº de operación / detalle de la tarjeta <span class="text-muted">(opcional)</span></label>
+            <input id="detalleTarjeta" type="text" class="form-control form-control-sm" [(ngModel)]="detalleTarjeta"
+              [maxlength]="maxDetallePago" placeholder="Ej: Op. 004512 · Visa débito" autocomplete="off">
+          </div>
+
+          <!-- 💵 Vuelto: con cuánto paga la parte en efectivo -->
+          <div *ngIf="montoEfectivo > 0" class="vuelto" [class.con-error]="mostrarErrorPagaCon || faltaEfectivo > 0">
+            <div class="vuelto-fila">
+              <span class="small text-muted">{{ pagoDividido ? 'Parte en efectivo' : 'A cobrar en efectivo' }}</span>
+              <strong>{{ montoEfectivo | currency }}</strong>
+            </div>
+            <div class="vuelto-fila">
+              <label for="pagaCon" class="small mb-0">Paga con</label>
+              <div class="paga-con">
+                <span class="input-group-text">$</span>
+                <input id="pagaCon" type="number" min="0" step="0.01" class="form-control form-control-sm"
+                  [(ngModel)]="pagaCon" (ngModelChange)="mostrarErrorPagaCon = false" placeholder="Opcional">
+              </div>
+            </div>
+            <div class="sugerencias">
+              <button type="button" class="btn btn-sm btn-light" (click)="elegirPagaCon(montoEfectivo)">Justo</button>
+              <button type="button" class="btn btn-sm btn-light" *ngFor="let v of sugerenciasPagaCon" (click)="elegirPagaCon(v)">
+                {{ v | currency:'ARS':'symbol-narrow':'1.0-0' }}
+              </button>
+              <button type="button" class="btn btn-sm btn-link text-muted" *ngIf="pagaCon !== null" (click)="pagaCon = null; mostrarErrorPagaCon = false">Borrar</button>
+            </div>
+            <div *ngIf="vuelto !== null" class="vuelto-resultado">
+              Vuelto: <strong>{{ vuelto | currency }}</strong>
+            </div>
+            <div *ngIf="faltaEfectivo > 0" class="text-danger small fw-bold mt-1">
+              Faltan {{ faltaEfectivo | currency }}: lo que entrega no alcanza.
+            </div>
           </div>
 
           <!-- ⚠️ Pagos incompletos o inválidos -->
@@ -362,26 +664,63 @@
             <span>Canje de {{ resumen.puntosUsados }} puntos</span>
             <span>-{{ resumen.descuentoPuntos | currency }}</span>
           </div>
+          <div *ngIf="resumen.descuentoEquipos > 0" class="d-flex justify-content-between small text-success">
+            <span>Descuento equipos ({{ resumen.porcentajeEquipos }}%)</span>
+            <span>-{{ resumen.descuentoEquipos | currency }}</span>
+          </div>
           <ng-container *ngIf="!resumen.errorPago">
             <ng-container *ngFor="let p of resumen.pagos">
               <div *ngIf="p.descuento > 0" class="d-flex justify-content-between small text-success">
-                <span>Descuento por {{ p.metodo }} ({{ p.porcentajeDescuento }}%{{ pagoDividido ? ' sobre su parte' : '' }})</span>
+                <span>Descuento por {{ p.metodo }} ({{ p.porcentajeDescuento }}%{{ pagoDividido ? ' sobre su parte' : '' }}{{ resumen.subtotalEquipos > 0 ? ', sin equipos' : '' }})</span>
                 <span>-{{ p.descuento | currency }}</span>
               </div>
             </ng-container>
           </ng-container>
           <hr class="my-2">
-          <div class="d-flex justify-content-between align-items-center">
-            <h5 class="m-0">Total a pagar:</h5>
-            <div class="text-success fw-bold fs-4">{{ resumen.totalFinal | currency }}</div>
-          </div>
-          <div *ngIf="pagoDividido && !resumen.errorPago" class="small mt-1">
-            <div *ngFor="let p of resumen.pagos" class="d-flex justify-content-between text-muted">
-              <span>{{ p.metodo | titlecase }}</span><span>{{ p.monto | currency }}</span>
+          <ng-container *ngIf="!resumen.credito">
+            <div class="d-flex justify-content-between align-items-center">
+              <h5 class="m-0">Total a pagar:</h5>
+              <div class="text-success fw-bold fs-4">{{ resumen.totalFinal | currency }}</div>
             </div>
-          </div>
-          <div *ngIf="resumen.subtotal - resumen.totalFinal > 0.004" class="text-success small text-end">
+            <div *ngIf="resumen.canje && !resumen.errorPago" class="d-flex justify-content-between small text-muted">
+              <span>📲 Plan canje</span><span>−{{ resumen.canje.monto | currency }}</span>
+            </div>
+            <div *ngIf="(pagoDividido || resumen.canje) && !resumen.errorPago" class="small mt-1">
+              <div *ngFor="let p of resumen.pagos" class="d-flex justify-content-between text-muted">
+                <span>{{ nombreMetodo(p.metodo) }}</span><span>{{ p.monto | currency }}</span>
+              </div>
+            </div>
+          </ng-container>
+          <ng-container *ngIf="resumen.credito as c">
+            <div class="d-flex justify-content-between align-items-center">
+              <h5 class="m-0">Precio financiado:</h5>
+              <div class="fw-bold fs-5">{{ c.precioFinanciado | currency }}</div>
+            </div>
+            <div class="d-flex justify-content-between align-items-center">
+              <h5 class="m-0">Paga hoy:</h5>
+              <div class="text-success fw-bold fs-4">{{ c.entrega | currency }}</div>
+            </div>
+            <div class="small text-muted text-end">
+              🏠 {{ c.cuotas.length }} cuota{{ c.cuotas.length > 1 ? 's' : '' }} de {{ c.cuotas[0].importe | currency }}{{ c.canje ? ' · canje ' : '' }}{{ c.canje ? (c.canje | currency) : '' }}
+            </div>
+          </ng-container>
+          <div *ngIf="!resumen.credito && resumen.subtotal - resumen.totalFinal > 0.004" class="text-success small text-end">
             Ahorrás: <strong>{{ resumen.subtotal - resumen.totalFinal | currency }}</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- 🧑‍💼 Cajero que cobra (obligatorio, se elige en cada venta) -->
+      <div class="card mb-3" style="max-width: 500px; margin: auto;" [class.border-danger]="mostrarErrorCajero">
+        <div class="card-body">
+          <label class="form-label mb-1" for="cajeroVenta"><strong>Cajero que cobra</strong></label>
+          <select id="cajeroVenta" class="form-select" [(ngModel)]="cajeroId" (ngModelChange)="mostrarErrorCajero = false"
+            [class.is-invalid]="mostrarErrorCajero" [disabled]="!cajeros.length">
+            <option [ngValue]="null" disabled>{{ cajeros.length ? 'Elegí quién cobra…' : 'No hay cajeros cargados' }}</option>
+            <option *ngFor="let c of cajeros" [ngValue]="c.id">{{ c.apellido }}, {{ c.nombre }}</option>
+          </select>
+          <div *ngIf="mostrarErrorCajero" class="text-danger small mt-1">
+            {{ cajeros.length ? 'Elegí el cajero que cobra la venta.' : 'Cargá los cajeros en Gestiones → Cajeros para poder cobrar.' }}
           </div>
         </div>
       </div>
@@ -389,6 +728,10 @@
       <div class="card mb-3" style="max-width: 500px; margin: auto;">
         <div class="card-body d-flex justify-content-between align-items-center">
           <button class="btn btn-secondary me-2" (click)="carrito=[]; total=0">Cancelar</button>
+          <button class="btn btn-outline-primary me-auto" type="button" (click)="imprimirPresupuesto()"
+            [disabled]="carrito.length === 0 || recalculandoPrecios" title="Imprime el carrito como presupuesto (no registra la venta)">
+            🖨 Imprimir presupuesto
+          </button>
           <button class="btn btn-success" (click)="finalizarVenta()" [disabled]="carrito.length === 0 || recalculandoPrecios || procesandoVenta">
             Finalizar Venta
           </button>
@@ -441,14 +784,31 @@
           <tr><td>💳 Tarjeta</td><td class="text-end">{{ resumenCierre.porMetodo.tarjeta | currency }}</td></tr>
           <tr><td>🏦 Transferencia / QR</td><td class="text-end">{{ resumenCierre.porMetodo.transferencia | currency }}</td></tr>
           <tr *ngIf="resumenCierre.porMetodo.otros"><td>Otros</td><td class="text-end">{{ resumenCierre.porMetodo.otros | currency }}</td></tr>
+          <tr *ngIf="resumenCierre.porMetodo.cuentacorriente" class="text-muted">
+            <td>📒 A cuenta corriente <small>(no ingresa a la caja)</small></td><td class="text-end">{{ resumenCierre.porMetodo.cuentacorriente | currency }}</td>
+          </tr>
+          <tr *ngIf="resumenCierre.porMetodo.creditocasa" class="text-muted">
+            <td>🏠 Crédito de la casa <small>(no ingresa a la caja)</small></td><td class="text-end">{{ resumenCierre.porMetodo.creditocasa | currency }}</td>
+          </tr>
+          <tr *ngIf="resumenCierre.porMetodo.canje" class="text-muted">
+            <td>📲 Plan canje <small>(equipos usados, no ingresa a la caja)</small></td><td class="text-end">{{ resumenCierre.porMetodo.canje | currency }}</td>
+          </tr>
           <tr class="fw-bold"><td>Total vendido</td><td class="text-end">{{ resumenCierre.totalVendido | currency }}</td></tr>
+          <tr *ngIf="resumenCierre.cobrosCuentaCorriente" class="small">
+            <td>Cobros de cuentas corrientes <span class="text-muted">(incluidos en los medios de arriba)</span></td>
+            <td class="text-end">{{ resumenCierre.cobrosCuentaCorriente | currency }}</td>
+          </tr>
+          <tr *ngIf="resumenCierre.cobrosCuotas" class="small">
+            <td>Cobros de cuotas del crédito <span class="text-muted">(incluidos en los medios de arriba)</span></td>
+            <td class="text-end">{{ resumenCierre.cobrosCuotas | currency }}</td>
+          </tr>
         </tbody>
       </table>
 
       <!-- Efectivo esperado -->
       <div class="esperado mb-3">
         <div class="d-flex justify-content-between"><span>Monto inicial</span><span>{{ resumenCierre.montoInicial | currency }}</span></div>
-        <div class="d-flex justify-content-between"><span>+ Ventas en efectivo</span><span>{{ resumenCierre.porMetodo.efectivo | currency }}</span></div>
+        <div class="d-flex justify-content-between"><span>+ Ventas y cobros en efectivo</span><span>{{ resumenCierre.porMetodo.efectivo | currency }}</span></div>
         <div *ngIf="resumenCierre.movimientos?.ingresos" class="d-flex justify-content-between"><span>+ Ingresos de efectivo</span><span>{{ resumenCierre.movimientos.ingresos | currency }}</span></div>
         <div *ngIf="resumenCierre.movimientos?.retiros" class="d-flex justify-content-between"><span>− Retiros de efectivo</span><span>{{ resumenCierre.movimientos.retiros | currency }}</span></div>
         <div *ngIf="resumenCierre.movimientos?.gastos" class="d-flex justify-content-between"><span>− Gastos</span><span>{{ resumenCierre.movimientos.gastos | currency }}</span></div>
@@ -607,10 +967,13 @@
           </td>
           <td class="text-nowrap text-end">
             <button class="btn btn-sm btn-outline-secondary" title="Imprimir comprobante" (click)="imprimirMovimiento(m)">🖨</button>
-            <ng-container *ngIf="!m.anulado">
+            <ng-container *ngIf="!m.anulado && !m.interno">
               <button class="btn btn-sm btn-outline-primary ms-1" title="Corregir" (click)="corregirMovimiento(m)">✏️</button>
               <button class="btn btn-sm btn-outline-danger ms-1" title="Anular" (click)="anularMovimiento(m)">⊘</button>
             </ng-container>
+            <div *ngIf="m.interno && !m.anulado" class="small text-muted mt-1" title="Se anula desde Gestiones → Cuenta Local – Taller">
+              🤝 Pago interno
+            </div>
           </td>
         </tr>
       </tbody>
@@ -691,9 +1054,18 @@
       <table class="table table-sm mt-2 mb-2">
         <tbody>
           <tr><td>Presupuesto</td><td class="text-end">{{ repOrden.presupuesto | currency }}</td></tr>
+          <tr *ngIf="repDesgloseOrden(repOrden) as d" class="desglose-presupuesto">
+            <td class="small text-muted ps-3">🛠 Mano de obra {{ d.manoObra | currency }} · 🔩 Repuestos {{ d.repuestos | currency }}</td>
+            <td></td>
+          </tr>
+          <tr *ngIf="!repDesgloseOrden(repOrden) && repOrden.presupuesto > 0" class="desglose-presupuesto">
+            <td class="small text-muted ps-3">Sin discriminar mano de obra / repuestos</td>
+            <td></td>
+          </tr>
           <tr *ngFor="let c of repOrden.cobros || []" [class.text-muted]="c.anulado">
             <td class="small">
               {{ c.fecha | date:'dd/MM HH:mm' }} · Ticket {{ c.nroTicket }} · {{ textoPagosCobro(c) }}
+              <span *ngIf="c.descuento > 0" class="text-success">(pagó {{ c.cobrado | currency }}, descuento {{ c.descuento | currency }})</span>
               <span *ngIf="c.anulado" class="badge bg-danger">anulado</span>
             </td>
             <td class="text-end small" [class.text-decoration-line-through]="c.anulado">− {{ c.monto | currency }}</td>
@@ -710,7 +1082,7 @@
       <ng-container *ngIf="repSaldo(repOrden) > 0">
         <div class="row g-2 align-items-end">
           <div class="col-sm-5">
-            <label class="form-label small mb-1">Monto a cobrar</label>
+            <label class="form-label small mb-1">Saldo a cancelar</label>
             <input type="number" min="0" step="0.01" class="form-control form-control-lg" [(ngModel)]="repMonto">
           </div>
         </div>
@@ -749,6 +1121,76 @@
           <div *ngIf="repLineas.length > 1 && repPagos.error && hayMonto(repLineas)" class="text-danger small mt-1">
             {{ repPagos.error }}
           </div>
+
+          <!-- 💳 Tarjeta: nº de operación del posnet (opcional) -->
+          <div *ngIf="pagaConTarjeta(repLineas)" class="detalle-tarjeta">
+            <label for="repDetalleTarjeta" class="small mb-1">💳 Nº de operación / detalle de la tarjeta <span class="text-muted">(opcional)</span></label>
+            <input id="repDetalleTarjeta" type="text" class="form-control form-control-sm" [(ngModel)]="repDetalleTarjeta"
+              [maxlength]="maxDetallePago" placeholder="Ej: Op. 004512 · Visa débito" autocomplete="off">
+          </div>
+
+          <!-- 🏷 Descuento manual (efectivo / transferencia) -->
+          <div *ngIf="repAdmiteDescuento" class="descuento-efectivo" [class.con-error]="repPorcentajeInvalido">
+            <label for="repPorcentaje" class="small mb-0">Descuento por {{ repMediosConDescuento }}</label>
+            <div class="paga-con porcentaje">
+              <input id="repPorcentaje" type="number" min="0" max="99" step="0.5" class="form-control form-control-sm"
+                [(ngModel)]="repPorcentaje" placeholder="0">
+              <span class="input-group-text">%</span>
+            </div>
+            <button type="button" class="btn btn-sm btn-link text-muted p-0" *ngIf="repPorcentaje !== null"
+              (click)="repPorcentaje = null">Quitar</button>
+            <div *ngIf="repPorcentajeInvalido" class="text-danger small w-100">El descuento tiene que ser entre 0 y 99%.</div>
+          </div>
+
+          <!-- Resumen: saldo que cancela vs lo que paga -->
+          <div *ngIf="repPagos.descuentoTotal > 0 && !repPagos.error" class="resumen-descuento">
+            <div class="d-flex justify-content-between small text-muted">
+              <span>Saldo que cancela</span><span>{{ repMonto | currency }}</span>
+            </div>
+            <div class="d-flex justify-content-between small text-success">
+              <span>Descuento {{ repPorcentajeAplicado }}% {{ repLineas.length > 1 ? 'sobre la parte en ' + repMediosConDescuento : 'por ' + repMediosConDescuento }}</span>
+              <span>-{{ repPagos.descuentoTotal | currency }}</span>
+            </div>
+            <div class="d-flex justify-content-between fw-bold">
+              <span>El cliente paga</span><span>{{ repTotalAPagar | currency }}</span>
+            </div>
+          </div>
+
+          <!-- 🛠 Cómo se reparte este cobro -->
+          <div *ngIf="repDesgloseCobro as dc" class="desglose-cobro">
+            <span class="small text-muted">Este cobro:</span>
+            <span class="small">🛠 Mano de obra <strong>{{ dc.manoObra | currency }}</strong></span>
+            <span class="small">🔩 Repuestos <strong>{{ dc.repuestos | currency }}</strong></span>
+          </div>
+
+          <!-- 💵 Vuelto del cobro (parte en efectivo) -->
+          <div *ngIf="repMontoEfectivo > 0" class="vuelto" [class.con-error]="repFaltaEfectivo > 0">
+            <div class="vuelto-fila">
+              <span class="small text-muted">{{ repLineas.length > 1 ? 'Parte en efectivo' : 'A cobrar en efectivo' }}</span>
+              <strong>{{ repMontoEfectivo | currency }}</strong>
+            </div>
+            <div class="vuelto-fila">
+              <label for="repPagaCon" class="small mb-0">Paga con</label>
+              <div class="paga-con">
+                <span class="input-group-text">$</span>
+                <input id="repPagaCon" type="number" min="0" step="0.01" class="form-control form-control-sm"
+                  [(ngModel)]="repPagaCon" placeholder="Opcional">
+              </div>
+            </div>
+            <div class="sugerencias">
+              <button type="button" class="btn btn-sm btn-light" (click)="repPagaCon = repMontoEfectivo">Justo</button>
+              <button type="button" class="btn btn-sm btn-light" *ngFor="let v of repSugerenciasPagaCon" (click)="repPagaCon = v">
+                {{ v | currency:'ARS':'symbol-narrow':'1.0-0' }}
+              </button>
+              <button type="button" class="btn btn-sm btn-link text-muted" *ngIf="repPagaCon !== null" (click)="repPagaCon = null">Borrar</button>
+            </div>
+            <div *ngIf="repVuelto !== null" class="vuelto-resultado">
+              Vuelto: <strong>{{ repVuelto | currency }}</strong>
+            </div>
+            <div *ngIf="repFaltaEfectivo > 0" class="text-danger small fw-bold mt-1">
+              Faltan {{ repFaltaEfectivo | currency }}: lo que entrega no alcanza.
+            </div>
+          </div>
         </div>
         <div *ngIf="repMonto && repMonto > repSaldo(repOrden) + 0.009" class="text-danger small mt-1">
           El monto no puede superar el saldo pendiente.
@@ -762,6 +1204,16 @@
           <label class="form-check-label" for="repEntregar">Entregar el equipo (la orden pasa a Finalizadas)</label>
         </div>
 
+        <div class="mt-3">
+          <label class="form-label small mb-1" for="cajeroRep">Cajero que cobra</label>
+          <select id="cajeroRep" class="form-select" [(ngModel)]="repCajeroId" [disabled]="!cajeros.length"
+            [class.is-invalid]="!cajeros.length">
+            <option [ngValue]="null" disabled>{{ cajeros.length ? 'Elegí quién cobra…' : 'No hay cajeros cargados' }}</option>
+            <option *ngFor="let c of cajeros" [ngValue]="c.id">{{ c.apellido }}, {{ c.nombre }}</option>
+          </select>
+          <div *ngIf="!cajeros.length" class="text-danger small mt-1">Cargá los cajeros en Gestiones → Cajeros para poder cobrar.</div>
+        </div>
+
         <div class="text-end mt-3">
           <button class="btn btn-success" (click)="confirmarCobroReparacion()" [disabled]="!repCobroValido || repCobrando">
             {{ repCobrando ? 'Cobrando...' : 'Cobrar' }}
@@ -769,5 +1221,486 @@
         </div>
       </ng-container>
     </div>
+  </div>
+</div>
+
+<!-- ===========================
+     COBRO DE CUENTA CORRIENTE
+     =========================== -->
+<div *ngIf="mostrarCobroCuenta" class="cierre-overlay">
+  <div class="cierre-modal reparaciones-modal cuenta-modal">
+    <div class="d-flex justify-content-between align-items-start mb-2">
+      <div>
+        <h4 class="m-0">📒 Cobrar cuenta corriente</h4>
+        <small class="text-muted">El pago se imputa a las compras más viejas primero. Puede ser total o parcial.</small>
+      </div>
+      <button class="btn btn-sm btn-outline-secondary" (click)="cerrarCobroCuenta()" [disabled]="ccCobrando">✕</button>
+    </div>
+
+    <!-- Lista de clientes con deuda -->
+    <ng-container *ngIf="!ccCuenta">
+      <input type="text" class="form-control mb-2" [(ngModel)]="ccFiltro" placeholder="Buscar por nombre o DNI" autocomplete="off">
+
+      <div *ngIf="ccCargandoCuentas" class="text-muted small"><span class="spinner-border spinner-border-sm"></span> Cargando cuentas…</div>
+
+      <ng-container *ngIf="!ccCargandoCuentas">
+        <div *ngIf="!ccCuentas.length" class="alert alert-success py-2 mb-0">Ningún cliente tiene deuda en cuenta corriente.</div>
+
+        <ng-container *ngIf="ccCuentas.length">
+          <div class="d-flex justify-content-between small text-muted mb-1">
+            <span>{{ ccCuentas.length }} cliente(s) con deuda</span>
+            <span>Total adeudado: <strong>{{ ccTotalDeuda | currency }}</strong></span>
+          </div>
+          <div class="lista-cuentas">
+            <button type="button" class="item-cuenta" *ngFor="let c of ccCuentasFiltradas" (click)="elegirCuenta(c)">
+              <span>
+                <strong>{{ c.nombre }}</strong>
+                <small class="text-muted d-block" *ngIf="c.dni">DNI/CUIT {{ c.dni }}</small>
+              </span>
+              <span class="text-end">
+                <strong class="text-danger">{{ c.saldo | currency }}</strong>
+                <small class="text-muted d-block" *ngIf="c.ultimaCompra">últ. compra {{ c.ultimaCompra | date:'dd/MM/yy' }}</small>
+              </span>
+            </button>
+            <div *ngIf="!ccCuentasFiltradas.length" class="text-muted small p-2">No hay clientes con deuda que coincidan.</div>
+          </div>
+        </ng-container>
+      </ng-container>
+    </ng-container>
+
+    <!-- Cuenta elegida -->
+    <div *ngIf="ccCuenta" class="orden-elegida mb-3">
+      <div class="d-flex justify-content-between flex-wrap gap-2">
+        <div>
+          <strong>{{ ccCuenta.nombre }}</strong>
+          <div class="small text-muted" *ngIf="ccCuenta.dni">DNI/CUIT {{ ccCuenta.dni }}</div>
+        </div>
+        <div class="text-end">
+          <div class="small text-muted">Deuda actual</div>
+          <div class="fs-4 fw-bold text-danger">{{ ccCuenta.saldo | currency }}</div>
+        </div>
+      </div>
+      <button class="btn btn-link btn-sm p-0" (click)="volverAListaCuentas()" [disabled]="ccCobrando">← Elegir otro cliente</button>
+
+      <div *ngIf="ccCargandoDetalle" class="text-muted small mt-2"><span class="spinner-border spinner-border-sm"></span> Leyendo compras pendientes…</div>
+
+      <!-- Compras pendientes (FIFO) -->
+      <table *ngIf="!ccCargandoDetalle && ccPendientes.length" class="table table-sm mt-2 mb-2 tabla-pendientes">
+        <thead>
+          <tr><th>Compra</th><th class="text-end">Debe</th><th class="text-end">Se paga</th><th class="text-end">Queda</th></tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let m of ccPendientes" [class.table-success]="ccAplicadoA(m) > 0 && ccAplicadoA(m) >= (m.pendiente || 0) - 0.004">
+            <td class="small">
+              {{ m.fecha | date:'dd/MM/yy' }} · Ticket {{ nroTicketTexto(m.nroTicket) }}
+              <span class="text-muted">({{ diasDesde(m.fecha) }} días)</span>
+              <span *ngIf="(m.pendiente || 0) < m.importe - 0.004" class="badge bg-info text-dark ms-1">parcial</span>
+            </td>
+            <td class="text-end small">{{ m.pendiente | currency }}</td>
+            <td class="text-end small fw-bold">{{ ccAplicadoA(m) > 0 ? (ccAplicadoA(m) | currency) : '—' }}</td>
+            <td class="text-end small">{{ (m.pendiente || 0) - ccAplicadoA(m) | currency }}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <ng-container *ngIf="!ccCargandoDetalle && ccCuenta.saldo > 0.004">
+        <div class="row g-2 align-items-end">
+          <div class="col-sm-5">
+            <label class="form-label small mb-1">Deuda a cancelar</label>
+            <input type="number" min="0" step="0.01" class="form-control form-control-lg" [(ngModel)]="ccMonto">
+          </div>
+          <div class="col-sm-7 d-flex gap-2 flex-wrap">
+            <button type="button" class="btn btn-sm btn-outline-secondary" (click)="ccMonto = ccCuenta.saldo">Todo</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" *ngIf="ccPendientes.length > 1"
+              (click)="ccMonto = ccPendientes[0].pendiente || null" title="Solo la compra más vieja">La más vieja</button>
+          </div>
+        </div>
+
+        <!-- Medio(s) de pago del cobro -->
+        <div class="mt-2">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <label class="form-label small m-0">{{ ccLineas.length > 1 ? 'Medios de pago' : 'Método de pago' }}</label>
+            <button *ngIf="ccLineas.length < metodosPago.length" type="button" class="btn btn-link btn-sm p-0"
+              (click)="agregarMedioPago(ccLineas)">
+              <i class="fas fa-plus"></i> {{ ccLineas.length > 1 ? 'Agregar otro medio' : 'Pagar con varios medios' }}
+            </button>
+          </div>
+          <div class="linea-pago" *ngFor="let l of ccLineas; let i = index; let ultima = last" [class.dividido]="ccLineas.length > 1">
+            <div class="btn-group btn-group-sm medios" role="group">
+              <button *ngFor="let m of metodosPago" type="button" class="btn"
+                [class.btn-primary]="l.metodo === m.valor" [class.btn-outline-secondary]="l.metodo !== m.valor"
+                (click)="elegirMetodo(ccLineas, i, m.valor)">
+                {{ m.icono }} {{ m.nombre }}
+              </button>
+            </div>
+            <ng-container *ngIf="ccLineas.length > 1">
+              <div class="monto-pago" *ngIf="!ultima">
+                <span class="input-group-text">$</span>
+                <input type="number" min="0" step="0.01" class="form-control form-control-sm" placeholder="Monto" [(ngModel)]="l.monto">
+              </div>
+              <div class="monto-pago resto" *ngIf="ultima">
+                <span class="small text-muted me-1">resto</span>
+                <strong>{{ (ccPagos.error ? 0 : ccPagos.pagos[i]?.monto) | currency }}</strong>
+              </div>
+              <button type="button" class="btn btn-sm btn-outline-danger quitar" (click)="quitarMedioPago(ccLineas, i)" title="Quitar este medio">
+                <i class="fas fa-times"></i>
+              </button>
+            </ng-container>
+          </div>
+          <div *ngIf="ccLineas.length > 1 && ccPagos.error && hayMonto(ccLineas)" class="text-danger small mt-1">
+            {{ ccPagos.error }}
+          </div>
+
+          <!-- 💳 Tarjeta: nº de operación del posnet (opcional) -->
+          <div *ngIf="pagaConTarjeta(ccLineas)" class="detalle-tarjeta">
+            <label for="ccDetalleTarjeta" class="small mb-1">💳 Nº de operación / detalle de la tarjeta <span class="text-muted">(opcional)</span></label>
+            <input id="ccDetalleTarjeta" type="text" class="form-control form-control-sm" [(ngModel)]="ccDetalleTarjeta"
+              [maxlength]="maxDetallePago" placeholder="Ej: Op. 004512 · Visa débito" autocomplete="off">
+          </div>
+
+          <!-- 🏷 Descuento manual por pagar en efectivo -->
+          <div *ngIf="ccPagaEnEfectivo" class="descuento-efectivo" [class.con-error]="ccPorcentajeInvalido">
+            <label for="ccPorcentaje" class="small mb-0">Descuento en efectivo</label>
+            <div class="paga-con porcentaje">
+              <input id="ccPorcentaje" type="number" min="0" max="99" step="0.5" class="form-control form-control-sm"
+                [(ngModel)]="ccPorcentajeEfectivo" placeholder="0">
+              <span class="input-group-text">%</span>
+            </div>
+            <button type="button" class="btn btn-sm btn-link text-muted p-0" *ngIf="ccPorcentajeEfectivo !== null"
+              (click)="ccPorcentajeEfectivo = null">Quitar</button>
+            <div *ngIf="ccPorcentajeInvalido" class="text-danger small w-100">El descuento tiene que ser entre 0 y 99%.</div>
+          </div>
+
+          <!-- Resumen: deuda que cancela vs lo que paga -->
+          <div *ngIf="ccPagos.descuentoTotal > 0 && !ccPagos.error" class="resumen-descuento">
+            <div class="d-flex justify-content-between small text-muted">
+              <span>Deuda que cancela</span><span>{{ ccMonto | currency }}</span>
+            </div>
+            <div class="d-flex justify-content-between small text-success">
+              <span>Descuento {{ ccPorcentajeAplicado }}% {{ ccLineas.length > 1 ? 'sobre la parte en efectivo' : 'en efectivo' }}</span>
+              <span>-{{ ccPagos.descuentoTotal | currency }}</span>
+            </div>
+            <div class="d-flex justify-content-between fw-bold">
+              <span>El cliente paga</span><span>{{ ccTotalAPagar | currency }}</span>
+            </div>
+          </div>
+
+          <!-- 💵 Vuelto (parte en efectivo) -->
+          <div *ngIf="ccMontoEfectivo > 0" class="vuelto" [class.con-error]="ccFaltaEfectivo > 0">
+            <div class="vuelto-fila">
+              <span class="small text-muted">{{ ccLineas.length > 1 ? 'Parte en efectivo' : 'A cobrar en efectivo' }}</span>
+              <strong>{{ ccMontoEfectivo | currency }}</strong>
+            </div>
+            <div class="vuelto-fila">
+              <label for="ccPagaCon" class="small mb-0">Paga con</label>
+              <div class="paga-con">
+                <span class="input-group-text">$</span>
+                <input id="ccPagaCon" type="number" min="0" step="0.01" class="form-control form-control-sm"
+                  [(ngModel)]="ccPagaCon" placeholder="Opcional">
+              </div>
+            </div>
+            <div class="sugerencias">
+              <button type="button" class="btn btn-sm btn-light" (click)="ccPagaCon = ccMontoEfectivo">Justo</button>
+              <button type="button" class="btn btn-sm btn-light" *ngFor="let v of ccSugerenciasPagaCon" (click)="ccPagaCon = v">
+                {{ v | currency:'ARS':'symbol-narrow':'1.0-0' }}
+              </button>
+              <button type="button" class="btn btn-sm btn-link text-muted" *ngIf="ccPagaCon !== null" (click)="ccPagaCon = null">Borrar</button>
+            </div>
+            <div *ngIf="ccVuelto !== null" class="vuelto-resultado">
+              Vuelto: <strong>{{ ccVuelto | currency }}</strong>
+            </div>
+            <div *ngIf="ccFaltaEfectivo > 0" class="text-danger small fw-bold mt-1">
+              Faltan {{ ccFaltaEfectivo | currency }}: lo que entrega no alcanza.
+            </div>
+          </div>
+        </div>
+        <div *ngIf="ccMonto && ccMonto > ccCuenta.saldo + 0.009" class="text-danger small mt-1">
+          El monto no puede superar la deuda del cliente.
+        </div>
+        <div *ngIf="ccMonto && ccMonto > 0 && ccMonto < ccCuenta.saldo - 0.009" class="text-info small mt-1">
+          Pago parcial: la deuda queda en {{ ccCuenta.saldo - ccMonto | currency }}.
+        </div>
+
+        <div class="mt-3">
+          <label class="form-label small mb-1" for="cajeroCuenta">Cajero que cobra</label>
+          <select id="cajeroCuenta" class="form-select" [(ngModel)]="ccCajeroId" [disabled]="!cajeros.length"
+            [class.is-invalid]="!cajeros.length">
+            <option [ngValue]="null" disabled>{{ cajeros.length ? 'Elegí quién cobra…' : 'No hay cajeros cargados' }}</option>
+            <option *ngFor="let c of cajeros" [ngValue]="c.id">{{ c.apellido }}, {{ c.nombre }}</option>
+          </select>
+          <div *ngIf="!cajeros.length" class="text-danger small mt-1">Cargá los cajeros en Gestiones → Cajeros para poder cobrar.</div>
+        </div>
+
+        <div class="text-end mt-3">
+          <button class="btn btn-success" (click)="confirmarCobroCuenta()" [disabled]="!ccCobroValido || ccCobrando">
+            {{ ccCobrando ? 'Cobrando...' : 'Cobrar' }}
+          </button>
+        </div>
+      </ng-container>
+    </div>
+  </div>
+</div>
+
+<!-- ===========================
+     🏠 COBRO DE CUOTAS (crédito de la casa)
+     =========================== -->
+<div *ngIf="mostrarCobroCuota" class="cierre-overlay">
+  <div class="cierre-modal reparaciones-modal cuenta-modal">
+    <div class="d-flex justify-content-between align-items-start mb-2">
+      <div>
+        <h4 class="m-0">🏠 Cobrar cuotas</h4>
+        <small class="text-muted">Crédito de la casa. El pago se aplica a la cuota más vieja primero: puede ser parcial o adelantar varias.</small>
+      </div>
+      <button class="btn btn-sm btn-outline-secondary" (click)="cerrarCobroCuota()" [disabled]="cuCobrando">✕</button>
+    </div>
+
+    <!-- Lista de créditos vigentes -->
+    <ng-container *ngIf="!cuCredito">
+      <input type="text" class="form-control mb-2" [(ngModel)]="cuFiltro" placeholder="Buscar por cliente, DNI, equipo o IMEI" autocomplete="off">
+      <div *ngIf="cuCargando" class="text-muted small"><span class="spinner-border spinner-border-sm"></span> Cargando créditos…</div>
+      <ng-container *ngIf="!cuCargando">
+        <div *ngIf="!cuCreditos.length" class="alert alert-success py-2 mb-0">No hay créditos con cuotas pendientes.</div>
+        <div *ngIf="cuCreditos.length" class="lista-cuentas">
+          <button type="button" class="item-cuenta" *ngFor="let c of cuCreditosFiltrados" (click)="elegirCredito(c)">
+            <span>
+              <strong>{{ c.cliente.nombre }}</strong>
+              <small class="text-muted d-block">{{ c.equipos[0]?.nombre || c.detalle }}<ng-container *ngIf="c.cliente.dni"> · DNI {{ c.cliente.dni }}</ng-container></small>
+            </span>
+            <span class="text-end">
+              <strong>{{ cuSituaciones[c.id].saldo | currency }}</strong>
+              <small class="d-block" [ngSwitch]="cuSituaciones[c.id].estado">
+                <span *ngSwitchCase="'vencido'" class="text-danger fw-bold">🔴 {{ cuSituaciones[c.id].cuotasVencidas }} vencida(s) · {{ cuSituaciones[c.id].diasAtraso }} días</span>
+                <span *ngSwitchCase="'por-vencer'" class="text-warning-emphasis">🟡 vence este mes</span>
+                <span *ngSwitchDefault class="text-success">🟢 al día</span>
+              </small>
+            </span>
+          </button>
+          <div *ngIf="!cuCreditosFiltrados.length" class="text-muted small p-2">No hay créditos que coincidan.</div>
+        </div>
+      </ng-container>
+    </ng-container>
+
+    <!-- Crédito elegido -->
+    <div *ngIf="cuCredito" class="orden-elegida mb-3">
+      <div class="d-flex justify-content-between flex-wrap gap-2">
+        <div>
+          <strong>{{ cuCredito.cliente.nombre }}</strong>
+          <div class="small text-muted">
+            {{ cuCredito.equipos[0]?.nombre || cuCredito.detalle }}
+            · compra {{ cuCredito.fecha | date:'dd/MM/yy' }} (ticket {{ nroTicketTexto(cuCredito.nroTicket) }})
+            <button type="button" class="btn btn-link btn-sm p-0 ms-1" (click)="reimprimirComprobante(cuCredito.ventaId)">ver</button>
+          </div>
+          <div class="small text-muted" *ngIf="cuCredito.cliente.telefono">📞 {{ cuCredito.cliente.telefono }}</div>
+        </div>
+        <div class="text-end" *ngIf="cuSituacion as s">
+          <div class="small text-muted">Debe</div>
+          <div class="fs-4 fw-bold" [class.text-danger]="s.estado === 'vencido'">{{ s.saldo | currency }}</div>
+          <div class="small text-danger" *ngIf="s.montoVencido > 0">Vencido: {{ s.montoVencido | currency }}</div>
+        </div>
+      </div>
+      <button class="btn btn-link btn-sm p-0" (click)="volverAListaCreditos()" [disabled]="cuCobrando">← Elegir otro crédito</button>
+
+      <div *ngIf="cuCargandoDetalle" class="text-muted small mt-2"><span class="spinner-border spinner-border-sm"></span> Leyendo el crédito…</div>
+
+      <!-- Cuotas -->
+      <table *ngIf="!cuCargandoDetalle" class="table table-sm mt-2 mb-2 tabla-pendientes">
+        <thead>
+          <tr><th>Cuota</th><th>Vence</th><th class="text-end">Falta</th><th class="text-end">Se paga</th></tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let q of cuCredito.cuotas" [class.text-muted]="estadoCuota(q).estado === 'pagada'"
+              [class.table-success]="cuAplicadoA(q.numero) > 0 && cuAplicadoA(q.numero) >= faltaCuota(q) - 0.004">
+            <td class="small">
+              {{ q.numero }}/{{ cuCredito.cantidadCuotas }}
+              <ng-container [ngSwitch]="estadoCuota(q).estado">
+                <span *ngSwitchCase="'pagada'" class="badge bg-success ms-1">pagada</span>
+                <span *ngSwitchCase="'vencida'" class="badge bg-danger ms-1">vencida · {{ estadoCuota(q).diasAtraso }} d</span>
+                <span *ngSwitchCase="'por-vencer'" class="badge bg-warning text-dark ms-1">vence este mes</span>
+              </ng-container>
+              <span *ngIf="q.pagado > 0 && estadoCuota(q).estado !== 'pagada'" class="badge bg-info text-dark ms-1">parcial</span>
+            </td>
+            <td class="small">{{ q.hasta | date:'dd/MM/yy' }}</td>
+            <td class="text-end small">{{ faltaCuota(q) > 0 ? (faltaCuota(q) | currency) : '—' }}</td>
+            <td class="text-end small fw-bold">{{ cuAplicadoA(q.numero) > 0 ? (cuAplicadoA(q.numero) | currency) : '' }}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <ng-container *ngIf="!cuCargandoDetalle && cuSituacion as s">
+        <div class="row g-2 align-items-end">
+          <div class="col-sm-5">
+            <label class="form-label small mb-1" for="cuMonto">Paga de cuotas</label>
+            <input id="cuMonto" type="number" min="0" step="0.01" class="form-control form-control-lg" [(ngModel)]="cuMonto">
+          </div>
+          <div class="col-sm-7 d-flex gap-2 flex-wrap">
+            <button type="button" class="btn btn-sm btn-outline-secondary" *ngIf="s.montoVencido > 0" (click)="cuMonto = s.montoVencido">Lo vencido</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" *ngIf="s.aPagarHoy > 0 && s.aPagarHoy !== s.montoVencido" (click)="cuMonto = s.aPagarHoy">A pagar hoy</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" *ngIf="s.proxima && !s.aPagarHoy" (click)="cuMonto = faltaCuota(s.proxima)">Próxima cuota</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" (click)="cuMonto = s.saldo">Todo</button>
+          </div>
+        </div>
+        <div *ngIf="cuMonto && cuMonto > s.saldo + 0.009" class="text-danger small mt-1">El monto no puede superar lo que debe.</div>
+
+        <!-- Recargo por mora (opcional, lo decide el cajero) -->
+        <div class="descuento-efectivo mt-2" [class.con-error]="cuRecargoInvalido">
+          <label for="cuRecargo" class="small mb-0">Recargo fuera de término <span class="text-muted">(opcional)</span></label>
+          <div class="paga-con">
+            <span class="input-group-text">$</span>
+            <input id="cuRecargo" type="number" min="0" step="0.01" class="form-control form-control-sm" [(ngModel)]="cuRecargo" placeholder="0">
+          </div>
+          <span *ngIf="s.cuotasVencidas" class="small text-danger">{{ s.cuotasVencidas }} cuota(s) vencida(s), {{ s.diasAtraso }} días de atraso</span>
+          <div *ngIf="cuRecargoInvalido" class="text-danger small w-100">El recargo no puede ser negativo.</div>
+        </div>
+
+        <!-- Medio(s) de pago -->
+        <div class="mt-2">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <label class="form-label small m-0">{{ cuLineas.length > 1 ? 'Medios de pago' : 'Método de pago' }}</label>
+            <button *ngIf="cuLineas.length < metodosPago.length" type="button" class="btn btn-link btn-sm p-0" (click)="agregarMedioPago(cuLineas)">
+              <i class="fas fa-plus"></i> {{ cuLineas.length > 1 ? 'Agregar otro medio' : 'Pagar con varios medios' }}
+            </button>
+          </div>
+          <div class="linea-pago" *ngFor="let l of cuLineas; let i = index; let ultima = last" [class.dividido]="cuLineas.length > 1">
+            <div class="btn-group btn-group-sm medios" role="group">
+              <button *ngFor="let m of metodosPago" type="button" class="btn"
+                [class.btn-primary]="l.metodo === m.valor" [class.btn-outline-secondary]="l.metodo !== m.valor"
+                (click)="elegirMetodo(cuLineas, i, m.valor)">{{ m.icono }} {{ m.nombre }}</button>
+            </div>
+            <ng-container *ngIf="cuLineas.length > 1">
+              <div class="monto-pago" *ngIf="!ultima">
+                <span class="input-group-text">$</span>
+                <input type="number" min="0" step="0.01" class="form-control form-control-sm" placeholder="Monto" [(ngModel)]="l.monto">
+              </div>
+              <div class="monto-pago resto" *ngIf="ultima">
+                <span class="small text-muted me-1">resto</span>
+                <strong>{{ (cuPagos.error ? 0 : cuPagos.pagos[i]?.monto) | currency }}</strong>
+              </div>
+              <button type="button" class="btn btn-sm btn-outline-danger quitar" (click)="quitarMedioPago(cuLineas, i)" title="Quitar este medio">
+                <i class="fas fa-times"></i>
+              </button>
+            </ng-container>
+          </div>
+          <div *ngIf="cuLineas.length > 1 && cuPagos.error && hayMonto(cuLineas)" class="text-danger small mt-1">{{ cuPagos.error }}</div>
+
+          <div *ngIf="pagaConTarjeta(cuLineas)" class="detalle-tarjeta">
+            <label for="cuDetalleTarjeta" class="small mb-1">💳 Nº de operación / detalle de la tarjeta <span class="text-muted">(opcional)</span></label>
+            <input id="cuDetalleTarjeta" type="text" class="form-control form-control-sm" [(ngModel)]="cuDetalleTarjeta"
+              [maxlength]="maxDetallePago" placeholder="Ej: Op. 004512 · Visa débito" autocomplete="off">
+          </div>
+
+          <div class="resumen-descuento" *ngIf="cuTotal > 0">
+            <div class="d-flex justify-content-between small text-muted" *ngIf="cuRecargo && !cuRecargoInvalido">
+              <span>Cuotas</span><span>{{ cuMonto | currency }}</span>
+            </div>
+            <div class="d-flex justify-content-between small text-muted" *ngIf="cuRecargo && !cuRecargoInvalido">
+              <span>Recargo</span><span>{{ cuRecargo | currency }}</span>
+            </div>
+            <div class="d-flex justify-content-between fw-bold">
+              <span>El cliente paga</span><span>{{ cuTotal | currency }}</span>
+            </div>
+          </div>
+
+          <!-- 💵 Vuelto -->
+          <div *ngIf="cuMontoEfectivo > 0" class="vuelto" [class.con-error]="cuFaltaEfectivo > 0">
+            <div class="vuelto-fila">
+              <span class="small text-muted">{{ cuLineas.length > 1 ? 'Parte en efectivo' : 'A cobrar en efectivo' }}</span>
+              <strong>{{ cuMontoEfectivo | currency }}</strong>
+            </div>
+            <div class="vuelto-fila">
+              <label for="cuPagaCon" class="small mb-0">Paga con</label>
+              <div class="paga-con">
+                <span class="input-group-text">$</span>
+                <input id="cuPagaCon" type="number" min="0" step="0.01" class="form-control form-control-sm" [(ngModel)]="cuPagaCon" placeholder="Opcional">
+              </div>
+            </div>
+            <div class="sugerencias">
+              <button type="button" class="btn btn-sm btn-light" (click)="cuPagaCon = cuMontoEfectivo">Justo</button>
+              <button type="button" class="btn btn-sm btn-light" *ngFor="let v of cuSugerenciasPagaCon" (click)="cuPagaCon = v">
+                {{ v | currency:'ARS':'symbol-narrow':'1.0-0' }}
+              </button>
+              <button type="button" class="btn btn-sm btn-link text-muted" *ngIf="cuPagaCon !== null" (click)="cuPagaCon = null">Borrar</button>
+            </div>
+            <div *ngIf="cuVuelto !== null" class="vuelto-resultado">Vuelto: <strong>{{ cuVuelto | currency }}</strong></div>
+            <div *ngIf="cuFaltaEfectivo > 0" class="text-danger small fw-bold mt-1">Faltan {{ cuFaltaEfectivo | currency }}: lo que entrega no alcanza.</div>
+          </div>
+        </div>
+
+        <div class="mt-3">
+          <label class="form-label small mb-1" for="cajeroCuota">Cajero que cobra</label>
+          <select id="cajeroCuota" class="form-select" [(ngModel)]="cuCajeroId" [disabled]="!cajeros.length" [class.is-invalid]="!cajeros.length">
+            <option [ngValue]="null" disabled>{{ cajeros.length ? 'Elegí quién cobra…' : 'No hay cajeros cargados' }}</option>
+            <option *ngFor="let c of cajeros" [ngValue]="c.id">{{ c.apellido }}, {{ c.nombre }}</option>
+          </select>
+        </div>
+
+        <div class="text-end mt-3">
+          <button class="btn btn-success" (click)="confirmarCobroCuota()" [disabled]="!cuCobroValido || cuCobrando">
+            {{ cuCobrando ? 'Cobrando...' : 'Cobrar' }}
+          </button>
+        </div>
+      </ng-container>
+
+      <!-- Pagos anteriores (comprobantes guardados) -->
+      <div *ngIf="!cuCargandoDetalle && cuPagosAnteriores.length" class="mt-3">
+        <div class="small fw-bold mb-1">Pagos anteriores</div>
+        <table class="table table-sm mb-0">
+          <tbody>
+            <tr *ngFor="let p of cuPagosAnteriores" [class.text-decoration-line-through]="p.anulado" [class.text-muted]="p.anulado">
+              <td class="small">{{ p.fecha | date:'dd/MM/yy HH:mm' }} · ticket {{ nroTicketTexto(p.nroTicket) }}</td>
+              <td class="small">cuota(s) {{ cuotasDePago(p) }}<span *ngIf="p.anulado"> · ANULADO</span></td>
+              <td class="text-end small">{{ p.cobrado | currency }}</td>
+              <td class="text-end"><button type="button" class="btn btn-sm btn-link p-0" (click)="reimprimirComprobante(p.ventaId)">🖨</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===========================
+     ELEGIR EQUIPO
+     =========================== -->
+<div *ngIf="mostrarEquipos" class="cierre-overlay" (keydown.escape)="cerrarEquipos()">
+  <div class="cierre-modal reparaciones-modal equipos-modal">
+    <div class="d-flex justify-content-between align-items-start mb-2">
+      <div>
+        <h4 class="m-0">📱 Agregar equipo</h4>
+        <small class="text-muted">Buscá por modelo, color, capacidad o IMEI (podés escanearlo y apretar Enter).</small>
+      </div>
+      <button class="btn btn-sm btn-outline-secondary" (click)="cerrarEquipos()">✕</button>
+    </div>
+
+    <input type="text" class="form-control mb-2" [(ngModel)]="filtroEquipos" placeholder="Ej: 15 pro natural, o el IMEI"
+      autocomplete="off" (keydown.enter)="agregarEquipoBuscado()" autofocus>
+
+    <div *ngIf="cargandoEquipos" class="text-muted small"><span class="spinner-border spinner-border-sm"></span> Cargando equipos…</div>
+
+    <ng-container *ngIf="!cargandoEquipos">
+      <div class="small text-muted mb-1">
+        {{ equiposFiltrados.length }} disponible(s) · precios lista {{ tipoPrecio }} · dólar {{ cotizacionEquipos | currency:'ARS':'symbol-narrow':'1.0-2' }}
+      </div>
+      <div class="lista-equipos">
+        <button type="button" class="item-equipo" *ngFor="let e of equiposFiltrados" (click)="agregarEquipo(e)">
+          <span class="miniatura-equipo">
+            <img *ngIf="e.imagen" [src]="e.imagen" [alt]="e.modelo" loading="lazy">
+            <span *ngIf="!e.imagen">📱</span>
+          </span>
+          <span class="datos-equipo">
+            <span class="badge-condicion" [ngClass]="condicionEquipo(e)">{{ nombreCondicionEquipo(e) }}</span>
+            <strong>{{ e.modelo }}</strong> <span class="text-muted">· {{ e.capacidad }} · {{ e.color }}</span>
+            <small class="d-block text-muted">IMEI {{ e.imei }}<span *ngIf="e.grado"> · Grado {{ e.grado }}</span> · 🔋 {{ e.bateria }}%</small>
+            <small class="d-block text-muted obs-equipo" *ngIf="e.observaciones">{{ e.observaciones }}</small>
+          </span>
+          <span class="precio-equipo">
+            <strong>{{ precioEquipoTexto(e) }}</strong>
+            <small class="d-block text-muted" *ngIf="e.moneda === 'USD'">{{ precioEquipo(e) | currency }}</small>
+          </span>
+        </button>
+        <div *ngIf="!equiposFiltrados.length" class="text-muted small p-3 text-center">
+          {{ filtroEquipos ? 'No hay equipos disponibles que coincidan.' : 'No hay equipos disponibles.' }}
+        </div>
+      </div>
+    </ng-container>
   </div>
 </div>

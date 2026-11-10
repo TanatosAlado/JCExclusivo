@@ -1,0 +1,69 @@
+<div class="equipo-card">
+  <div class="equipo-img" [class.clickeable]="fotos.length" (click)="abrirGaleria()"
+    [title]="fotos.length ? 'Ver fotos' : ''">
+    <span class="sello-condicion" [class.nuevo]="nuevo" [class.usado]="!nuevo">{{ nuevo ? 'Nuevo' : 'Usado' }}</span>
+    <img [src]="fotoActual" [alt]="equipo?.modelo" loading="lazy">
+
+    <ng-container *ngIf="fotos.length > 1">
+      <button type="button" class="flecha izq" (click)="cambiarFoto(-1, $event)" aria-label="Foto anterior">‹</button>
+      <button type="button" class="flecha der" (click)="cambiarFoto(1, $event)" aria-label="Foto siguiente">›</button>
+      <div class="puntos">
+        <button type="button" *ngFor="let f of fotos; let i = index" [class.activo]="i === indiceFoto"
+          (click)="irAFoto(i, $event)" [attr.aria-label]="'Foto ' + (i + 1)"></button>
+      </div>
+    </ng-container>
+  </div>
+
+  <div class="equipo-info">
+    <div class="equipo-nombre" [title]="equipo?.modelo + ' ' + equipo?.capacidad">
+      {{ equipo?.modelo }} <span class="capacidad">{{ equipo?.capacidad }}</span>
+    </div>
+
+    <div class="chips">
+      <span class="chip">{{ equipo?.color }}</span>
+      <span class="chip grado" *ngIf="equipo?.grado">Grado {{ equipo?.grado }}</span>
+      <span class="chip bateria" [ngClass]="claseBateria()">🔋 {{ equipo?.bateria }}%</span>
+    </div>
+
+    <div class="obs" *ngIf="equipo?.observaciones" [title]="equipo.observaciones">{{ equipo.observaciones }}</div>
+
+    <!-- Precio en dólares (minorista o mayorista según el cliente) -->
+    <div class="precio" *ngIf="enDolares && precioDolares; else precioEnPesos">
+      <h5 class="m-0">{{ usd(precioDolares, 2) }}</h5>
+    </div>
+
+    <ng-template #precioEnPesos>
+      <div class="precio">
+        <h5 class="m-0">{{ precioPesos | currency:'ARS':'symbol':'1.0-0' }}</h5>
+        <small class="text-muted" *ngIf="precioDolares">{{ usd(precioDolares, 0) }}</small>
+      </div>
+    </ng-template>
+
+    <button type="button" class="btn-agregar" (click)="agregarCarrito()" [disabled]="agregando || enCarrito">
+      <i class="fa fa-shopping-cart"></i>
+      {{ enCarrito ? 'En el carrito' : (agregando ? 'Agregando…' : 'Agregar al carrito') }}
+    </button>
+  </div>
+</div>
+
+<!-- Galería: fotos en grande -->
+<div class="galeria" *ngIf="mostrarGaleria" (click)="cerrarGaleria()" role="dialog" aria-modal="true">
+  <div class="galeria-contenido" (click)="$event.stopPropagation()">
+    <button type="button" class="galeria-cerrar" (click)="cerrarGaleria()" aria-label="Cerrar">✕</button>
+    <div class="galeria-titulo">
+      <span class="sello-condicion estatico" [class.nuevo]="nuevo" [class.usado]="!nuevo">{{ nuevo ? 'Nuevo' : 'Usado' }}</span>
+      {{ equipo?.modelo }} {{ equipo?.capacidad }} · {{ equipo?.color }}
+    </div>
+    <div class="galeria-foto">
+      <button type="button" class="flecha izq" *ngIf="fotos.length > 1" (click)="cambiarFoto(-1, $event)" aria-label="Foto anterior">‹</button>
+      <img [src]="fotoActual" [alt]="equipo?.modelo">
+      <button type="button" class="flecha der" *ngIf="fotos.length > 1" (click)="cambiarFoto(1, $event)" aria-label="Foto siguiente">›</button>
+    </div>
+    <div class="galeria-miniaturas" *ngIf="fotos.length > 1">
+      <button type="button" *ngFor="let f of fotos; let i = index" [class.activa]="i === indiceFoto" (click)="irAFoto(i, $event)">
+        <img [src]="f" [alt]="'Foto ' + (i + 1)">
+      </button>
+    </div>
+    <div class="galeria-contador" *ngIf="fotos.length > 1">{{ indiceFoto + 1 }} / {{ fotos.length }}</div>
+  </div>
+</div>

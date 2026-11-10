@@ -1,0 +1,214 @@
+<app-encabezado>
+  Cuentas corrientes
+</app-encabezado>
+
+<div class="container mt-4 mb-5">
+
+  <!-- ===================== LISTADO ===================== -->
+  <mat-card *ngIf="!cuenta">
+    <mat-card-title>📒 Cuentas corrientes</mat-card-title>
+    <mat-card-subtitle>
+      Lo que deben los clientes mayoristas. Las compras a cuenta y los cobros se hacen en Despacho.
+    </mat-card-subtitle>
+
+    <mat-card-content>
+      <div class="indicadores">
+        <div class="indicador destacado">
+          <span class="etiqueta">Deuda total</span>
+          <strong>{{ totalDeuda | currency }}</strong>
+        </div>
+        <div class="indicador">
+          <span class="etiqueta">Clientes con deuda</span>
+          <strong>{{ cantidadConDeuda }}</strong>
+        </div>
+        <div class="indicador">
+          <span class="etiqueta">Cuentas abiertas</span>
+          <strong>{{ cuentas.length }}</strong>
+        </div>
+      </div>
+
+      <div class="barra-lista">
+        <mat-form-field appearance="outline" class="campo-filtro">
+          <mat-label>Buscar cliente</mat-label>
+          <input matInput [(ngModel)]="filtro" placeholder="Nombre o DNI" autocomplete="off">
+          <mat-icon matSuffix>search</mat-icon>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="campo-orden">
+          <mat-label>Ordenar por</mat-label>
+          <mat-select [(ngModel)]="orden">
+            <mat-option value="saldo">Mayor deuda</mat-option>
+            <mat-option value="antiguedad">Más tiempo sin pagar</mat-option>
+            <mat-option value="nombre">Nombre</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-checkbox [(ngModel)]="soloConDeuda">Solo con deuda</mat-checkbox>
+        <span class="espacio"></span>
+        <button mat-stroked-button type="button" (click)="cargar()" [disabled]="cargando">
+          <mat-icon>refresh</mat-icon> Actualizar
+        </button>
+        <button mat-stroked-button type="button" (click)="exportarSaldos()" [disabled]="cargando || !visibles.length">
+          <mat-icon>download</mat-icon> Excel
+        </button>
+      </div>
+
+      <div *ngIf="cargando" class="text-muted py-3"><span class="spinner-border spinner-border-sm"></span> Cargando…</div>
+      <div *ngIf="error" class="alert alert-danger">{{ error }}</div>
+
+      <div class="tabla-scroll" *ngIf="!cargando && visibles.length">
+        <table class="table table-sm table-hover align-middle">
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th class="text-end">Saldo</th>
+              <th class="text-end d-none d-md-table-cell">Comprado a cuenta</th>
+              <th class="text-end d-none d-md-table-cell">Pagado</th>
+              <th class="d-none d-sm-table-cell">Última compra</th>
+              <th class="d-none d-sm-table-cell">Último pago</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let c of visibles" class="fila" (click)="abrir(c)">
+              <td>
+                <strong>{{ c.nombre }}</strong>
+                <div class="small text-muted" *ngIf="c.dni">DNI/CUIT {{ c.dni }}</div>
+              </td>
+              <td class="text-end">
+                <strong [class.text-danger]="c.saldo > 0.004" [class.text-success]="c.saldo <= 0.004">
+                  {{ c.saldo | currency }}
+                </strong>
+              </td>
+              <td class="text-end d-none d-md-table-cell">{{ c.totalCompras | currency }}</td>
+              <td class="text-end d-none d-md-table-cell">{{ c.totalPagos | currency }}</td>
+              <td class="d-none d-sm-table-cell small">{{ c.ultimaCompra ? (c.ultimaCompra | date:'dd/MM/yyyy') : '—' }}</td>
+              <td class="d-none d-sm-table-cell small">
+                {{ c.ultimoPago ? (c.ultimoPago | date:'dd/MM/yyyy') : 'Nunca' }}
+              </td>
+              <td class="text-end"><mat-icon class="flecha">chevron_right</mat-icon></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div *ngIf="!cargando && !error && !visibles.length" class="vacio">
+        <mat-icon>check_circle</mat-icon>
+        <div>{{ filtro ? 'No hay cuentas que coincidan con la búsqueda.' : (soloConDeuda ? 'Ningún cliente tiene deuda.' : 'Todavía no hay cuentas corrientes.') }}</div>
+        <small class="text-muted" *ngIf="!filtro && !cuentas.length">
+          Se crea la cuenta de un cliente mayorista la primera vez que compra con el medio de pago "Cuenta corriente" en Despacho.
+        </small>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- ===================== DETALLE ===================== -->
+  <mat-card *ngIf="cuenta">
+    <div class="encabezado-detalle">
+      <button mat-icon-button type="button" (click)="cerrarDetalle()" title="Volver al listado"><mat-icon>arrow_back</mat-icon></button>
+      <div class="titulo">
+        <h2>{{ cuenta.nombre }}</h2>
+        <div class="small text-muted" *ngIf="cuenta.dni">DNI/CUIT {{ cuenta.dni }}</div>
+      </div>
+      <button mat-stroked-button type="button" (click)="exportarMovimientos()" [disabled]="cargandoDetalle || !movimientos.length">
+        <mat-icon>download</mat-icon> Excel
+      </button>
+    </div>
+
+    <mat-card-content>
+      <div class="indicadores">
+        <div class="indicador destacado">
+          <span class="etiqueta">Debe hoy</span>
+          <strong [class.text-success]="cuenta.saldo <= 0.004">{{ cuenta.saldo | currency }}</strong>
+        </div>
+        <div class="indicador">
+          <span class="etiqueta">Comprado a cuenta</span>
+          <strong>{{ cuenta.totalCompras | currency }}</strong>
+        </div>
+        <div class="indicador">
+          <span class="etiqueta">Pagado</span>
+          <strong>{{ cuenta.totalPagos | currency }}</strong>
+        </div>
+        <div class="indicador" *ngIf="comprasPendientes.length">
+          <span class="etiqueta">Deuda más vieja</span>
+          <strong>{{ diasDesde(comprasPendientes[0].fecha) }} días</strong>
+        </div>
+      </div>
+
+      <div class="antiguedad" *ngIf="comprasPendientes.length">
+        <div *ngFor="let t of antiguedad" class="tramo" [class.vacio-tramo]="!t.monto">
+          <span>{{ t.etiqueta }}</span>
+          <strong>{{ t.monto | currency }}</strong>
+        </div>
+      </div>
+
+      <p class="small text-muted mb-2">
+        Los cobros se hacen en <strong>Despacho → 📒 Cobrar cuenta corriente</strong> (con la caja abierta).
+        Cada pago se imputa a las compras más viejas primero.
+      </p>
+
+      <div *ngIf="cargandoDetalle" class="text-muted py-3"><span class="spinner-border spinner-border-sm"></span> Cargando movimientos…</div>
+
+      <ng-container *ngIf="!cargandoDetalle">
+        <div class="d-flex align-items-center mb-2" *ngIf="cantidadAnulados">
+          <mat-checkbox [(ngModel)]="verAnulados">Ver anulados ({{ cantidadAnulados }})</mat-checkbox>
+        </div>
+
+        <div *ngIf="!movimientosVisibles.length" class="text-muted py-3">Sin movimientos.</div>
+
+        <div class="movimientos">
+          <div *ngFor="let m of movimientosVisibles" class="movimiento" [ngClass]="m.tipo" [class.anulado]="m.anulado">
+            <div class="mov-icono">
+              <mat-icon>{{ m.tipo === 'cargo' ? 'shopping_bag' : 'payments' }}</mat-icon>
+            </div>
+
+            <div class="mov-cuerpo">
+              <div class="mov-linea">
+                <strong>{{ m.tipo === 'cargo' ? 'Compra a cuenta' : 'Pago' }}</strong>
+                <button type="button" class="link-ticket" (click)="verTicket(m.ventaId)" title="Ver ticket">Ticket {{ nro(m.nroTicket) }}</button>
+                <span class="text-muted small">{{ m.fecha | date:'dd/MM/yyyy HH:mm' }}</span>
+                <span *ngIf="m.anulado" class="badge bg-danger">ANULADO</span>
+                <span *ngIf="!m.anulado && m.tipo === 'cargo'" class="estado" [ngClass]="estado(m)">{{ nombreEstado(estado(m)) }}</span>
+              </div>
+
+              <!-- Compra -->
+              <ng-container *ngIf="m.tipo === 'cargo'">
+                <div class="small text-muted detalle" *ngIf="m.detalle">{{ m.detalle }}</div>
+                <div class="small" *ngIf="!m.anulado && estado(m) !== 'pagado'">
+                  Falta pagar <strong>{{ m.pendiente | currency }}</strong>
+                  <span class="text-muted"> · hace {{ diasDesde(m.fecha) }} días</span>
+                </div>
+                <div class="small text-muted" *ngIf="cobrosVigentes(m).length">
+                  Pagos: <span *ngFor="let c of cobrosVigentes(m); let ult = last">
+                    {{ c.importe | currency }} el {{ c.fecha | date:'dd/MM/yy' }} (ticket {{ nro(c.nroTicket) }}){{ ult ? '' : ' · ' }}
+                  </span>
+                </div>
+              </ng-container>
+
+              <!-- Pago -->
+              <ng-container *ngIf="m.tipo === 'pago'">
+                <div class="small">{{ pagos(m) }}</div>
+                <div class="small text-success" *ngIf="m.descuento > 0">
+                  Pagó {{ m.cobrado | currency }} con descuento en efectivo de {{ m.descuento | currency }}
+                </div>
+                <div class="small text-muted" *ngIf="m.aplicaciones?.length">
+                  Imputado a: <span *ngFor="let a of m.aplicaciones; let ult = last">
+                    ticket {{ nro(a.nroTicket) }} {{ a.importe | currency }}{{ a.pendienteNuevo <= 0 ? ' (cancelada)' : '' }}{{ ult ? '' : ' · ' }}
+                  </span>
+                </div>
+              </ng-container>
+
+              <div class="small text-muted" *ngIf="m.anulado && m.motivoAnulacion">Motivo: {{ m.motivoAnulacion }}</div>
+              <div class="small text-muted" *ngIf="nombreCajero(m)">Atendió: {{ nombreCajero(m) }}</div>
+            </div>
+
+            <div class="mov-importes">
+              <div class="importe" [class.debe]="m.tipo === 'cargo'" [class.haber]="m.tipo === 'pago'">
+                {{ m.tipo === 'cargo' ? '+' : '−' }} {{ m.importe | currency }}
+              </div>
+              <div class="small text-muted" *ngIf="!m.anulado && saldoDespues[m.id] !== undefined">saldo {{ saldoDespues[m.id] | currency }}</div>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+    </mat-card-content>
+  </mat-card>
+</div>

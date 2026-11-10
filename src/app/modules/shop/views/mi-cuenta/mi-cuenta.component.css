@@ -1,0 +1,393 @@
+:host {
+  --tinta: #1f2430;
+  --tinta-2: #5b6170;
+  --tinta-3: #8a909c;
+  --borde: #e3e6eb;
+  --suave: #f7f8fa;
+  --acento: #e71634;
+  display: block;
+}
+
+.mi-cuenta {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+  color: var(--tinta);
+}
+
+.estado-carga {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 48px 0;
+  color: var(--tinta-2);
+}
+
+.estado-carga.chico { padding: 20px 0; }
+
+.aviso {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+}
+
+.aviso.error { background: #fdecea; color: #8a1c13; }
+
+/* ---------- Encabezado ---------- */
+.encabezado {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  border: 1px solid var(--borde);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.avatar {
+  flex: 0 0 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--tinta);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.2rem;
+  letter-spacing: 0.04em;
+}
+
+.quien { flex: 1; min-width: 0; }
+
+.quien h1 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  font-size: 0.88rem;
+  color: var(--tinta-2);
+}
+
+.sello {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.sello.mayorista { background: #fff4d6; color: #6b4a00; }
+
+.puntos {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 14px;
+  border-radius: 12px;
+  background: var(--suave);
+  border: 1px solid var(--borde);
+}
+
+.puntos .valor { font-size: 1.4rem; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.puntos .etiqueta { font-size: 0.72rem; color: var(--tinta-2); text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* ---------- Pestañas ---------- */
+.pestanas {
+  display: flex;
+  gap: 4px;
+  margin: 18px 0 14px;
+  border-bottom: 1px solid var(--borde);
+  overflow-x: auto;
+}
+
+.pestanas button {
+  border: 0;
+  background: none;
+  padding: 10px 14px;
+  font-weight: 600;
+  color: var(--tinta-2);
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.pestanas button i { margin-right: 6px; }
+.pestanas button:hover { color: var(--tinta); }
+.pestanas button.activa { color: var(--tinta); border-bottom-color: var(--acento); }
+
+/* ---------- Compras ---------- */
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.filtros button {
+  border: 1px solid var(--borde);
+  background: #fff;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 0.85rem;
+  color: var(--tinta-2);
+  cursor: pointer;
+}
+
+.filtros button span {
+  margin-left: 4px;
+  font-size: 0.75rem;
+  color: var(--tinta-3);
+}
+
+.filtros button.activo { background: var(--tinta); border-color: var(--tinta); color: #fff; }
+.filtros button.activo span { color: rgba(255, 255, 255, 0.75); }
+
+.lista-compras {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.compra {
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.compra.abierta { box-shadow: 0 4px 14px rgba(16, 24, 40, 0.06); }
+
+.compra-fila {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tipo {
+  flex: 0 0 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--suave);
+  color: var(--tinta-2);
+}
+
+.tipo.web { background: #eaf2fd; color: #1d5aa6; }
+.tipo.reparacion { background: #f1ecfb; color: #5b3aa6; }
+
+.compra-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.titulo {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fecha { font-size: 0.8rem; color: var(--tinta-3); }
+
+.estado {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+  background: var(--suave);
+  color: var(--tinta-2);
+}
+
+.estado.pendiente { background: #fff4d6; color: #6b4a00; }
+.estado.finalizado, .estado.pagado { background: #e7f5ec; color: #1e5c34; }
+.estado.cancelado, .estado.anulado { background: #fdecea; color: #8a1c13; }
+
+.total {
+  font-weight: 700;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.compra.anulada .total { text-decoration: line-through; color: var(--tinta-3); }
+
+.flecha {
+  color: var(--tinta-3);
+  transition: transform 0.2s;
+}
+
+.compra.abierta .flecha { transform: rotate(180deg); }
+
+.compra-detalle {
+  padding: 4px 14px 14px 62px;
+  font-size: 0.88rem;
+  color: var(--tinta-2);
+}
+
+.items {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 6px;
+}
+
+.items li { padding: 2px 0; }
+.items .cant { font-weight: 700; color: var(--tinta); margin-right: 4px; }
+
+.dato { margin: 2px 0; }
+
+.vacio {
+  text-align: center;
+  padding: 36px 12px;
+  color: var(--tinta-2);
+}
+
+.vacio i { font-size: 2.2rem; color: #c3c7ce; }
+.vacio p { margin: 10px 0 14px; }
+
+.vacio-filtro { color: var(--tinta-3); text-align: center; padding: 16px 0; }
+
+/* ---------- Formularios ---------- */
+.formulario {
+  border: 1px solid var(--borde);
+  border-radius: 14px;
+  background: #fff;
+  padding: 18px 20px;
+}
+
+.formulario.angosto { max-width: 440px; }
+
+.grilla {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+}
+
+.campo { margin-bottom: 12px; }
+.grilla .campo { margin-bottom: 0; }
+
+.campo label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--tinta-2);
+  margin-bottom: 4px;
+}
+
+.campo input[readonly] { background: var(--suave); color: var(--tinta-2); }
+
+.ayuda { font-size: 0.78rem; color: var(--tinta-3); margin-top: 4px; }
+
+.nota { font-size: 0.8rem; color: var(--tinta-3); margin: 12px 0 0; }
+
+.ver-claves {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.88rem;
+  color: var(--tinta-2);
+  cursor: pointer;
+}
+
+.mensaje {
+  margin-top: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.mensaje.ok { background: #e7f5ec; color: #1e5c34; }
+.mensaje.mal { background: #fdecea; color: #8a1c13; }
+
+.acciones { margin-top: 14px; }
+
+/* ---------- Pantallas chicas ---------- */
+@media (max-width: 600px) {
+  .grilla { grid-template-columns: 1fr; }
+  .quien h1 { white-space: normal; font-size: 1.2rem; }
+
+  /* Fila: ícono | título y fecha | total arriba y estado abajo */
+  .compra-fila {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    grid-template-areas:
+      "tipo info total"
+      "tipo info estado";
+    column-gap: 12px;
+    row-gap: 4px;
+  }
+  .tipo { grid-area: tipo; align-self: start; }
+  .compra-info { grid-area: info; }
+  .titulo { white-space: normal; }
+  .total { grid-area: total; justify-self: end; }
+  .estado { grid-area: estado; justify-self: end; align-self: start; }
+  .flecha { display: none; }
+  .compra-detalle { padding-left: 62px; }
+}
+
+
+/* ---------- Cuenta mayorista ---------- */
+.sello.revision { background: #eaf2fd; color: #1d5aa6; }
+
+.bloque-mayorista {
+  margin-top: 18px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--borde);
+  background: var(--suave);
+}
+
+.bloque-mayorista.pendiente { border-color: #c9ddf7; background: #f3f8fe; }
+.bloque-mayorista.rechazada { border-color: #f5c6c1; background: #fdf3f2; }
+.bloque-mayorista.mayorista { border-color: #bfe3cb; background: #f1faf4; }
+
+.bm-titulo {
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.bm-titulo i { margin-right: 6px; color: var(--tinta-2); }
+
+.bm-texto {
+  margin: 0 0 10px;
+  font-size: 0.9rem;
+  color: var(--tinta-2);
+}
+
+.bm-form { margin-top: 8px; }
+
+.bm-acciones {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}

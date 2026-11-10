@@ -253,7 +253,10 @@ normalizarStock(producto: any) {
 
   editarProducto(producto: Producto): void {
     const dialogRef = this.dialog.open(EdicionProductoComponent, {
-      width: '600px',
+      width: '96vw',
+      maxWidth: '1100px',
+      maxHeight: '92vh',
+      autoFocus: false,
       data: producto,  // Enviar los datos del producto a editar
     });
 

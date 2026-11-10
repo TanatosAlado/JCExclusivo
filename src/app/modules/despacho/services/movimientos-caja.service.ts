@@ -10,6 +10,7 @@ import {
   serverTimestamp
 } from '@angular/fire/firestore';
 import { AuditoriaService, UsuarioRegistro } from 'src/app/shared/services/auditoria.service';
+import { imprimirEnPagina } from 'src/app/shared/utils/imprimir';
 
 /** Tipos de movimiento de efectivo de una caja */
 export type TipoMovimientoCaja = 'ingreso' | 'retiro' | 'gasto' | 'proveedor' | 'deposito';
@@ -48,6 +49,9 @@ export interface MovimientoCaja {
   anuladoEn?: any;
   corrigeA?: string | null;      // id del movimiento anulado que este corrige
   corregidoPor?: string | null;  // id del movimiento que corrige a este
+  /** Pago entre el local y el taller (se anula desde Gestiones → Cuenta Local – Taller, no desde la caja) */
+  interno?: boolean;
+  cuentaInterna?: { cuentaId: string; pagoId: string } | null;
 }
 
 /** Error de negocio con mensaje para mostrar */
@@ -209,16 +213,11 @@ export class MovimientosCajaService {
 
   /** Comprobante para imprimir (80 mm) con espacio para firma — útil en retiros y pagos */
   imprimirComprobante(mov: MovimientoCaja, nombreSucursal: string): void {
-    const win = window.open('', '_blank', 'width=420,height=600');
-    if (!win) {
-      alert('El navegador bloqueó la ventana. Permití las ventanas emergentes para este sitio.');
-      return;
-    }
     const esc = (t: any) => String(t ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const importe = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(Number(mov.importe) || 0);
     const fecha = new Date(mov.fecha).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' });
 
-    win.document.write(`
+    const html = (`
 <html><head><meta charset="utf-8"><title>Comprobante de caja</title>
 <style>
   @page { size: 80mm auto; margin: 0; }
@@ -246,6 +245,10 @@ export class MovimientosCajaService {
   <p style="text-align:center;font-size:10px;margin-top:10px">Mov. ${esc(mov.id)}</p>
   <script>window.onload = function () { window.print(); };</script>
 </body></html>`);
-    win.document.close();
+    // Sin ventana aparte (la ventana aparte congelaba Despacho)
+    imprimirEnPagina(html).catch(err => {
+      console.error('No se pudo imprimir el comprobante', err);
+      alert('No se pudo imprimir el comprobante. Probá de nuevo.');
+    });
   }
 }

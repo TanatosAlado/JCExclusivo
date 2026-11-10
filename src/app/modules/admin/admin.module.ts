@@ -40,6 +40,16 @@ import { AuditoriaComponent } from './views/auditoria/auditoria.component';
 import { TicketsComponent } from './views/tickets/tickets.component';
 import { TableroComponent } from './views/tablero/tablero.component';
 import { ArticulosOrdenComponent } from './views/taller/components/articulos-orden/articulos-orden.component';
+import { CajerosComponent } from './views/cajeros/cajeros.component';
+import { CuentasCorrientesComponent } from './views/cuentas-corrientes/cuentas-corrientes.component';
+import { CreditosComponent } from './views/creditos/creditos.component';
+import { EquiposComponent } from './views/equipos/equipos.component';
+import { EditorFotosComponent } from './components/editor-fotos/editor-fotos.component';
+import { AnalyticsTiendaComponent } from './views/analytics-tienda/analytics-tienda.component';
+import { SolicitudesMayoristasComponent } from './views/solicitudes-mayoristas/solicitudes-mayoristas.component';
+import { CuentaTallerComponent } from './views/cuenta-taller/cuenta-taller.component';
+import { TrabajoTerminadoComponent } from './views/taller/components/trabajo-terminado/trabajo-terminado.component';
+import { PermisosUsuariosComponent } from './views/permisos-usuarios/permisos-usuarios.component';
 
 
 
@@ -53,6 +63,11 @@ import { ArticulosOrdenComponent } from './views/taller/components/articulos-ord
     AltaProductoComponent,
     ListaProductosComponent,
     EdicionProductoComponent,
+    EditorFotosComponent,
+    AnalyticsTiendaComponent,
+    SolicitudesMayoristasComponent,
+    CuentaTallerComponent,
+    TrabajoTerminadoComponent,
     DetalleProductoComponent,
     ClientesEditarComponent,
     ClientesDetallesComponent,
@@ -82,6 +97,11 @@ import { ArticulosOrdenComponent } from './views/taller/components/articulos-ord
     TicketsComponent,
     TableroComponent,
     ArticulosOrdenComponent,
+    CajerosComponent,
+    CuentasCorrientesComponent,
+    CreditosComponent,
+    EquiposComponent,
+    PermisosUsuariosComponent,
   ],
   exports: [
     TicketsComponent, // se usa también dentro de Despacho

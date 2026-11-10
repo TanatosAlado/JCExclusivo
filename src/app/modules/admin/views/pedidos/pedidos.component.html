@@ -307,8 +307,11 @@
 
                             <div class="detalle">
                                 <p>{{carro.nombre}}</p>
+                                <small *ngIf="carro.tipo === 'equipo'" class="text-muted d-block">
+                                    📱 Equipo · IMEI {{ carro.equipo?.imei }} · {{ carro.equipo?.color }} · Grado {{ carro.equipo?.grado }} · Batería {{ carro.equipo?.bateria }}%
+                                </small>
                                 <div *ngIf="!carro.editandoCantidad; else inputCantidad"
-                                    (click)="this.activeTab === 1 && activarEdicion(carro)">
+                                    (click)="this.activeTab === 1 && carro.tipo !== 'equipo' && activarEdicion(carro)">
                                     <span class="cantidad-label">Cantidad: {{carro.cantidad}}</span>
                                 </div>
                                 <ng-template #inputCantidad>

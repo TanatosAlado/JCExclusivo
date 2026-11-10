@@ -21,8 +21,11 @@
     </div>
 
     <div *ngIf="(clienteActual$ | async) as cliente" class="d-flex d-lg-none ms-auto gap-2 align-items-center">
-      <span class="text-white me-2">{{ cliente.nombre }}</span>
-      <mat-icon (click)="closeSesion()" class="icono-header">logout</mat-icon>
+      <a *ngIf="cliente.id !== 'invitado'; else nombreInvitadoMovil" routerLink="/mi-cuenta" class="mi-cuenta-link me-1" title="Mi cuenta">
+        <i class="fas fa-user-circle"></i><span class="nombre">{{ cliente.nombre }}</span>
+      </a>
+      <ng-template #nombreInvitadoMovil><span class="text-white me-2">{{ cliente.nombre }}</span></ng-template>
+      <mat-icon (click)="closeSesion()" class="icono-header" title="Cerrar sesión">logout</mat-icon>
       <div class="carrito-icono" (click)="abrirCarrito()" data-bs-toggle="offcanvas"
           data-bs-target="#offcanvasCarrito" aria-controls="offcanvasCarrito">
           <i class="fas fa-shopping-cart text-white"></i>
@@ -50,7 +53,7 @@
         <a routerLink="/contacto" class="nav-link text-white">Contacto</a>
         <a (click)="abrirModalReparacion()" class="nav-link text-white">Reparación</a>
         <a *ngIf="usrAdmin" routerLink="/gestiones" class="nav-link" (click)="cerrarMenu()">Gestiones</a>
-        <a *ngIf="usrAdmin" routerLink="/despacho" class="nav-link">Despacho</a>
+        <a *ngIf="usrAdmin && usrDespacho" routerLink="/despacho" class="nav-link">Despacho</a>
       </div>
 
       <!-- Acciones -->
@@ -64,8 +67,11 @@
 
         <!-- Mostrar logout solo si HAY cliente -->
         <ng-container *ngIf="(clienteActual$ | async) as cliente">
-          <span class="text-white me-2">{{ cliente.nombre }}</span>
-          <mat-icon (click)="closeSesion()" class="icono-header">logout</mat-icon>
+          <a *ngIf="cliente.id !== 'invitado'; else nombreInvitado" routerLink="/mi-cuenta" class="mi-cuenta-link me-2" title="Mi cuenta: compras, datos y contraseña">
+            <i class="fas fa-user-circle"></i><span class="nombre">{{ cliente.nombre }}</span>
+          </a>
+          <ng-template #nombreInvitado><span class="text-white me-2">{{ cliente.nombre }}</span></ng-template>
+          <mat-icon (click)="closeSesion()" class="icono-header" title="Cerrar sesión">logout</mat-icon>
         </ng-container>
 
         <!-- Icono carrito -->
@@ -88,13 +94,17 @@
     <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
   </div>
   <div class="offcanvas-body d-flex flex-column gap-2">
-    <a routerLink="/inicio" class="nav-link">Inicio</a>
-    <a routerLink="/productos" class="nav-link">Productos</a>
-    <a routerLink="/nosotros" class="nav-link">Nosotros</a>
-    <a routerLink="/contacto" class="nav-link">Contacto</a>
-    <a (click)="abrirModalReparacion()" class="nav-link text-white">Reparación</a>
-    <a *ngIf="usrAdmin" routerLink="/gestiones" class="nav-link">Gestiones</a>
-    <a *ngIf="usrAdmin" routerLink="/despacho" class="nav-link">Despacho</a>
+    <!-- Cada opción cierra el menú (si no, quedaba abierto con el fondo gris) -->
+    <a routerLink="/inicio" class="nav-link" (click)="cerrarMenu()">Inicio</a>
+    <a routerLink="/productos" class="nav-link" (click)="cerrarMenu()">Productos</a>
+    <a routerLink="/nosotros" class="nav-link" (click)="cerrarMenu()">Nosotros</a>
+    <a routerLink="/contacto" class="nav-link" (click)="cerrarMenu()">Contacto</a>
+    <ng-container *ngIf="(clienteActual$ | async) as cliente">
+      <a *ngIf="cliente.id !== 'invitado'" routerLink="/mi-cuenta" class="nav-link" (click)="cerrarMenu()">Mi cuenta</a>
+    </ng-container>
+    <a (click)="cerrarMenu(); abrirModalReparacion()" class="nav-link" role="button">Reparación</a>
+    <a *ngIf="usrAdmin" routerLink="/gestiones" class="nav-link" (click)="cerrarMenu()">Gestiones</a>
+    <a *ngIf="usrAdmin && usrDespacho" routerLink="/despacho" class="nav-link" (click)="cerrarMenu()">Despacho</a>
   </div>
 </div>
 

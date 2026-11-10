@@ -63,8 +63,13 @@ showTablaPedido: boolean = true;
       if (info?.dolar) {
         this.dolar = info.dolar;
       }
+      const jc = Number((info as any)?.dolarJC);
+      this.dolarJC = jc > 0 ? jc : (Number(info?.dolar) || 0);
     });
   }
+
+  /** Dólar JC (equipos) */
+  dolarJC = 0;
 
 
   @ViewChild(MatPaginator) set matPaginator(mp: MatPaginator) {
@@ -285,6 +290,11 @@ showTablaPedido: boolean = true;
         }
         //this.getPedidos();
       })
+      .catch(err => {
+        // Ej: se quiere restaurar un pedido con un equipo que ya se vendió
+        console.error('No se pudo mover el pedido:', err);
+        this.toastService.toastMessage(err?.message || 'No se pudo mover el pedido.', 'red', 5000);
+      });
   }
 
 
@@ -340,7 +350,10 @@ showTablaPedido: boolean = true;
     let precio = producto.precioFinal || 0;
 
     if (producto.moneda === 'USD') {
-      precio = precio * this.dolar;
+      // Equipo: con el dólar que se usó en el pedido (o el dólar JC)
+      precio = producto.tipo === 'equipo'
+        ? precio * (Number(producto.cotizacionDolar) || this.dolarJC || this.dolar)
+        : precio * this.dolar;
     }
 
     return precio;

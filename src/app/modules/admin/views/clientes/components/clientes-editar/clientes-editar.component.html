@@ -23,9 +23,11 @@
     <mat-checkbox formControlName="administrador" class="fadeIn second">¿Es Administrador?</mat-checkbox>
     <mat-checkbox formControlName="esMayorista" class="fadeIn second">¿Es Mayorista?</mat-checkbox>
 
+    <p *ngIf="avisoPermisos" class="small text-muted mt-2 mb-0">🔒 {{ avisoPermisos }}</p>
+
 </mat-dialog-content>
 
 <mat-dialog-actions class="fadeIn fourth" align="end">
     <button class="botonesRojos" mat-raised-button (click)="guardar()">Guardar</button>
     <button mat-button mat-dialog-close>Cancelar</button>
-</mat-dialog-actions>
+</mat-dialog-actions>

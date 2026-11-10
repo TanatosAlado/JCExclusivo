@@ -6,11 +6,18 @@
             *ngIf="!tieneStockDisponible()">
             SIN STOCK
         </div>
-        <img class="img-fluid w-100" [src]="
-        selectedVariante?.imagen ||
-        producto.imagen ||
-        '../../../../../assets/imagenes/No disponible.png'
-      " alt="Imagen producto" />
+        <img class="img-fluid w-100" [src]="fotoActual" [alt]="producto.descripcion"
+            [class.clickeable]="fotos.length" (click)="abrirGaleria()" loading="lazy" />
+
+        <!-- 📷 Varias fotos: flechas y puntitos -->
+        <ng-container *ngIf="fotos.length > 1">
+            <button type="button" class="flecha izq" (click)="cambiarFoto(-1, $event)" aria-label="Foto anterior">‹</button>
+            <button type="button" class="flecha der" (click)="cambiarFoto(1, $event)" aria-label="Foto siguiente">›</button>
+            <div class="puntos">
+                <button type="button" *ngFor="let f of fotos; let i = index" [class.activo]="i === indiceFoto"
+                    (click)="irAFoto(i, $event)" [attr.aria-label]="'Foto ' + (i + 1)"></button>
+            </div>
+        </ng-container>
 
 <div class="product-action">
   <!-- Mostrar botón de carrito solo si no tiene variantes -->
@@ -50,7 +57,9 @@
     <!-- 🧾 Info del producto -->
     <div class="text-center py-4">
         <!-- Descripción -->
-        <a (click)="verDetalle(producto)" class="h6 text-decoration-none text-truncate">
+        <!-- Hasta 2 líneas; el nombre completo se ve al pasar el mouse -->
+        <a (click)="verDetalle(producto)" class="h6 text-decoration-none nombre-producto"
+           [title]="producto.descripcion">
             {{ producto.descripcion }}
         </a>
 
@@ -100,3 +109,7 @@
 
     </div>
 </div>
+
+<!-- Galería: fotos en grande -->
+<app-galeria-fotos *ngIf="verGaleria" [fotos]="fotos" [(indice)]="indiceFoto"
+    [titulo]="producto.descripcion" (cerrar)="verGaleria = false"></app-galeria-fotos>

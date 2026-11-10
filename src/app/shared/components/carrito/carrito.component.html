@@ -23,15 +23,17 @@
       <div class="col-7">
         <div class="card-body py-2 px-3 text-center">
           <h6 class="card-title mb-2">{{ producto.nombre }}</h6>
+          <small *ngIf="esEquipo(producto)" class="text-muted d-block mb-1">📱 {{ detalleEquipo(producto) }}</small>
 
-          <div class="contenedor-productos">
+          <div class="contenedor-productos" *ngIf="!esEquipo(producto)">
             <button class="btn-menos" (click)="disminuirCantidad(producto)">−</button>
             <input class="input-productos" type="text" [(ngModel)]="producto.cantidad" readonly>
             <button [disabled]="producto.cantidad==producto.stock" class="btn-mas"
               (click)="aumentarCantidad(producto)">+</button>
           </div>
           <div class="info-precios mt-2">
-            <label>Stock: {{ producto.stock }}</label>
+            <label *ngIf="!esEquipo(producto)">Stock: {{ producto.stock }}</label>
+            <label *ngIf="esEquipo(producto)">Unidad única</label>
             <strong class="precio-final">{{ getPrecioProducto(producto) * producto.cantidad | currency:'ARS' }}</strong>
           </div>
         </div>
@@ -89,4 +91,4 @@
   <p class="text-center mt-4">
     Inicia sesión para recuperar tu carrito o continua como invitado.
   </p>
-</div>
+</div>

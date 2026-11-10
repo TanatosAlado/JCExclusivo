@@ -57,10 +57,35 @@
         </mat-form-field>
     </div>
 
-    <mat-form-field appearance="outline" class="full-width fadeIn second">
-        <mat-label>Presupuesto</mat-label>
-        <input matInput formControlName="presupuesto">
-    </mat-form-field>
+    <div class="form-grid">
+        <mat-form-field appearance="outline" class="form-field fadeIn second">
+            <mat-label>Mano de obra</mat-label>
+            <span matPrefix>$&nbsp;</span>
+            <input matInput type="number" min="0" formControlName="manoObra">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="form-field fadeIn second">
+            <mat-label>Repuestos</mat-label>
+            <span matPrefix>$&nbsp;</span>
+            <input matInput type="number" min="0" formControlName="repuestos">
+        </mat-form-field>
+    </div>
+
+    <!-- Con mano de obra / repuestos el total se calcula solo -->
+    <div class="presupuesto-total fadeIn second" *ngIf="discriminada">
+        <span>Presupuesto total</span>
+        <strong>{{ presupuestoCalculado | currency:'ARS':'symbol':'1.0-2' }}</strong>
+    </div>
+
+    <!-- Órdenes viejas: sin discriminar, el presupuesto se edita como siempre -->
+    <ng-container *ngIf="!discriminada">
+        <mat-form-field appearance="outline" class="full-width fadeIn second">
+            <mat-label>Presupuesto (sin discriminar)</mat-label>
+            <span matPrefix>$&nbsp;</span>
+            <input matInput type="number" min="0" formControlName="presupuesto">
+            <mat-hint>Cargá mano de obra y repuestos para discriminarlo.</mat-hint>
+        </mat-form-field>
+    </ng-container>
 
     <mat-form-field appearance="outline" class="full-width fadeIn second">
         <mat-label>Estado</mat-label>
@@ -95,4 +120,4 @@
 <mat-dialog-actions class="fadeIn fourth" align="end">
     <button class="botonesRojos" mat-raised-button (click)="guardar()">Guardar</button>
     <button mat-button mat-dialog-close>Cancelar</button>
-</mat-dialog-actions>
+</mat-dialog-actions>

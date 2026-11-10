@@ -15,6 +15,10 @@ import { InfoEmpresa } from 'src/app/shared/models/infoEmpresa.model';
 import { InfoEmpresaService } from 'src/app/shared/services/info-empresa.service';
 import { SucursalesService } from 'src/app/modules/admin/services/sucursales.service';
 import Swal from 'sweetalert2';
+import { esItemEquipo, precioListaEquipo, totalCarritoWeb, detalleEquipo, cotizacionEquipos } from 'src/app/shared/utils/equipos-tienda';
+import { AnalyticsService } from 'src/app/shared/services/analytics.service';
+import { itemAnalytics } from 'src/app/shared/utils/analytics-tienda';
+import { disponibleParaRetiro } from 'src/app/modules/admin/models/sucursal.model';
 
 /** Sucursal de la que se descuenta stock por defecto (envíos a domicilio) */
 const SUCURSAL_CENTRAL_ID = 'GtVWr5IHmosOOB8l6u6j';
@@ -24,6 +28,63 @@ class CheckoutError extends Error {
   constructor(message: string) {
     super(message);
   }
+}
+
+/** Error cuando cambió el precio de algún producto desde que se cargó en el carrito */
+class PreciosCambiadosError extends CheckoutError {
+  constructor(public cambios: CambioPrecio[]) {
+    super('Los precios de algunos productos se actualizaron. Revisá el nuevo total antes de confirmar.');
+  }
+}
+
+interface PrecioVigente {
+  precioFinal: number;
+  precioOferta: number | null;
+  oferta: boolean;
+  moneda: string;
+}
+
+interface CambioPrecio {
+  index: number;
+  nombre: string;
+  nuevo: PrecioVigente;
+}
+
+/**
+ * Precio vigente de un ítem según el producto en Firestore.
+ * Misma regla que al agregar al carrito: oferta > lista (mayorista/minorista).
+ * Si el ítem es una variante embebida (estructura vieja), usa sus precios con fallback al padre.
+ */
+function calcularPrecioVigente(productoData: any, item: any, esMayorista: boolean): PrecioVigente | null {
+  let fuente = productoData;
+  if (Array.isArray(productoData?.variantes) && item.codigoBarras) {
+    const variante = productoData.variantes.find((v: any) => v.codigoBarras === item.codigoBarras);
+    if (variante) {
+      fuente = { ...productoData };
+      for (const campo of ['precioMinorista', 'precioMayorista', 'precioOferta', 'oferta', 'moneda']) {
+        if (variante[campo] != null) fuente[campo] = variante[campo];
+      }
+    }
+  }
+
+  const precio = (fuente.oferta && fuente.precioOferta)
+    ? fuente.precioOferta
+    : (esMayorista ? fuente.precioMayorista : fuente.precioMinorista);
+
+  const precioNum = Number(precio);
+  if (precio == null || isNaN(precioNum)) return null; // sin dato de precio: no tocamos el ítem
+
+  return {
+    precioFinal: precioNum,
+    precioOferta: fuente.precioOferta ?? null,
+    oferta: !!fuente.oferta,
+    moneda: fuente.moneda || 'ARS'
+  };
+}
+
+function precioDistinto(item: any, nuevo: PrecioVigente): boolean {
+  return Math.abs((Number(item.precioFinal) || 0) - nuevo.precioFinal) > 0.005
+    || (item.moneda || 'ARS') !== nuevo.moneda;
 }
 
 /** Normaliza stockSucursales (estructura vieja tipo mapa → array) */
@@ -78,6 +139,8 @@ export class CheckoutComponent {
   montoMinimoFuturasCompras: number = 0; // Monto mínimo mayorista luego de activado
 
   procesando: boolean = false; // evita doble envío del pedido
+  actualizandoPrecios: boolean = false; // mientras se verifican precios al entrar
+  private preciosVerificados: boolean = false;
   nroPedidoConfirmado: number | null = null; // número REAL del pedido guardado
 
   sucursales: any[] = []; // lista de sucursales disponibles
@@ -85,7 +148,7 @@ export class CheckoutComponent {
 
    dolar: number = 1;
 
-  constructor(private infoEmpresaService: InfoEmpresaService, private firestore: Firestore, private fb: FormBuilder, private clienteService: ClientesService, public pedidoService: PedidosService, public generalService: GeneralService, private contadorService: ContadorService, private router: Router, private carritoService: CarritoService, private puntosService: VouchersPuntosService, private sucursalesService: SucursalesService) {
+  constructor(private analytics: AnalyticsService, private infoEmpresaService: InfoEmpresaService, private firestore: Firestore, private fb: FormBuilder, private clienteService: ClientesService, public pedidoService: PedidosService, public generalService: GeneralService, private contadorService: ContadorService, private router: Router, private carritoService: CarritoService, private puntosService: VouchersPuntosService, private sucursalesService: SucursalesService) {
 
     this.formCheckout = this.fb.group({
       user: ['', [Validators.required]],
@@ -101,6 +164,7 @@ export class CheckoutComponent {
       if (info?.dolar) {
         this.dolar = info.dolar;
       }
+      this.dolarJC = cotizacionEquipos(info);   // equipos
     });
     this.getContadorPedidos()
     this.getDatosEmpresa()
@@ -120,8 +184,15 @@ export class CheckoutComponent {
 
   obtenerSucursales(): void {
     this.sucursalesService.obtenerSucursales().subscribe(sucs => {
-      this.sucursales = sucs;
-      // Aquí no necesitamos tocar forms de stock, solo lo dejamos para otros componentes
+      // Solo las activas y habilitadas para retiro (las internas, como el mayorista, no se muestran)
+      this.sucursales = (sucs || []).filter(s => disponibleParaRetiro(s));
+      if (this.sucursalSeleccionada && !this.sucursales.some(s => s.id === this.sucursalSeleccionada)) {
+        this.sucursalSeleccionada = '';
+      }
+      // Si hay una sola, ya queda elegida
+      if (!this.sucursalSeleccionada && this.sucursales.length === 1) {
+        this.sucursalSeleccionada = this.sucursales[0].id;
+      }
     });
   }
 
@@ -166,7 +237,97 @@ export class CheckoutComponent {
             domicilioEntrega: cliente.direccion,
           });
         }
+
+        // 💲 Al entrar al checkout, actualizamos los precios del carrito (una sola vez)
+        if (!this.preciosVerificados && cliente.carrito?.length) {
+          this.preciosVerificados = true;
+          this.actualizarPreciosCarrito(cliente);
+          this.analytics.iniciarCompra(this.itemsAnalytics(cliente.carrito));
+        }
       }
+    });
+  }
+
+  /** Recalcula los precios del carrito con los valores actuales de los productos */
+  async actualizarPreciosCarrito(cliente: Cliente) {
+    this.actualizandoPrecios = true;
+    try {
+      const esMayorista = !!cliente.esMayorista;
+      const cambios: CambioPrecio[] = [];
+      const noDisponibles: string[] = [];
+
+      for (let i = 0; i < cliente.carrito.length; i++) {
+        const item = cliente.carrito[i];
+        // 📱 Equipo: tiene que seguir disponible y con el mismo precio
+        if (esItemEquipo(item)) {
+          const snapEq = await getDoc(doc(this.firestore, 'Equipos', item.equipoId)).catch(() => null);
+          const eq: any = snapEq && snapEq.exists() ? snapEq.data() : null;
+          if (!eq || eq.estado !== 'disponible') {
+            noDisponibles.push(item.nombre);
+            continue;
+          }
+          const nuevoEq: PrecioVigente = { precioFinal: precioListaEquipo(eq, esMayorista), precioOferta: null, oferta: false, moneda: eq.moneda || 'USD' };
+          if (precioDistinto(item, nuevoEq)) cambios.push({ index: i, nombre: item.nombre, nuevo: nuevoEq });
+          continue;
+        }
+        const id = await this.resolverDocIdProducto(item);
+        const snap = id ? await getDoc(doc(this.firestore, 'productos', id)) : null;
+
+        if (!snap || !snap.exists()) {
+          noDisponibles.push(item.nombre);
+          continue;
+        }
+
+        const nuevo = calcularPrecioVigente(snap.data(), item, esMayorista);
+        if (nuevo && precioDistinto(item, nuevo)) {
+          cambios.push({ index: i, nombre: item.nombre, nuevo });
+        }
+      }
+
+      if (cambios.length) {
+        await this.aplicarPreciosNuevos(cliente, cambios);
+      }
+
+      if (noDisponibles.length) {
+        await Swal.fire(
+          'Productos no disponibles',
+          `Estos productos ya no están disponibles: ${noDisponibles.join(', ')}. Quitalos del carrito para poder finalizar la compra.`,
+          'warning'
+        );
+      }
+    } catch (err) {
+      // Si falla (ej. sin conexión), igual se vuelve a validar al confirmar el pedido
+      console.error('No se pudieron verificar los precios del carrito:', err);
+    } finally {
+      this.actualizandoPrecios = false;
+    }
+  }
+
+  /** Aplica precios nuevos al carrito, lo guarda y avisa al cliente */
+  private async aplicarPreciosNuevos(cliente: Cliente, cambios: CambioPrecio[]) {
+    const detalle = cambios.map(c => {
+      const item = cliente.carrito[c.index];
+      const antes = this.getPrecioProducto(item);
+      Object.assign(item, c.nuevo);
+      const despues = this.getPrecioProducto(item);
+      return `<li><strong>${c.nombre}</strong>: ${this.formatearMoneda(antes)} → ${this.formatearMoneda(despues)}</li>`;
+    }).join('');
+
+    // Guardamos el carrito actualizado
+    try {
+      if (cliente.id === 'invitado') {
+        localStorage.setItem('carritoInvitado', JSON.stringify(cliente.carrito));
+      } else {
+        await this.clienteService.actualizarCliente(cliente.id, { carrito: this.limpiarParaFirestore(cliente.carrito) });
+      }
+    } catch (err) {
+      console.error('No se pudo guardar el carrito con precios actualizados:', err);
+    }
+
+    await Swal.fire({
+      title: 'Precios actualizados',
+      html: `Algunos precios cambiaron desde que agregaste los productos:<ul style="text-align:left">${detalle}</ul>`,
+      icon: 'info'
     });
   }
 
@@ -256,7 +417,7 @@ export class CheckoutComponent {
   //FUNCION PARA REALIZAR EL REGISTRO DEL PEDIDO
   async registroCheckout() {
     // 🔒 Evita doble click / doble envío (generaba pedidos duplicados)
-    if (this.procesando) return;
+    if (this.procesando || this.actualizandoPrecios) return;
 
     this.envioTocado = true;
     this.pagoTocado = true;
@@ -272,7 +433,8 @@ export class CheckoutComponent {
     const envioSeleccionado = !!this.radioButtonSeleccionado;
     const pagoSeleccionado = !this.showOpcionesPago || !!this.opcionPagoSeleccionada;
     // Antes no se validaba: se podía confirmar "Retiro en sucursal" sin elegir sucursal
-    const sucursalOk = this.radioButtonSeleccionado !== 'local' || !!this.sucursalSeleccionada;
+    const sucursalOk = this.radioButtonSeleccionado !== 'local'
+      || (!!this.sucursalSeleccionada && this.sucursales.some(s => s.id === this.sucursalSeleccionada));
 
     if (!formularioValido || !envioSeleccionado || !pagoSeleccionado || !sucursalOk) {
       return;
@@ -306,17 +468,27 @@ export class CheckoutComponent {
 
     this.procesando = true;
 
+    // Analytics: se arma antes de crear el pedido (después el carrito queda vacío)
+    const itemsCompra = this.itemsAnalytics(cliente.carrito);
+    const totalCompra = this.getTotalPrecio(cliente, this.usarPuntos, this.valorMonetarioPorPunto, this.cuponAplicado);
+    const cuponCompra = this.cuponAplicado?.codigo || null;
+    const envioCompra = this.radioButtonSeleccionado === 'domicilio' ? 'Envío' : 'Retiro en sucursal';
+
     try {
       const { nroPedido } = await this.createPedido();
 
       this.nroPedidoConfirmado = nroPedido;
       this.abrirModal();
+      this.analytics.compra({ nroPedido, valor: totalCompra, items: itemsCompra, cupon: cuponCompra, envio: envioCompra });
 
     } catch (error: any) {
 
       console.error('❌ No se pudo completar el pedido:', error);
 
-      if (error instanceof CheckoutError) {
+      if (error instanceof PreciosCambiadosError) {
+        // Nada se guardó: actualizamos el carrito y el cliente revisa el nuevo total
+        await this.aplicarPreciosNuevos(cliente, error.cambios);
+      } else if (error instanceof CheckoutError) {
         await Swal.fire('No se pudo completar el pedido', error.message, 'warning');
       } else {
         await Swal.fire(
@@ -395,13 +567,16 @@ export class CheckoutComponent {
     // ID real del documento de cada producto
     const idsPorItem: string[] = [];
     for (const item of carritoCliente) {
+      if (esItemEquipo(item)) { idsPorItem.push(''); continue; }   // los equipos se leen aparte
       const id = await this.resolverDocIdProducto(item);
       if (!id) {
         throw new CheckoutError(`El producto "${item.nombre}" ya no está disponible. Quitalo del carrito para continuar.`);
       }
       idsPorItem.push(id);
     }
-    const idsUnicos = [...new Set(idsPorItem)];
+    const idsUnicos = [...new Set(idsPorItem.filter(Boolean))];
+    // 📱 Equipos del carrito (unidades únicas)
+    const equiposCarrito = carritoCliente.filter(esItemEquipo);
 
     const pedidoRef = doc(collection(this.firestore, 'Pedidos Pendientes'));
     const clienteRef = esInvitado ? null : doc(this.firestore, 'Clientes', cliente.id);
@@ -433,6 +608,22 @@ export class CheckoutComponent {
       const clienteDoc = clienteRef ? await tx.get(clienteRef) : null;
       const cuponDoc = cuponRef ? await tx.get(cuponRef) : null;
 
+      // Equipos: cada uno tiene que seguir disponible (otro cliente o el local pudo llevárselo)
+      const lecturasEquipos: { item: any; ref: any; data: any; imeiRef: any; imeiData: any }[] = [];
+      for (const item of equiposCarrito) {
+        const ref = doc(this.firestore, 'Equipos', item.equipoId);
+        const snap = await tx.get(ref);
+        const data: any = snap.exists() ? snap.data() : null;
+        const imeiRef = data?.imei ? doc(this.firestore, 'EquiposIMEI', String(data.imei)) : null;
+        const imeiSnap = imeiRef ? await tx.get(imeiRef) : null;
+        lecturasEquipos.push({ item, ref, data, imeiRef, imeiData: imeiSnap?.exists() ? imeiSnap.data() : null });
+      }
+      const equiposVendidos = lecturasEquipos.filter(l => !l.data || l.data.estado !== 'disponible');
+      if (equiposVendidos.length) {
+        throw new CheckoutError(`Ya no está disponible: ${equiposVendidos.map(l => l.item.nombre).join(', ')}. ` +
+          'Quitalo del carrito para continuar.');
+      }
+
       // ---------- 2) VALIDACIONES ----------
 
       // Cupón: puede haberse agotado/desactivado desde que se aplicó
@@ -448,9 +639,31 @@ export class CheckoutComponent {
         if (nuevaCantidad <= 0) cuponUpdate.activo = false;
       }
 
+      // Precios: tienen que coincidir con los vigentes (si cambiaron, no se guarda nada)
+      const cambiosPrecio: CambioPrecio[] = [];
+      carritoCliente.forEach((item, i) => {
+        if (esItemEquipo(item)) {
+          const eq = lecturasEquipos.find(l => l.item.equipoId === item.equipoId)!.data;
+          const nuevoEq: PrecioVigente = { precioFinal: precioListaEquipo(eq, esMayorista), precioOferta: null, oferta: false, moneda: eq.moneda || 'USD' };
+          if (precioDistinto(item, nuevoEq)) cambiosPrecio.push({ index: i, nombre: item.nombre, nuevo: nuevoEq });
+          return;
+        }
+        const nuevo = calcularPrecioVigente(productos.get(idsPorItem[i])!.data, item, esMayorista);
+        if (nuevo && precioDistinto(item, nuevo)) {
+          cambiosPrecio.push({ index: i, nombre: item.nombre, nuevo });
+        }
+      });
+      if (cambiosPrecio.length) {
+        throw new PreciosCambiadosError(cambiosPrecio);
+      }
+
       // Stock: se descuenta sobre los datos leídos (acumulando si dos ítems son del mismo documento)
       const sinStock: string[] = [];
       const carritoFinal = carritoCliente.map((item, i) => {
+        // Equipo: no tiene stock que descontar (se marca vendido); guardamos la cotización usada
+        if (esItemEquipo(item)) {
+          return { ...item, cantidad: 1, stockDescontado: null, cotizacionDolar: item.moneda === 'USD' ? (this.dolarJC || this.dolar) : null };
+        }
         const prod = productos.get(idsPorItem[i])!;
         const resultado = this.descontarStockItem(prod, item, esMayorista, sucursalADescontar);
         if ('disponible' in resultado) {
@@ -508,6 +721,25 @@ export class CheckoutComponent {
       });
       tx.set(pedidoRef, unPedido);
 
+      // 📱 Equipos: quedan vendidos (reservados por el pedido web). Si se cancela el pedido, vuelven a la venta.
+      for (const l of lecturasEquipos) {
+        tx.update(l.ref, {
+          estado: 'vendido',
+          venta: {
+            ventaId: null,
+            pedidoId: pedidoRef.id,
+            nroPedido,
+            fecha: new Date().toISOString(),
+            origen: 'web',
+            cliente: { id: cliente.id, nombre: unPedido.nombreCliente || unPedido.user || '' },
+            tipoPrecio: esMayorista ? 'mayorista' : 'minorista',
+            precio: l.item.precioFinal,
+            moneda: l.item.moneda
+          }
+        });
+        if (l.imeiRef && l.imeiData?.equipoId === l.item.equipoId) tx.delete(l.imeiRef);
+      }
+
       // Cliente logueado: historial, carrito vacío, puntos, activación mayorista
       if (clienteRef && clienteDoc?.exists()) {
         const datosCliente: any = clienteDoc.data();
@@ -522,12 +754,16 @@ export class CheckoutComponent {
           id: pedidoRef.id,
         });
 
-        const puntosActuales = Number(datosCliente.puntos) || 0;
         const updateCliente: any = {
           carrito: [],
-          historial: [...(datosCliente.historial || []), historico],
-          puntos: Math.max(0, puntosActuales - puntosGastados + puntosGanados)
+          historial: [...(datosCliente.historial || []), historico]
         };
+
+        // Puntos: solo clientes minoristas
+        if (!esMayorista) {
+          const puntosActuales = Number(datosCliente.puntos) || 0;
+          updateCliente.puntos = Math.max(0, puntosActuales - puntosGastados + puntosGanados);
+        }
 
         if (datosCliente.esMayorista && !datosCliente.mayoristaActivado) {
           updateCliente.mayoristaActivado = total >= this.montoParaActivar;
@@ -550,7 +786,9 @@ export class CheckoutComponent {
         cliente.carrito = [];
       } else {
         cliente.carrito = [];
-        cliente.puntos = Math.max(0, (Number(cliente.puntos) || 0) - puntosGastados + puntosGanados);
+        if (!esMayorista) {
+          cliente.puntos = Math.max(0, (Number(cliente.puntos) || 0) - puntosGastados + puntosGanados);
+        }
         this.generalService.setCliente(cliente);
       }
 
@@ -710,19 +948,22 @@ export class CheckoutComponent {
    */
   getPuntosAUsar(): number {
     const cliente = this.clienteEncontrado;
-    if (!cliente || cliente.id === 'invitado' || !this.usarPuntos) return 0;
+    // Los puntos son solo para clientes minoristas
+    if (!cliente || cliente.id === 'invitado' || cliente.esMayorista || !this.usarPuntos) return 0;
     const puntos = Number(cliente.puntos) || 0;
     if (puntos <= 0) return 0;
-    const totalConCupon = this.getTotalPrecio(cliente, false, this.valorMonetarioPorPunto, this.cuponAplicado);
-    return Math.min(puntos, Math.floor(totalConCupon / this.valorMonetarioPorPunto));
+    // Solo sobre los productos (los equipos no se pagan con puntos)
+    const productosConCupon = this.calcularTotales(cliente, false, this.valorMonetarioPorPunto, this.cuponAplicado).productos;
+    return Math.min(puntos, Math.floor(productosConCupon / this.valorMonetarioPorPunto));
   }
 
   /** Puntos que suma esta compra (sobre el total final a pagar) */
   getPuntosASumar(): number {
     const cliente = this.clienteEncontrado;
-    if (!cliente || cliente.id === 'invitado' || !this.valorParaSumarPunto) return 0;
-    const totalFinal = this.getTotalPrecio(cliente, this.usarPuntos, this.valorMonetarioPorPunto, this.cuponAplicado);
-    return Math.floor(totalFinal / this.valorParaSumarPunto);
+    if (!cliente || cliente.id === 'invitado' || cliente.esMayorista || !this.valorParaSumarPunto) return 0;
+    // Los equipos no suman puntos
+    const productosFinal = this.calcularTotales(cliente, this.usarPuntos, this.valorMonetarioPorPunto, this.cuponAplicado).productos;
+    return Math.floor(productosFinal / this.valorParaSumarPunto);
   }
 
   aplicarCupon() {
@@ -759,8 +1000,10 @@ export class CheckoutComponent {
     });
   }
 
+  /** Total a pagar (el mismo que el resumen: con dólar, cupón y puntos) */
   getTotal(): number {
-    return this.generalService.getTotalPrecio(this.clienteEncontrado);
+    if (!this.clienteEncontrado) return 0;
+    return this.getTotalPrecio(this.clienteEncontrado, this.usarPuntos, this.valorMonetarioPorPunto, this.cuponAplicado);
   }
   generarQR(aliasOCvu: string): string {
     return `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(aliasOCvu)}&size=200x200`;
@@ -774,50 +1017,53 @@ export class CheckoutComponent {
 
   }
 
+  /** Dólar JC (equipos): Gestiones → Empresa; si no está cargado, el dólar común */
+  dolarJC = 0;
+
+  /** Carrito → ítems de Analytics (precios en pesos) */
+  private itemsAnalytics(carrito: any[]) {
+    return (carrito || []).map(i => itemAnalytics(i, this.getPrecioProducto(i), i.cantidad));
+  }
+
   getPrecioProducto(producto: any): number {
     let precio = producto.precioFinal || 0;
     if (producto.moneda === 'USD') {
-      precio = precio * this.dolar;
+      // Los equipos se pasan a pesos con el dólar JC
+      precio = precio * (esItemEquipo(producto) ? (this.dolarJC || this.dolar) : this.dolar);
     }
     return precio;
   }
 
 
+  /**
+   * Total a pagar. Cupón y puntos se aplican solo a los productos:
+   * los equipos van siempre a precio de lista (no tienen descuentos).
+   */
   getTotalPrecio(
     cliente: any,
     usarPuntos: boolean = false,
     valorMonetarioPorPunto: number = 50,
     cuponAplicado: any = null
   ): number {
-    let total = (cliente.carrito || []).reduce((sum: number, prod: any) => {
-      let precio = Number(prod.precioFinal) || 0;
+    return this.calcularTotales(cliente, usarPuntos, valorMonetarioPorPunto, cuponAplicado).total;
+  }
 
-      if (prod.moneda === 'USD') {
-        precio *= this.dolar;
-      }
-      const cantidad = Number(prod.cantidad) || 0;
-      return sum + (precio * cantidad);
-    }, 0);
+  private calcularTotales(cliente: any, usarPuntos: boolean, valorMonetarioPorPunto: number, cuponAplicado: any) {
+    return totalCarritoWeb(cliente?.carrito || [], item => this.getPrecioProducto(item), {
+      cupon: cuponAplicado,
+      usarPuntos,
+      puntosCliente: Number(cliente?.puntos) || 0,
+      valorPunto: valorMonetarioPorPunto
+    });
+  }
 
-    // Aplicar cupón si está disponible
-    if (cuponAplicado && cuponAplicado.activo) {
-      if (cuponAplicado.tipo === 'porcentaje') {
-        const descuento = (cuponAplicado.valor / 100) * total;
-        total -= descuento;
-      } else if (cuponAplicado.tipo === 'monto') {
-        total -= cuponAplicado.valor;
-      }
-      total = Math.max(total, 0);
-    }
+  /** ¿Hay equipos en el carrito? (para aclarar que no llevan cupón ni puntos) */
+  get hayEquiposEnCarrito(): boolean {
+    return (this.clienteEncontrado?.carrito || []).some((i: any) => esItemEquipo(i));
+  }
 
-    // Aplicar puntos si corresponde
-    if (usarPuntos && cliente.puntos > 0) {
-      const maxPuntosPorMonto = Math.floor(total / valorMonetarioPorPunto);
-      const puntosUsables = Math.min(cliente.puntos, maxPuntosPorMonto);
-      const descuento = puntosUsables * valorMonetarioPorPunto;
-      total = Math.max(total - descuento, 0);
-    }
-    return total;
+  detalleEquipo(item: any): string {
+    return detalleEquipo(item?.equipo);
   }
 
   buscarUndefined(obj: any, ruta = ''): void {

@@ -157,3 +157,17 @@ button.mat-icon-button {
   color: white;
   font-weight: bold;
 }
+
+
+/* Sucursal interna (no aparece en la tienda online) */
+.chip-interna {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #eaf2fd;
+  color: #1d5aa6;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}

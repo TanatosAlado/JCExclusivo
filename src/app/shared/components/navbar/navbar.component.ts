@@ -1,14 +1,17 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy } from '@angular/core';
 import {trigger, transition, style, animate} from '@angular/animations';
 import { CarritoService } from '../../services/carrito.service';
 import { LoginComponent } from 'src/app/modules/auth/views/login/login.component';
 import { MatDialog } from '@angular/material/dialog';
 import { Cliente } from 'src/app/modules/auth/models/cliente.model';
-import { Router } from '@angular/router';
+import { NavigationEnd, Router } from '@angular/router';
 import { GeneralService } from '../../services/general.service';
 import { ClientesService } from '../../services/clientes.service';
 import { AuthService } from 'src/app/modules/auth/services/auth.service';
-import { Observable } from 'rxjs';
+import { Observable, Subscription } from 'rxjs';
+import { filter } from 'rxjs/operators';
+import { permisosDe } from 'src/app/core/secciones';
+import { AvisoMayoristaService } from '../../services/aviso-mayorista.service';
 import { DetalleOrdenComponent } from 'src/app/modules/admin/views/taller/components/detalle-orden/detalle-orden.component';
 
 @Component({
@@ -25,10 +28,13 @@ import { DetalleOrdenComponent } from 'src/app/modules/admin/views/taller/compon
   ],
 })
 
-export class NavbarComponent {
+export class NavbarComponent implements OnDestroy {
+  private navegacionSub?: Subscription;
 
    usuarioLogueado: boolean = false;
   usrAdmin: boolean = false;
+  /** Tiene permiso para Despacho (el link solo se muestra si lo tiene) */
+  usrDespacho: boolean = false;
   searchTerm: string = '';
   resultados: any[] = [];
   productos:any[]=[]
@@ -42,7 +48,14 @@ export class NavbarComponent {
               private router: Router,
              private generalService:GeneralService,
              private clientesService:ClientesService,
-             private authService: AuthService) {
+             private authService: AuthService,
+             private avisoMayorista: AvisoMayoristaService) {
+
+              // Al cambiar de página se cierran los paneles laterales (menú mobile / carrito).
+              // Bootstrap no se entera de la navegación de Angular y quedaban abiertos con el fondo gris.
+              this.navegacionSub = this.router.events
+                .pipe(filter(e => e instanceof NavigationEnd))
+                .subscribe(() => this.cerrarPanelesLaterales());
 
               this.clienteActual$ = this.generalService.getCliente();
   }
@@ -55,7 +68,10 @@ export class NavbarComponent {
         next: (clienteDb) => {
           this.generalService.setCliente(clienteDb);
           this.usrAdmin = clienteDb.administrador;
+          this.usrDespacho = permisosDe(clienteDb).includes('despacho');
           this.carritoService.actualizarCantidadProductos(clienteDb);
+          this.sincronizarMayorista(clienteDb);
+          this.avisoMayorista.mostrar(clienteDb);
         },
         error: () => {
           console.warn('Cliente no válido en localStorage');
@@ -84,10 +100,32 @@ export class NavbarComponent {
       if (cliente) {
         this.generalService.setCliente(cliente);
         this.usrAdmin = cliente.administrador;
+        this.usrDespacho = permisosDe(cliente).includes('despacho');
         this.carritoService.actualizarCantidadProductos(cliente);
+        this.avisoMayorista.mostrar(cliente);
       } else {
         //console.log('Modal cerrado sin login');
       }
+    });
+  }
+
+  /**
+   * Si un administrador aprobó (o cambió) la cuenta mayorista mientras tanto, la sesión guardada
+   * se pone al día: así ve los precios que corresponden sin tener que volver a iniciar sesión.
+   */
+  private sincronizarMayorista(clienteDb: any) {
+    const actual: any = this.authService.getClienteActualValor();
+    if (!actual || actual.id !== clienteDb?.id) return;
+    const cambio = actual.esMayorista !== clienteDb.esMayorista
+      || JSON.stringify(actual.solicitudMayorista ?? null) !== JSON.stringify(clienteDb.solicitudMayorista ?? null);
+    if (!cambio) return;
+    this.authService.setUsuarioActual({
+      ...actual,
+      esMayorista: clienteDb.esMayorista === true,
+      mayoristaActivado: clienteDb.mayoristaActivado === true,
+      solicitudMayorista: clienteDb.solicitudMayorista,
+      razonSocial: clienteDb.razonSocial ?? actual.razonSocial,
+      cuit: clienteDb.cuit ?? actual.cuit
     });
   }
 
@@ -105,6 +143,7 @@ export class NavbarComponent {
     localStorage.removeItem('cliente');
     localStorage.removeItem('carritoInvitado');
     this.usrAdmin = false;
+    this.usrDespacho = false;
     this.carritoService.actualizarCantidadProductos(null);
 
     this.router.navigate(['/']);
@@ -147,9 +186,42 @@ export class NavbarComponent {
     
   }
 
+  ngOnDestroy(): void {
+    this.navegacionSub?.unsubscribe();
+  }
+
+  /** Cierra el menú mobile (al tocar una opción) */
   cerrarMenu() {
-    const closeButton = document.querySelector('#offcanvasMenu .btn-close') as HTMLElement;
-    closeButton?.click();
+    this.cerrarPanel('offcanvasMenu');
+  }
+
+  /** Cierra un panel lateral (offcanvas) de Bootstrap usando su propia API */
+  private cerrarPanel(id: string) {
+    const el = document.getElementById(id);
+    if (!el || !el.classList.contains('show')) return;
+    const bs = (window as any).bootstrap;
+    const instancia = bs?.Offcanvas?.getInstance(el) || bs?.Offcanvas?.getOrCreateInstance?.(el);
+    if (instancia) {
+      instancia.hide();
+    } else {
+      el.classList.remove('show');
+    }
+    // Si por algún motivo quedó el fondo gris colgado, se limpia
+    setTimeout(() => this.limpiarFondo(), 450);
+  }
+
+  private cerrarPanelesLaterales() {
+    this.cerrarPanel('offcanvasMenu');
+    this.cerrarPanel('offcanvasCarrito');
+    setTimeout(() => this.limpiarFondo(), 450);
+  }
+
+  /** Saca el fondo gris y el bloqueo de scroll si no queda ningún panel abierto */
+  private limpiarFondo() {
+    if (document.querySelector('.offcanvas.show')) return;
+    document.querySelectorAll('.offcanvas-backdrop').forEach(b => b.remove());
+    document.body.style.removeProperty('overflow');
+    document.body.style.removeProperty('padding-right');
   }
 
   async abrirHistorial() {

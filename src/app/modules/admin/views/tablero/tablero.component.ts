@@ -6,6 +6,7 @@ import { ReportesService, DatosCrudos, Indicadores, RangoFechas, Bucket } from '
 import { SucursalesService } from '../../services/sucursales.service';
 import { nombreTipoMovimiento } from 'src/app/modules/despacho/services/movimientos-caja.service';
 import { textoPagos, pagosDeVenta } from 'src/app/modules/despacho/services/pagos';
+import { situacionCredito } from 'src/app/modules/despacho/services/credito-casa';
 
 type Periodo = 'hoy' | '7d' | '30d' | 'mes' | 'mesAnterior' | 'custom';
 
@@ -183,6 +184,12 @@ export class TableroComponent implements OnInit {
     return max > 0 ? Math.max(1, (valor / max) * 100) : 0;
   }
 
+  /** Barra del resultado por sucursal (proporcional al mayor, sin signo) */
+  anchoResultado(valor: number): number {
+    const max = Math.max(0, ...(this.ind?.porSucursal || []).map(f => Math.abs(f.resultado)));
+    return max > 0 && valor ? Math.max(2, (Math.abs(valor) / max) * 100) : 0;
+  }
+
   porcentaje(valor: number, total: number): string {
     return total > 0 ? Math.round((valor / total) * 100) + '%' : '-';
   }
@@ -209,6 +216,11 @@ export class TableroComponent implements OnInit {
 
   moneda(n: number): string {
     return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(Number(n) || 0);
+  }
+
+  /** "1.250" (sin símbolo) */
+  numero(n: number): string {
+    return new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 }).format(Number(n) || 0);
   }
 
   monedaCorta(n: number): string {
@@ -256,12 +268,71 @@ export class TableroComponent implements OnInit {
       { Indicador: 'Ventas web', Valor: ind.ventasWeb },
       { Indicador: 'Pedidos web', Valor: ind.pedidosWeb },
       { Indicador: 'Cobros de reparaciones', Valor: ind.reparacionesCobradas },
+      { Indicador: '   · Mano de obra', Valor: ind.reparacionesManoObra },
+      { Indicador: '   · Repuestos', Valor: ind.reparacionesRepuestos },
+      { Indicador: '   · Sin discriminar (órdenes anteriores)', Valor: ind.reparacionesSinDiscriminar },
+      { Indicador: 'Vendido a cuenta corriente', Valor: ind.ventasACuenta },
+      { Indicador: 'Cobros de cuentas corrientes', Valor: ind.cobrosCuenta },
+      { Indicador: 'Deuda actual en cuentas corrientes', Valor: ind.deudaCuentas },
+      { Indicador: 'Financiado con crédito de la casa', Valor: ind.ventasACredito },
+      { Indicador: 'Ventas a crédito (cantidad)', Valor: ind.cantidadVentasCredito },
+      { Indicador: 'Cobros de cuotas', Valor: ind.cobrosCuotas },
+      { Indicador: '   · Recargos por pago fuera de término', Valor: ind.recargosCuotas },
+      { Indicador: 'Créditos: falta cobrar hoy', Valor: ind.deudaCreditos },
+      { Indicador: 'Créditos: vencido hoy', Valor: ind.deudaCreditosVencida },
+      { Indicador: 'Equipos vendidos (cantidad)', Valor: ind.equiposVendidos },
+      { Indicador: 'Equipos vendidos ($)', Valor: ind.montoEquiposVendidos },
+      { Indicador: 'Equipos disponibles hoy', Valor: ind.equiposDisponibles },
+      { Indicador: 'Valor equipos disponibles (US$, minorista)', Valor: ind.stockEquiposUsd },
+      { Indicador: 'Valor equipos disponibles ($, dólar JC)', Valor: ind.stockEquiposPesos },
       { Indicador: 'Egresos', Valor: ind.egresos },
-      { Indicador: 'Resultado', Valor: ind.resultado },
+      ...(ind.hayTaller ? (ind.esTallerSeleccionado ? [
+        { Indicador: 'Trabajos para el local', Valor: ind.trabajosParaLocal },
+        { Indicador: 'Trabajos terminados (cantidad)', Valor: ind.cantidadTrabajosTaller }
+      ] : [
+        { Indicador: suc ? 'Costo de taller' : 'Costo de taller (interno, se compensa en el total)', Valor: ind.costoTaller },
+        { Indicador: 'Trabajos de taller (cantidad)', Valor: ind.cantidadTrabajos },
+        { Indicador: '   · Se cobra a clientes por esas órdenes', Valor: ind.presupuestoTrabajos },
+        { Indicador: '   · Le queda al local', Valor: ind.gananciaTrabajos }
+      ]) : []),
+      ...(ind.hayTaller ? [{ Indicador: 'Hoy se le debe al taller', Valor: ind.deudaInternaTaller }] : []),
+      { Indicador: suc ? 'Resultado de la sucursal (sin tienda web ni gastos generales)' : 'Resultado', Valor: ind.resultado },
       { Indicador: 'Diferencias de caja', Valor: ind.diferenciasCaja },
       { Indicador: 'Valor del stock al costo', Valor: ind.valorStockCosto },
       { Indicador: 'Saldo de reparaciones por cobrar', Valor: ind.saldoReparaciones }
     ]);
+
+    const filaExcel = (f: any) => ({
+      Sucursal: f.nombre,
+      Ventas: f.ventas,
+      Reparaciones: f.reparaciones,
+      'Tienda web': f.web,
+      ...(ind.hayTaller ? { 'Trabajos para el local (+)': f.trabajosParaLocal, 'Costo de taller (−)': f.costoTaller } : {}),
+      'Egresos (−)': f.egresos,
+      Resultado: f.resultado
+    });
+    hoja('Por sucursal', [
+      ...ind.porSucursal.map(filaExcel),
+      filaExcel(ind.totalSucursales)
+    ]);
+
+    if (ind.hayTaller) {
+      hoja('Trabajos del taller', (d.trabajosTaller || [])
+        .filter(t => !suc || t.deudor?.id === suc || t.acreedor?.id === suc)
+        .map(t => ({
+          'Terminado el': fecha(t.fecha),
+          'Orden Nº': t.numeroOrden ?? '',
+          Equipo: t.equipo || '',
+          Cliente: t.cliente || '',
+          Local: t.deudor?.nombre || '',
+          Taller: t.acreedor?.nombre || '',
+          'Se cobra al cliente': Number(t.presupuesto) || 0,
+          'Costo de taller': Number(t.importe) || 0,
+          'Le queda al local': Math.round(((Number(t.presupuesto) || 0) - (Number(t.importe) || 0)) * 100) / 100,
+          'Falta pagarle al taller': Number(t.pendiente) || 0,
+          Nota: t.nota || ''
+        })));
+    }
 
     hoja(this.tituloSerie, ind.porDia.map(b => ({
       Fecha: b.etiqueta, Local: b.local, Web: b.web, Reparaciones: b.reparaciones, Total: b.total
@@ -274,17 +345,68 @@ export class TableroComponent implements OnInit {
         'Nº': v.nroTicket ?? '',
         Fecha: fecha(v.fecha),
         Sucursal: this.nombreSucursal(v.sucursalId),
-        Tipo: v.tipoVenta === 'reparacion' ? 'Reparación' : 'Venta',
+        Tipo: v.tipoVenta === 'reparacion' ? 'Reparación' : v.tipoVenta === 'cobrocuenta' ? 'Cobro cuenta corriente'
+          : v.tipoVenta === 'cobrocuota' ? 'Cobro cuota crédito' : v.credito ? 'Venta a crédito' : 'Venta',
         Cliente: v.cliente?.nombre || 'Consumidor final',
         Lista: v.tipoPrecio || '',
         'Medio de pago': textoPagos(v, n => this.moneda(n)),
         Efectivo: this.montoMedio(v, 'efectivo'),
         Tarjeta: this.montoMedio(v, 'tarjeta'),
         'Transferencia / QR': this.montoMedio(v, 'transferencia'),
+        'A cuenta corriente': this.montoMedio(v, 'cuentacorriente'),
+        'Crédito de la casa': this.montoMedio(v, 'creditocasa'),
+        'Plan canje': this.montoMedio(v, 'canje'),
         Total: Number(v.total) || 0,
-        Vendedor: v.usuario?.nombre || v.usuario?.usuario || '',
+        'Mano de obra': v.tipoVenta === 'reparacion' && v.desglose ? Number(v.desglose.manoObra) || 0 : '',
+        Repuestos: v.tipoVenta === 'reparacion' && v.desglose ? Number(v.desglose.repuestos) || 0 : '',
+        Cajero: v.cajero ? [v.cajero.nombre, v.cajero.apellido].filter(Boolean).join(' ') : '',
+        'Usuario (sesión)': v.usuario?.nombre || v.usuario?.usuario || '',
         Estado: v.anulada ? 'ANULADO' : 'Vigente',
         'Motivo anulación': v.motivoAnulacion || ''
+      })));
+
+    hoja('Equipos', (d.equipos || [])
+      .slice()
+      .sort((a, b) => String(a.estado).localeCompare(String(b.estado)) || String(a.modelo).localeCompare(String(b.modelo)))
+      .map(e => ({
+        Condición: e.condicion === 'nuevo' ? 'Nuevo' : 'Usado',
+        Modelo: e.modelo || '',
+        Color: e.color || '',
+        Capacidad: e.capacidad || '',
+        IMEI: e.imei || '',
+        'Batería %': e.bateria ?? '',
+        Grado: e.grado || '',
+        Observaciones: e.observaciones || '',
+        Moneda: e.moneda || '',
+        'Precio minorista': Number(e.precioMinorista) || 0,
+        'Precio mayorista': Number(e.precioMayorista) || 0,
+        Estado: e.estado === 'vendido' ? 'Vendido' : 'Disponible',
+        'Vendido en': e.venta ? (e.venta.origen === 'web' ? 'Tienda web' : 'Local') : '',
+        'Fecha de venta': e.venta?.fecha ? fecha(e.venta.fecha) : '',
+        'Ticket / Pedido': e.venta ? (e.venta.nroTicket ? 'Ticket ' + String(e.venta.nroTicket).padStart(8, '0')
+          : e.venta.nroPedido ? 'Pedido ' + e.venta.nroPedido : '') : '',
+        Cliente: e.venta?.cliente?.nombre || '',
+        'Fecha de alta': e.creado?.fecha ? fecha(e.creado.fecha) : ''
+      })));
+
+    // 🏠 Créditos con saldo hoy (no depende del período)
+    hoja('Créditos', (d.creditos || [])
+      .filter(c => c.estado === 'vigente' && deSuc(c))
+      .map(c => ({ c, s: situacionCredito(c) }))
+      .filter(x => x.s.saldo > 0.004)
+      .sort((a, b) => b.s.diasAtraso - a.s.diasAtraso || b.s.saldo - a.s.saldo)
+      .map(({ c, s }) => ({
+        Cliente: c.cliente?.nombre || '',
+        Teléfono: c.cliente?.telefono || '',
+        Equipo: (c.equipos || []).map((e: any) => e.nombre).join(', ') || c.detalle || '',
+        'Fecha de compra': fecha(c.fecha),
+        Sucursal: this.nombreSucursal(c.sucursalId),
+        Financiado: Number(c.importe) || 0,
+        'Cuotas pagadas': `${s.cuotasPagadas}/${c.cantidadCuotas}`,
+        Saldo: s.saldo,
+        Vencido: s.montoVencido,
+        'Días de atraso': s.diasAtraso || '',
+        'Próxima cuota': s.proxima ? s.proxima.hasta.split('-').reverse().join('/') : ''
       })));
 
     hoja('Pedidos web', d.pedidosFinalizados
@@ -305,8 +427,8 @@ export class TableroComponent implements OnInit {
       '%': this.porcentaje(m.monto, this.totalMetodos)
     })));
 
-    hoja('Vendedores', ind.porVendedor.map(v => ({
-      Vendedor: v.vendedor, Tickets: v.tickets, Monto: v.monto
+    hoja('Cajeros', ind.porVendedor.map(v => ({
+      Cajero: v.vendedor, Tickets: v.tickets, Monto: v.monto
     })));
 
     hoja('Movimientos de caja', d.movimientos
@@ -362,7 +484,7 @@ export class TableroComponent implements OnInit {
       x.cantidad += c; x.monto += m; mapa.set(n, x);
     };
     this.datos.ventas
-      .filter(v => (!suc || v.sucursalId === suc) && !v.anulada && v.tipoVenta !== 'reparacion')
+      .filter(v => (!suc || v.sucursalId === suc) && !v.anulada && v.tipoVenta !== 'reparacion' && v.tipoVenta !== 'cobrocuenta' && v.tipoVenta !== 'cobrocuota')
       .filter(v => { const f = new Date(v.fecha); return f >= r.inicio && f <= r.fin; })
       .forEach(v => (v.items || []).forEach((i: any) => sumar(i.nombre || '?', Number(i.cantidad) || 0, Number(i.subtotal) || 0)));
     this.datos.pedidosFinalizados

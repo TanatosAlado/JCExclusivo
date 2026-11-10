@@ -17,13 +17,31 @@
   <!-- ========================================================= -->
   <div class="left">
 
-    <div class="image-container">
+    <div class="image-container" [class.clickeable]="fotos.length" (click)="abrirGaleria()"
+      [title]="fotos.length ? 'Ver fotos en grande' : ''">
 
       <img
         [src]="imagenVisible"
         [alt]="producto.descripcion">
 
+      <!-- 📷 Varias fotos -->
+      <ng-container *ngIf="fotos.length > 1">
+        <button type="button" class="flecha izq" (click)="cambiarFoto(-1, $event)" aria-label="Foto anterior">‹</button>
+        <button type="button" class="flecha der" (click)="cambiarFoto(1, $event)" aria-label="Foto siguiente">›</button>
+        <span class="contador-fotos">{{ indiceFoto + 1 }} / {{ fotos.length }}</span>
+      </ng-container>
+
     </div>
+
+    <div class="miniaturas-fotos" *ngIf="fotos.length > 1">
+      <button type="button" *ngFor="let f of fotos; let i = index" [class.activa]="i === indiceFoto"
+        (click)="irAFoto(i)" [attr.aria-label]="'Foto ' + (i + 1)">
+        <img [src]="f" [alt]="'Foto ' + (i + 1)" loading="lazy">
+      </button>
+    </div>
+
+    <app-galeria-fotos *ngIf="verGaleria" [fotos]="fotos" [(indice)]="indiceFoto"
+      [titulo]="producto.descripcion" (cerrar)="verGaleria = false"></app-galeria-fotos>
 
   </div>
 
@@ -355,4 +373,4 @@
 
   </div>
 
-</div>
+</div>

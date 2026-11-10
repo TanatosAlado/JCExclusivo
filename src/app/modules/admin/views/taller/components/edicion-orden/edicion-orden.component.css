@@ -148,3 +148,25 @@ button[mat-raised-button] {
   -moz-animation-delay: 0.7s;
   animation-delay: 0.7s;
 }
+
+
+/* Presupuesto = mano de obra + repuestos */
+.presupuesto-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  background: #f4f7fb;
+  border: 1px solid #e3e8f0;
+}
+
+.presupuesto-total span {
+  font-size: 0.85rem;
+  color: #5b6170;
+}
+
+.presupuesto-total strong {
+  font-size: 1.15rem;
+}

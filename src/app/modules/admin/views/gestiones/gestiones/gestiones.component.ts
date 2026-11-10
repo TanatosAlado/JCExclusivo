@@ -1,6 +1,17 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from 'src/app/modules/auth/services/auth.service';
+import { PermisosService } from 'src/app/core/permisos.service';
+import { seccionDeRuta } from 'src/app/core/secciones';
+import { SolicitudesMayoristasService } from '../../../services/solicitudes-mayoristas.service';
+
+/** Card solo para el superadministrador */
+const CARD_PERMISOS = {
+  titulo: 'Permisos de usuarios',
+  descripcion: 'Qué secciones ve cada administrador',
+  icono: 'fa-solid fa-user-lock',
+  ruta: '/gestiones/permisos',
+};
 
 @Component({
   selector: 'app-gestiones',
@@ -17,6 +28,27 @@ export class GestionesComponent {
       ruta: '/gestiones/dashboard',
     },
     {
+      titulo: 'Analytics de la tienda',
+      descripcion: 'Visitas, embudo de compra, productos más vistos y búsquedas de la tienda online',
+      icono: 'fas fa-chart-pie',
+      ruta: '/gestiones/analytics',
+      seccion: 'dashboard',   // mismo permiso que el Dashboard
+    },
+    {
+      titulo: 'Cuenta Local – Taller',
+      descripcion: 'Lo que el local le debe al taller por las reparaciones, y los pagos entre ellos',
+      icono: 'fas fa-handshake',
+      ruta: '/gestiones/cuenta-taller',
+      seccion: 'taller',   // mismo permiso que Taller
+    },
+    {
+      titulo: 'Solicitudes mayoristas',
+      descripcion: 'Aprobar o rechazar los clientes que piden precios mayoristas',
+      icono: 'fas fa-user-check',
+      ruta: '/gestiones/solicitudes-mayoristas',
+      seccion: 'clientes',   // mismo permiso que Clientes
+    },
+    {
       titulo: 'Clientes',
       descripcion: 'Gestión de clientes',
       icono: 'fas fa-users',
@@ -27,6 +59,12 @@ export class GestionesComponent {
       descripcion: 'Gestión de productos',
       icono: 'fas fa-box-open',
       ruta: '/gestiones/productos',
+    },
+    {
+      titulo: 'Equipos',
+      descripcion: 'Equipos para la venta (unidades únicas por IMEI)',
+      icono: 'fas fa-mobile-alt',
+      ruta: '/gestiones/equipos',
     },
     {
       titulo: 'Pedidos',
@@ -66,6 +104,25 @@ export class GestionesComponent {
       ruta: '/gestiones/caja',
     },
     {
+      titulo: 'Cuentas corrientes',
+      descripcion: 'Deudas de los clientes mayoristas, compras y pagos',
+      icono: 'fa-solid fa-book',
+      ruta: '/gestiones/cuentas-corrientes',
+    },
+    {
+      titulo: 'Créditos de la casa',
+      descripcion: 'Ventas en cuotas: créditos vigentes, cuotas en tiempo o vencidas y pagos',
+      icono: 'fas fa-home',
+      ruta: '/gestiones/creditos',
+      seccion: 'cuentas',   // mismo permiso que Cuentas corrientes
+    },
+    {
+      titulo: 'Cajeros',
+      descripcion: 'Alta y baja de las personas que cobran en despacho',
+      icono: 'fas fa-user-tie',
+      ruta: '/gestiones/cajeros',
+    },
+    {
       titulo: 'Sucursales',
       descripcion: 'Gestión de sucursales',
       icono: 'fas fa-map-marker-alt',
@@ -95,10 +152,44 @@ export class GestionesComponent {
     
   ];
 
-  constructor(private router: Router, private authService: AuthService) { }
+  /** Cards que ve el usuario según sus permisos */
+  visibles: any[] = [];
+  cargandoPermisos = true;
 
-  ngOnInit() {
+  constructor(
+    private router: Router,
+    private authService: AuthService,
+    private permisos: PermisosService,
+    private solicitudesMayoristas: SolicitudesMayoristasService
+  ) { }
+
+  /** Número rojo en la tarjeta "Solicitudes mayoristas" */
+  private async contarSolicitudesPendientes() {
+    const card: any = this.visibles.find(g => g.ruta === '/gestiones/solicitudes-mayoristas');
+    if (!card) return;
+    try {
+      card.pendientes = await this.solicitudesMayoristas.cantidadPendientes();
+    } catch (err) {
+      console.warn('No se pudieron contar las solicitudes mayoristas', err);
+    }
+  }
+
+  async ngOnInit() {
     this.sincronizarIndiceUsuarios();
+    try {
+      const [permisos, superAdmin] = await Promise.all([this.permisos.permisos(), this.permisos.esSuperAdmin()]);
+      this.visibles = this.gestiones.filter(g => {
+        const seccion = (g as any).seccion || seccionDeRuta(g.ruta);
+        return superAdmin || (!!seccion && permisos.includes(seccion));
+      });
+      if (superAdmin) this.visibles = [...this.visibles, CARD_PERMISOS];
+      this.contarSolicitudesPendientes();
+    } catch (e) {
+      console.error('No se pudieron verificar los permisos', e);
+      this.visibles = [];
+    } finally {
+      this.cargandoPermisos = false;
+    }
   }
 
   /**

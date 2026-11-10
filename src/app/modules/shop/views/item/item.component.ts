@@ -9,6 +9,9 @@ import { ToastService } from 'src/app/shared/services/toast.service';
 import { MatDialog } from '@angular/material/dialog';
 import { InfoEmpresaService } from 'src/app/shared/services/info-empresa.service';
 import { EcommerceStateService } from '../../services/ecommerce-state.service';
+import { fotosDe, unicas } from 'src/app/shared/utils/fotos';
+import { AnalyticsService } from 'src/app/shared/services/analytics.service';
+import { itemAnalytics } from 'src/app/shared/utils/analytics-tienda';
 
 @Component({
   selector: 'app-item',
@@ -31,6 +34,7 @@ export class ItemComponent implements OnInit {
   dolar = 1; // fallback por si no carga
 
   constructor(
+    private analytics: AnalyticsService,
     private authService: AuthService,
     private router: Router,
     private generalService: GeneralService,
@@ -96,10 +100,12 @@ export class ItemComponent implements OnInit {
     // limpiar selección previa de variante
     this.selectedVariante = null;
     this.varianteSeleccionada = null;
+    this.indiceFoto = 0;
   }
 
   // Acepta tanto índice (number) como objeto variante
   seleccionarVariante(arg: number | any) {
+    this.indiceFoto = 0;
     if (typeof arg === 'number') {
       const idx = arg as number;
       this.selectedVariante = this.producto.variantes?.[idx] ?? null;
@@ -187,6 +193,7 @@ export class ItemComponent implements OnInit {
     this.generalService.cargarProductoCarrito(producto, 1)
       .then(() => {
         this.toastService.toastMessage('Producto agregado al carrito', 'green', 2000);
+        this.analytics.agregarAlCarrito(itemAnalytics(producto, this.precioUnitarioPesos(), 1));
       })
       .catch(err => {
 
@@ -229,6 +236,48 @@ export class ItemComponent implements OnInit {
         }
       }
     );
+  }
+
+  // =====================================================
+  // FOTOS (varias: se pasan con flechas; tocando la foto se ve grande)
+  // =====================================================
+
+  readonly sinFoto = '../../../../../assets/imagenes/No disponible.png';
+  indiceFoto = 0;
+  verGaleria = false;
+
+  /** Primero la foto de la variante elegida (si tiene) y después la galería del producto */
+  get fotos(): string[] {
+    return unicas([this.selectedVariante?.imagen, ...fotosDe(this.producto as any)]);
+  }
+
+  get fotoActual(): string {
+    const fotos = this.fotos;
+    return fotos[this.indiceFoto] || fotos[0] || this.sinFoto;
+  }
+
+  cambiarFoto(dir: number, evento?: Event) {
+    evento?.stopPropagation();
+    const n = this.fotos.length;
+    if (n < 2) return;
+    this.indiceFoto = (this.indiceFoto + dir + n) % n;
+  }
+
+  irAFoto(i: number, evento?: Event) {
+    evento?.stopPropagation();
+    this.indiceFoto = i;
+  }
+
+  abrirGaleria() {
+    if (this.fotos.length) this.verGaleria = true;
+  }
+
+  /** Precio unitario en pesos que ve el cliente (para Analytics) */
+  private precioUnitarioPesos(): number {
+    if (this.esMayorista) return this.getPrecioMayoristaPesos();
+    const p: any = this.producto;
+    const precio = Number(p.oferta && p.precioOferta ? p.precioOferta : p.precioMinorista) || 0;
+    return p.moneda === 'USD' ? precio * this.dolar : precio;
   }
 
   getPrecioMayoristaPesos(): number {

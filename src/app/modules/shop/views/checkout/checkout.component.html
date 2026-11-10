@@ -24,13 +24,16 @@
         <div class="select-sucursal">
           <label for="sucursal">Seleccione una sucursal:</label>
           <select id="sucursal" [(ngModel)]="sucursalSeleccionada">
-            <option value="" disabled selected>-- Elija una sucursal --</option>
+            <option value="" disabled>-- Elija una sucursal --</option>
             <option *ngFor="let s of sucursales" [value]="s.id">{{ s.nombre }}</option>
           </select>
         </div>
 
-        <div class="error-message" *ngIf="envioTocado && !sucursalSeleccionada">
+        <div class="error-message" *ngIf="envioTocado && !sucursalSeleccionada && sucursales.length">
           <span>Debe seleccionar una sucursal</span>
+        </div>
+        <div class="error-message" *ngIf="!sucursales.length">
+          <span>Por ahora no hay sucursales para retirar. Elegí envío a domicilio.</span>
         </div>
       </div>
       <div class="error-message" *ngIf="envioTocado && !radioButtonSeleccionado">
@@ -155,10 +158,10 @@
     <div class="contenedor-boton">
       <button
         (click)="registroCheckout()"
-        [disabled]="procesando"
+        [disabled]="procesando || actualizandoPrecios"
         type="button">
-        <span *ngIf="procesando" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-        {{ procesando ? 'Procesando pedido...' : 'Finalizar pedido' }}
+        <span *ngIf="procesando || actualizandoPrecios" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+        {{ procesando ? 'Procesando pedido...' : (actualizandoPrecios ? 'Actualizando precios...' : 'Finalizar pedido') }}
       </button>
     </div>
   </div>
@@ -176,6 +179,7 @@
               <h6 class="card-title mb-2">
                 {{ producto.nombre }} x <span style="color: #e71634;">{{ producto.cantidad }}u.</span>
               </h6>
+              <small *ngIf="producto.tipo === 'equipo'" class="text-muted d-block">📱 {{ detalleEquipo(producto) }}</small>
               <div class="contenedor-productos"></div>
               <div class="info-precios mt-2">
                 <!-- <strong class="precio-final">{{ producto.precioFinal * producto.cantidad | currency }}</strong> -->
@@ -188,6 +192,10 @@
       </div>
 
       <div class="resumen-carrito mt-3" *ngIf="cliente.carrito && cliente.carrito.length > 0">
+
+        <div *ngIf="hayEquiposEnCarrito" class="small text-muted text-center mb-2">
+          📱 Los equipos van a precio de lista: no aplican cupones ni canje de puntos, y no suman puntos.
+        </div>
 
         <!-- Sección: Canjear Puntos -->
         <div *ngIf="cliente.id !== 'invitado' && !cliente.esMayorista" class="card mb-3" style="max-width: 500px; margin: auto;">
@@ -311,4 +319,4 @@
   </div>
 </div>
 
-<app-footer></app-footer>
+<app-footer></app-footer>

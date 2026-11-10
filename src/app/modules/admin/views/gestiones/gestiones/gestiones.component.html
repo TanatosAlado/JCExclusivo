@@ -1,12 +1,17 @@
 <div class="container mt-5">
     <h2 class="mb-4">Gestiones</h2>
+    <p *ngIf="!cargandoPermisos && !visibles.length" class="text-muted">
+      No tenés secciones habilitadas. Pedile al administrador que te asigne permisos.
+    </p>
     <div class="grid-productos">
       <a
         class="card item-card shadow-sm position-relative text-decoration-none"
-        *ngFor="let gestion of gestiones"
+        *ngFor="let gestion of visibles"
         [routerLink]="!gestion.disabled ? gestion.ruta : null"
         [class.disabled-card]="gestion.disabled"
       >
+        <span class="badge-pendientes" *ngIf="gestion.pendientes > 0"
+          [title]="gestion.pendientes + ' pendiente(s)'">{{ gestion.pendientes }}</span>
         <div class="gestion-icon-container">
           <i [class]="gestion.icono"></i>
         </div>
@@ -17,4 +22,4 @@
         </div>
       </a>
     </div>
-  </div>
+  </div>

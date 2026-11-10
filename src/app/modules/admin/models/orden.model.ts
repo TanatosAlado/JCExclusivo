@@ -14,6 +14,11 @@ export interface Orden {
   codigoDesbloqueo: string;
   colorEquipo: string;
   presupuesto: number;
+  /** Presupuesto = manoObra + repuestos. Las órdenes viejas no los tienen (null = sin discriminar) */
+  manoObra?: number | null;
+  repuestos?: number | null;
+  /** El taller terminó el trabajo y cargó su costo (ver despacho/services/cuenta-taller.ts) */
+  trabajoTerminado?: any;
   estado: string;
   fechaIngreso: Date;
   fechaEntrega?: Date;
@@ -21,4 +26,4 @@ export interface Orden {
   garantia: boolean;
   fechaGarantia?: Date;
   observaciones?: string[];
-}
+}
