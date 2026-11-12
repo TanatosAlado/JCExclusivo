@@ -10,6 +10,7 @@ import { ToastService } from 'src/app/shared/services/toast.service';
 import { MatTabChangeEvent } from '@angular/material/tabs';
 import { InfoEmpresaService } from 'src/app/shared/services/info-empresa.service';
 import { AuditoriaService } from 'src/app/shared/services/auditoria.service';
+import { Cotizacion, precioItemEnPesos, totalConCarrito, totalPedidoEnPesos, totalQuedoEnDolares } from 'src/app/shared/utils/total-pedido';
 
 @Component({
   selector: 'app-pedidos',
@@ -40,7 +41,8 @@ showTablaPedido: boolean = true;
   showTablaVerProducto: boolean = false
   showFormAgregarCliente: boolean = false
   showTablaVerCliente: boolean = false
-  dolar: number = 1;
+  dolar: number = 0;           // 0 hasta que carga la cotización (antes 1: pasaba los USD "a pesos" sin convertir)
+  corrigiendo = false;
 
   @ViewChild('paginatorPendientes') paginatorPendientes!: MatPaginator;
   @ViewChild('paginatorFinalizados') paginatorFinalizados!: MatPaginator;
@@ -208,31 +210,79 @@ showTablaPedido: boolean = true;
   }
 
   //FUNCION PARA DESHABILITAR EL INPUT PARA CAMBIAR CANTIDAD DE PRODUCTOS
+  // Solo guarda si realmente se estaba editando esa cantidad (antes guardaba al volver de cualquier pedido)
   desactivarEdicion(carro: any) {
+    if (!carro.editandoCantidad) return;
     carro.editandoCantidad = false;
     this.actualizarTotal();
     this.updatePedidoCarrito()
 
   }
 
+  /** Cotización para pasar a pesos lo que está en dólares */
+  get cotizacion(): Cotizacion {
+    return { dolar: this.dolar, dolarJC: this.dolarJC };
+  }
+
+  /** Total del pedido en pesos (si quedó guardado en dólares, recalculado) */
+  totalPedido(p: any): number {
+    return totalPedidoEnPesos(p, this.cotizacion);
+  }
+
+  totalEnDolares(p: any): boolean {
+    return totalQuedoEnDolares(p, this.cotizacion);
+  }
+
+  /** Pedidos que quedaron con el total en dólares (en las tres listas) */
+  get pedidosACorregir(): { coleccion: string; pedido: any }[] {
+    return [
+      ...this.pedidosPendientes.map(p => ({ coleccion: 'Pedidos Pendientes', pedido: p })),
+      ...this.pedidosFinalizados.map(p => ({ coleccion: 'Pedidos Finalizados', pedido: p })),
+      ...this.pedidosEliminados.map(p => ({ coleccion: 'Pedidos Eliminados', pedido: p }))
+    ].filter(x => this.totalEnDolares(x.pedido));
+  }
+
+  get numerosACorregir(): string {
+    const nros = this.pedidosACorregir.map(x => x.pedido.nroPedido).filter(n => n !== undefined && n !== null);
+    return nros.slice(0, 10).join(', ') + (nros.length > 10 ? '…' : '');
+  }
+
+  /** Guarda en pesos el total de los pedidos que quedaron en dólares (así el dashboard también da bien) */
+  async corregirTotales(soloEste: any = null) {
+    const lista = soloEste
+      ? this.pedidosACorregir.filter(x => x.pedido.id === soloEste.id)
+      : this.pedidosACorregir;
+    if (!lista.length || this.corrigiendo) return;
+    this.corrigiendo = true;
+    let corregidos = 0;
+    try {
+      for (const x of lista) {
+        if (await this.pedidosService.corregirTotal(x.coleccion, x.pedido.id, this.cotizacion)) corregidos++;
+      }
+      this.toastService.toastMessage(`Total corregido en ${corregidos} pedido(s)`, 'green', 3000);
+    } catch (err: any) {
+      console.error('No se pudieron corregir los totales:', err);
+      this.toastService.toastMessage('No se pudieron corregir los totales. ' + (err?.message || ''), 'red', 5000);
+    } finally {
+      this.corrigiendo = false;
+    }
+  }
+
   actualizarTotal() {
     if (!this.pedidoEncontrado || !this.pedidoEncontrado.carrito) return;
-
-    let nuevoTotal = 0;
-    for (let item of this.pedidoEncontrado.carrito) {
-      nuevoTotal += item.precioFinal * item.cantidad;
-    }
-
-    this.pedidoEncontrado.total = nuevoTotal;
+    // En pesos (los USD con su cotización), manteniendo el descuento del pedido
+    this.pedidoEncontrado.total = totalConCarrito(this.pedidoEncontrado, this.pedidoEncontrado.carrito, this.cotizacion);
   }
 
   //FUNCION PARA ACTUALIZAR EL PEDIDO DEL CARRO EN ADMIN
   updatePedidoCarrito() {
     // Actualizar en Firestore
-    this.pedidosService.updateCarroEnPedido(this.pedidoEncontrado.id, this.pedidoEncontrado.carrito)
+    this.pedidosService.updateCarroEnPedido(this.pedidoEncontrado.id, this.pedidoEncontrado.carrito, this.cotizacion)
       .then(() => {
       })
       .catch(err => {
+        console.error('No se pudo actualizar el pedido:', err);
+        this.toastService.toastMessage(err?.message || 'No se pudo actualizar el pedido.', 'red', 4000);
       });
   }
 
@@ -240,7 +290,7 @@ showTablaPedido: boolean = true;
   showBodyPedidos() {
     if (this.pedidoEncontrado?.carrito?.length) {
       this.pedidoEncontrado.carrito.forEach((carro: any) => {
-        this.desactivarEdicion(carro);
+        this.desactivarEdicion(carro);   // guarda solo si había una cantidad en edición
       });
     }
     this.showFormAgregarProducto = false
@@ -255,7 +305,7 @@ showTablaPedido: boolean = true;
     const idPedido = this.pedidoEncontrado.id;
     const idProducto = carro.id;
 
-    this.pedidosService.deleteProductoDelCarrito(idPedido, idProducto)
+    this.pedidosService.deleteProductoDelCarrito(idPedido, idProducto, this.cotizacion)
       .then(() => {
         this.toastService.toastMessage('Producto eliminado con éxito', 'green', 2000);
         this.pedidoEncontrado.carrito = this.pedidoEncontrado.carrito.filter((p: { id: any; }) => p.id !== idProducto);
@@ -263,14 +313,12 @@ showTablaPedido: boolean = true;
           this.showCarroPedido = false;
           this.toastService.toastMessage('Producto eliminado con éxito', 'green', 2000);
         } else {
-          this.pedidoEncontrado.total = this.pedidoEncontrado.carrito.reduce(
-            (acc: number, producto: any) => acc + producto.precioFinal * producto.cantidad, 0
-          );
+          this.actualizarTotal();
         }
       })
       .catch((error) => {
         console.error('Error al eliminar producto:', error);
-        this.toastService.toastMessage('Producto eliminado con éxito', 'red', 2000);
+        this.toastService.toastMessage(error?.message || 'No se pudo eliminar el producto.', 'red', 3000);
       });
   }
 
@@ -346,17 +394,8 @@ showTablaPedido: boolean = true;
   }
 
   getPrecioProducto(producto: any): number {
-
-    let precio = producto.precioFinal || 0;
-
-    if (producto.moneda === 'USD') {
-      // Equipo: con el dólar que se usó en el pedido (o el dólar JC)
-      precio = producto.tipo === 'equipo'
-        ? precio * (Number(producto.cotizacionDolar) || this.dolarJC || this.dolar)
-        : precio * this.dolar;
-    }
-
-    return precio;
+    // Los USD con la cotización que se usó en el pedido (si quedó guardada); si no, la de hoy
+    return precioItemEnPesos(producto, this.pedidoEncontrado, this.cotizacion);
   }
 
 

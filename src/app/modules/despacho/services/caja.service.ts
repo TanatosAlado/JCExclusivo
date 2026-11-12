@@ -19,6 +19,7 @@ export interface ResumenCaja {
   cobrosCuentaCorriente?: number;
   /** Cobros de cuotas del crédito de la casa (ya incluidos en efectivo / tarjeta / transferencia) */
   cobrosCuotas?: number;
+  devoluciones?: { cantidad: number; total: number }; // ↩ notas de devolución (ya descontadas de los medios y del total vendido)
   movimientos: {                 // movimientos de efectivo vigentes (no anulados)
     ingresos: number;
     retiros: number;
@@ -248,6 +249,7 @@ export class CajaService {
     let totalVendido = 0;
     let cobrosCuentaCorriente = 0;
     let cobrosCuotas = 0;
+    const devoluciones = { cantidad: 0, total: 0 };
 
     for (const d of snap.docs) {
       const venta: any = d.data();
@@ -256,6 +258,14 @@ export class CajaService {
         continue;
       }
       const monto = Number(venta.total) || 0;
+      // ↩ Nota de devolución: importes negativos (resta del total y de cada medio), no cuenta como venta
+      if (venta.tipoVenta === 'devolucion') {
+        devoluciones.cantidad++;
+        devoluciones.total += -monto;
+        totalVendido += monto;
+        for (const pago of pagosDeVenta(venta)) porMetodo[pago.metodo] += pago.monto;
+        continue;
+      }
       cantidadVentas++;
       // El cobro de una deuda no es una venta nueva (la venta se contó cuando se llevó la mercadería)
       if (esCobroCuenta(venta)) cobrosCuentaCorriente += monto;
@@ -286,6 +296,7 @@ export class CajaService {
       },
       cobrosCuentaCorriente: this.redondear(cobrosCuentaCorriente),
       cobrosCuotas: this.redondear(cobrosCuotas),
+      devoluciones: { cantidad: devoluciones.cantidad, total: this.redondear(devoluciones.total) },
       movimientos: {
         ingresos: this.redondear(movimientos.ingresos),
         retiros: this.redondear(movimientos.retiros),

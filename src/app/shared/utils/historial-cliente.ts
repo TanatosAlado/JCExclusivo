@@ -94,11 +94,15 @@ export function compraDePedido(p: any, estado: EstadoCompra): CompraHistorial {
 
 export function compraDeVenta(v: any, moneda: (n: number) => string): CompraHistorial {
   const tipo: TipoCompra = v?.tipoVenta === 'reparacion' ? 'reparacion'
-    : v?.tipoVenta === 'cobrocuenta' || v?.tipoVenta === 'cobrocuota' ? 'cuenta' : 'local';
+    : v?.tipoVenta === 'cobrocuenta' || v?.tipoVenta === 'cobrocuota' || v?.tipoVenta === 'refinanciacion' ? 'cuenta' : 'local';
   const ticket = nroTicket(v);
-  const base = tipo === 'reparacion'
-    ? `Reparación${v?.orden?.numeroOrden ? ' · orden #' + v.orden.numeroOrden : ''}`
-    : tipo === 'cuenta' ? (v?.tipoVenta === 'cobrocuota' ? 'Pago de cuota (crédito de la casa)' : 'Pago de cuenta corriente') : 'Compra en el local';
+  const base = v?.tipoVenta === 'devolucion'
+    ? `Devolución de productos${v?.ventaOriginal?.nroTicket ? ' · ticket ' + String(v.ventaOriginal.nroTicket).padStart(8, '0') : ''}`
+    : tipo === 'reparacion'
+    ? (Array.isArray(v?.ordenes) && v.ordenes.length > 1
+      ? `Reparación · órdenes ${v.ordenes.map((o: any) => '#' + (o?.numeroOrden ?? '?')).join(', ')}`
+      : `Reparación${v?.orden?.numeroOrden ? ' · orden #' + v.orden.numeroOrden : ''}`)
+    : tipo === 'cuenta' ? (v?.tipoVenta === 'refinanciacion' ? 'Refinanciación del crédito de la casa' : v?.tipoVenta === 'cobrocuota' ? 'Pago de cuota (crédito de la casa)' : 'Pago de cuenta corriente') : 'Compra en el local';
 
   const items = tipo === 'cuenta' ? [] : (v?.items || []).map((i: any) => ({
     nombre: String(i?.nombre || 'Producto'),

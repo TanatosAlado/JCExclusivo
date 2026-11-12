@@ -97,10 +97,10 @@ export function filasPorSucursal(e: EntradaFilas): FilaSucursal[] {
   const fila = (id: any) => (id && conocidas.has(id) ? filas.get(id)! : otras);
 
   for (const v of e.ventas || []) {
-    if (v.tipoVenta === 'cobrocuenta' || v.tipoVenta === 'cobrocuota') continue;   // cobrar una deuda no es una venta nueva
+    if (v.tipoVenta === 'cobrocuenta' || v.tipoVenta === 'cobrocuota' || v.tipoVenta === 'refinanciacion') continue;   // cobrar una deuda no es una venta nueva
     const f = fila(v.sucursalId);
     if (v.tipoVenta === 'reparacion') f.reparaciones += num(v.total);
-    else { f.ventas += num(v.total); f.tickets++; }
+    else { f.ventas += num(v.total); if (v.tipoVenta !== 'devolucion') f.tickets++; }   // ↩ la devolución resta (total negativo)
   }
   for (const m of e.movimientos || []) {
     if (m.interno === true) continue;                      // pagos entre el local y el taller

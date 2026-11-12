@@ -33,6 +33,8 @@ import { CajerosComponent } from './modules/admin/views/cajeros/cajeros.componen
 import { CuentasCorrientesComponent } from './modules/admin/views/cuentas-corrientes/cuentas-corrientes.component';
 import { CreditosComponent } from './modules/admin/views/creditos/creditos.component';
 import { EquiposComponent } from './modules/admin/views/equipos/equipos.component';
+import { TasadorComponent } from './modules/admin/views/tasador/tasador.component';
+import { CotizaUsadoComponent } from './shared/components/cotiza-usado/cotiza-usado.component';
 import { TicketsComponent } from './modules/admin/views/tickets/tickets.component';
 
 const routes: Routes = [
@@ -68,6 +70,7 @@ const routes: Routes = [
       { path: 'cuentas-corrientes', component: CuentasCorrientesComponent, canActivate: [PermisoGuard], data: { seccion: 'cuentas' } },
       { path: 'creditos', component: CreditosComponent, canActivate: [PermisoGuard], data: { seccion: 'cuentas' } },
       { path: 'equipos', component: EquiposComponent, canActivate: [PermisoGuard], data: { seccion: 'equipos' } },
+      { path: 'tasador', component: TasadorComponent, canActivate: [PermisoGuard], data: { seccion: 'tasador' } },
       // Solo superadministrador
       { path: 'permisos', component: PermisosUsuariosComponent, canActivate: [SuperAdminGuard] },
     ]
@@ -78,6 +81,7 @@ const routes: Routes = [
   {path: 'mi-cuenta',component: MiCuentaComponent},
   {path: 'despacho',component: LayoutDespachoComponent, canActivate: [AdminGuard, PermisoGuard], data: { seccion: 'despacho' }},
   {path: 'consulta/:id',component: ConsultaOrdenComponent},
+  {path: 'cotiza-tu-usado', component: CotizaUsadoComponent},   // 🌐 solo si está habilitado (o para admins)
 ];
 
 @NgModule({

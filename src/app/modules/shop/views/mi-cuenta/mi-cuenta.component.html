@@ -34,6 +34,14 @@
       <button type="button" role="tab" [class.activa]="pestana === 'compras'" (click)="pestana = 'compras'">
         <i class="fas fa-receipt"></i> Mis compras
       </button>
+      <button *ngIf="cuenta" type="button" role="tab" [class.activa]="pestana === 'cuenta'" (click)="pestana = 'cuenta'">
+        <i class="fas fa-book"></i> Cuenta corriente
+        <span *ngIf="cuenta.saldo > 0" class="marca-deuda" title="Tenés saldo pendiente"></span>
+      </button>
+      <button *ngIf="creditos.length" type="button" role="tab" [class.activa]="pestana === 'creditos'" (click)="pestana = 'creditos'">
+        <i class="fas fa-mobile-alt"></i> Estado de los créditos
+        <span *ngIf="hayCreditosAtrasados" class="marca-deuda" title="Tenés cuotas vencidas"></span>
+      </button>
       <button type="button" role="tab" [class.activa]="pestana === 'datos'" (click)="pestana = 'datos'">
         <i class="fas fa-id-card"></i> Mis datos
       </button>
@@ -94,6 +102,218 @@
       <p *ngIf="!cargandoCompras && compras.length && !comprasFiltradas.length" class="vacio-filtro">
         No hay compras en esta sección.
       </p>
+    </div>
+
+    <!-- ================= 📒 CUENTA CORRIENTE (solo para ver) ================= -->
+    <div *ngIf="pestana === 'cuenta'" class="panel">
+      <div *ngIf="cargandoCuenta" class="estado-carga chico">
+        <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
+        <span>Buscando tu cuenta corriente…</span>
+      </div>
+      <div *ngIf="!cargandoCuenta && errorCuenta" class="aviso error">
+        <i class="fas fa-exclamation-circle"></i> {{ errorCuenta }}
+        <button type="button" class="btn btn-sm btn-outline-secondary ms-auto" (click)="cargarCuenta()">Reintentar</button>
+      </div>
+
+      <ng-container *ngIf="!cargandoCuenta && cuenta as cc">
+        <!-- Resumen -->
+        <div class="cc-resumen">
+          <div class="cc-saldo" [class.al-dia]="cc.saldo <= 0">
+            <span class="cc-etiqueta">{{ cc.saldo > 0 ? 'Saldo a pagar' : 'Estás al día' }}</span>
+            <span class="cc-monto">{{ cc.saldo | currency:'ARS':'symbol-narrow':'1.0-2' }}</span>
+          </div>
+          <div class="cc-dato">
+            <span class="cc-etiqueta">Comprado a cuenta</span>
+            <span>{{ cc.totalCompras | currency:'ARS':'symbol-narrow':'1.0-2' }}</span>
+            <small *ngIf="cc.ultimaCompra">Última: {{ cc.ultimaCompra | date:'dd/MM/yyyy' }}</small>
+          </div>
+          <div class="cc-dato">
+            <span class="cc-etiqueta">Pagado</span>
+            <span>{{ cc.totalPagos | currency:'ARS':'symbol-narrow':'1.0-2' }}</span>
+            <small *ngIf="cc.ultimoPago">Último: {{ cc.ultimoPago | date:'dd/MM/yyyy' }}</small>
+          </div>
+        </div>
+        <p class="nota"><i class="fas fa-info-circle"></i> Es solo para consultar. Los pagos se hacen en el local.</p>
+
+        <!-- Compras que todavía debe -->
+        <ng-container *ngIf="cc.pendientes.length">
+          <h3 class="cc-subtitulo">Compras pendientes de pago</h3>
+          <ul class="cc-lista">
+            <li *ngFor="let m of cc.pendientes">
+              <span class="cc-icono cargo"><i class="fas fa-shopping-bag"></i></span>
+              <span class="cc-info">
+                <span class="titulo">Compra{{ m.nroTicket ? ' · ticket ' + nroTicket(m.nroTicket) : '' }}</span>
+                <span class="fecha">{{ m.fecha ? (m.fecha | date:'dd/MM/yyyy') : '' }} · total {{ m.importe | currency:'ARS':'symbol-narrow':'1.0-2' }}</span>
+              </span>
+              <span class="cc-importe deuda">Debe {{ m.pendiente | currency:'ARS':'symbol-narrow':'1.0-2' }}</span>
+            </li>
+          </ul>
+        </ng-container>
+
+        <!-- Movimientos -->
+        <div class="d-flex justify-content-between align-items-center mt-3">
+          <h3 class="cc-subtitulo m-0">Movimientos</h3>
+          <label *ngIf="hayAnulados" class="cc-anulados"><input type="checkbox" [(ngModel)]="verAnulados"> Ver anulados</label>
+        </div>
+        <div *ngIf="!movimientosVisibles.length" class="vacio-filtro">Todavía no hay movimientos.</div>
+        <ul class="cc-lista" *ngIf="movimientosVisibles.length">
+          <li *ngFor="let m of movimientosVisibles" [class.anulado]="m.anulado">
+            <span class="cc-icono" [ngClass]="m.tipo"><i class="fas" [ngClass]="m.tipo === 'pago' ? 'fa-hand-holding-usd' : 'fa-shopping-bag'"></i></span>
+            <span class="cc-info">
+              <span class="titulo">
+                {{ m.tipo === 'pago' ? 'Pago' : 'Compra a cuenta' }}{{ m.nroTicket ? ' · ticket ' + nroTicket(m.nroTicket) : '' }}
+                <span *ngIf="m.anulado" class="badge bg-secondary ms-1">Anulado</span>
+              </span>
+              <span class="fecha">
+                {{ m.fecha ? (m.fecha | date:'dd/MM/yyyy HH:mm') : '' }}
+                <ng-container *ngIf="m.tipo === 'cargo' && !m.anulado">
+                  · {{ m.pendiente > 0.004 ? 'debe ' + (m.pendiente | currency:'ARS':'symbol-narrow':'1.0-2') : 'pagada' }}
+                </ng-container>
+                <ng-container *ngIf="m.devuelto > 0"> · devolución {{ m.devuelto | currency:'ARS':'symbol-narrow':'1.0-2' }}</ng-container>
+                <ng-container *ngIf="m.tipo === 'pago' && m.pagado < m.importe - 0.004"> · pagó {{ m.pagado | currency:'ARS':'symbol-narrow':'1.0-2' }} (con descuento)</ng-container>
+              </span>
+            </span>
+            <span class="cc-importe" [ngClass]="m.tipo">{{ m.tipo === 'pago' ? '−' : '+' }}{{ m.importe | currency:'ARS':'symbol-narrow':'1.0-2' }}</span>
+          </li>
+        </ul>
+      </ng-container>
+    </div>
+
+    <!-- ================= 🏠 ESTADO DE LOS CRÉDITOS (solo para ver) ================= -->
+    <div *ngIf="pestana === 'creditos'" class="panel">
+      <div *ngIf="cargandoCreditos" class="estado-carga chico">
+        <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
+        <span>Buscando tus créditos…</span>
+      </div>
+      <div *ngIf="!cargandoCreditos && errorCreditos" class="aviso error">
+        <i class="fas fa-exclamation-circle"></i> {{ errorCreditos }}
+        <button type="button" class="btn btn-sm btn-outline-secondary ms-auto" (click)="cargarCreditos()">Reintentar</button>
+      </div>
+
+      <ng-container *ngIf="!cargandoCreditos && !errorCreditos">
+        <!-- Resumen -->
+        <div class="cc-resumen" *ngIf="resumenCreditos as r">
+          <div class="cc-saldo" [class.al-dia]="r.saldo <= 0">
+            <span class="cc-etiqueta">{{ r.saldo > 0 ? 'Deuda total' : 'Estás al día' }}</span>
+            <span class="cc-monto">{{ r.saldo | currency:'ARS':'symbol-narrow':'1.0-2' }}</span>
+            <small *ngIf="r.vencido > 0" class="texto-vencido">Vencido: {{ r.vencido | currency:'ARS':'symbol-narrow':'1.0-2' }}</small>
+          </div>
+          <div class="cc-dato">
+            <span class="cc-etiqueta">Próxima cuota</span>
+            <ng-container *ngIf="r.proxima as p; else sinProxima">
+              <span>{{ p.cuota.falta | currency:'ARS':'symbol-narrow':'1.0-2' }}</span>
+              <small [class.texto-vencido]="p.cuota.estado === 'vencida'">
+                {{ p.cuota.estado === 'vencida' ? 'Venció el ' + (p.cuota.hasta | date:'dd/MM/yyyy') : 'Del ' + p.cuota.vence }}
+              </small>
+            </ng-container>
+            <ng-template #sinProxima><span>—</span><small>No tenés cuotas pendientes</small></ng-template>
+          </div>
+          <div class="cc-dato">
+            <span class="cc-etiqueta">A pagar hoy</span>
+            <span>{{ r.aPagarHoy | currency:'ARS':'symbol-narrow':'1.0-2' }}</span>
+            <small>{{ r.vigentes }} crédito{{ r.vigentes === 1 ? '' : 's' }} vigente{{ r.vigentes === 1 ? '' : 's' }}</small>
+          </div>
+        </div>
+        <p class="nota">
+          <i class="fas fa-info-circle"></i> Es solo para consultar. Las cuotas se pagan en el local del 1 al 10 de cada mes;
+          después del 10 tienen un recargo del {{ recargoDiario }}% por cada día de atraso.
+        </p>
+
+        <div class="d-flex justify-content-end" *ngIf="hayCreditosTerminados">
+          <label class="cc-anulados"><input type="checkbox" [(ngModel)]="verTerminados"> Ver créditos terminados</label>
+        </div>
+
+        <!-- Créditos -->
+        <div *ngFor="let c of creditosVisibles" class="cr-tarjeta" [ngClass]="'cr-' + (c.estado === 'vigente' ? c.situacion.estado : c.estado)">
+          <button type="button" class="cr-cabecera" (click)="alternarCredito(c.id)" [attr.aria-expanded]="creditosAbiertos.has(c.id)">
+            <span class="cr-titulo">
+              <strong>{{ c.detalle }}</strong>
+              <small>
+                {{ c.fecha ? (c.fecha | date:'dd/MM/yyyy') : '' }}{{ c.nroTicket ? ' · ticket ' + nroTicket(c.nroTicket) : '' }}
+                · {{ c.cantidadCuotas }} cuota{{ c.cantidadCuotas === 1 ? '' : 's' }}{{ c.esRefinanciacion ? ' · refinanciación' : '' }}
+              </small>
+            </span>
+            <span class="cr-estado" [ngSwitch]="c.estado === 'vigente' ? c.situacion.estado : c.estado">
+              <span *ngSwitchCase="'vencido'" class="badge bg-danger">{{ c.situacion.cuotasVencidas }} cuota{{ c.situacion.cuotasVencidas > 1 ? 's' : '' }} vencida{{ c.situacion.cuotasVencidas > 1 ? 's' : '' }}</span>
+              <span *ngSwitchCase="'por-vencer'" class="badge bg-warning text-dark">Cuota del mes por pagar</span>
+              <span *ngSwitchCase="'al-dia'" class="badge bg-success">Al día</span>
+              <span *ngSwitchCase="'cancelado'" class="badge bg-secondary">Pagado</span>
+              <span *ngSwitchCase="'refinanciado'" class="badge bg-secondary">Refinanciado</span>
+              <i class="fas ms-2" [ngClass]="creditosAbiertos.has(c.id) ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+            </span>
+          </button>
+
+          <div *ngIf="creditosAbiertos.has(c.id)" class="cr-cuerpo">
+            <p *ngIf="c.estado === 'refinanciado'" class="nota m-0 mb-2">
+              <i class="fas fa-random"></i> Este crédito se refinanció: lo que faltaba pasó a un crédito nuevo{{ c.refinanciadoEn ? ' (ticket ' + nroTicket(c.refinanciadoEn) + ')' : '' }}.
+            </p>
+
+            <!-- Números -->
+            <div class="cr-numeros">
+              <div><span class="cc-etiqueta">Financiado</span><span>{{ c.importe | currency:'ARS':'symbol-narrow':'1.0-2' }}</span></div>
+              <div><span class="cc-etiqueta">Pagado</span><span>{{ c.pagado | currency:'ARS':'symbol-narrow':'1.0-2' }}</span></div>
+              <div><span class="cc-etiqueta">Debe</span><span [class.texto-vencido]="c.saldo > 0 && c.situacion.estado === 'vencido'">{{ c.saldo | currency:'ARS':'symbol-narrow':'1.0-2' }}</span></div>
+              <div><span class="cc-etiqueta">Cuotas pagas</span><span>{{ c.situacion.cuotasPagadas }} de {{ c.cantidadCuotas }}</span></div>
+            </div>
+            <div class="cr-barra" *ngIf="c.cantidadCuotas" [attr.aria-label]="c.situacion.cuotasPagadas + ' de ' + c.cantidadCuotas + ' cuotas pagas'">
+              <span [style.width.%]="c.situacion.cuotasPagadas / c.cantidadCuotas * 100"></span>
+            </div>
+
+            <!-- Próximo pago -->
+            <div *ngIf="c.estado === 'vigente' && proximaDe(c) as q" class="cr-proxima" [class.vencida]="c.situacion.cuotasVencidas > 0">
+              <ng-container *ngIf="c.situacion.cuotasVencidas > 0; else proximaNormal">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>Tenés {{ c.situacion.montoVencido | currency:'ARS':'symbol-narrow':'1.0-2' }} vencidos
+                  ({{ c.situacion.diasAtraso }} día{{ c.situacion.diasAtraso === 1 ? '' : 's' }} de atraso). Acercate al local para ponerte al día.</span>
+              </ng-container>
+              <ng-template #proximaNormal>
+                <i class="fas fa-calendar-alt"></i>
+                <span>Próxima cuota: <strong>nº {{ q.numero }}</strong> por
+                  <strong>{{ q.falta | currency:'ARS':'symbol-narrow':'1.0-2' }}</strong>, se paga del {{ q.vence }}.</span>
+              </ng-template>
+            </div>
+
+            <!-- Cuotas -->
+            <h3 class="cc-subtitulo">Cuotas</h3>
+            <ul class="cr-cuotas">
+              <li *ngFor="let q of c.cuotas" [ngClass]="'q-' + q.estado">
+                <span class="q-num">{{ q.numero }}</span>
+                <span class="q-info">
+                  <span>{{ q.vence }}</span>
+                  <small [ngSwitch]="q.estado">
+                    <ng-container *ngSwitchCase="'pagada'">Pagada{{ q.fechaPago ? ' el ' + (q.fechaPago | date:'dd/MM/yyyy') : '' }}</ng-container>
+                    <ng-container *ngSwitchCase="'vencida'">Vencida · {{ q.diasAtraso }} día{{ q.diasAtraso === 1 ? '' : 's' }} de atraso{{ q.pagado > 0 ? ' · pagaste ' + (q.pagado | currency:'ARS':'symbol-narrow':'1.0-2') : '' }}</ng-container>
+                    <ng-container *ngSwitchCase="'por-vencer'">Se paga este mes{{ q.pagado > 0 ? ' · pagaste ' + (q.pagado | currency:'ARS':'symbol-narrow':'1.0-2') : '' }}</ng-container>
+                    <ng-container *ngSwitchDefault>A vencer{{ q.pagado > 0 ? ' · pagaste ' + (q.pagado | currency:'ARS':'symbol-narrow':'1.0-2') : '' }}</ng-container>
+                  </small>
+                </span>
+                <span class="q-importe">
+                  {{ (q.estado === 'pagada' ? q.importe : q.falta) | currency:'ARS':'symbol-narrow':'1.0-2' }}
+                  <i *ngIf="q.estado === 'pagada'" class="fas fa-check-circle text-success ms-1"></i>
+                </span>
+              </li>
+            </ul>
+
+            <!-- Pagos -->
+            <h3 class="cc-subtitulo">Pagos</h3>
+            <div *ngIf="!c.pagos.length" class="vacio-filtro">Todavía no hay pagos.</div>
+            <ul class="cc-lista" *ngIf="c.pagos.length">
+              <li *ngFor="let p of c.pagos">
+                <span class="cc-icono pago"><i class="fas fa-hand-holding-usd"></i></span>
+                <span class="cc-info">
+                  <span class="titulo">Pago{{ p.nroTicket ? ' · ticket ' + nroTicket(p.nroTicket) : '' }}</span>
+                  <span class="fecha">
+                    {{ p.fecha ? (p.fecha | date:(p.anterior ? 'dd/MM/yyyy' : 'dd/MM/yyyy HH:mm')) : '' }}
+                    <ng-container *ngIf="p.cuotas.length"> · cuota{{ p.cuotas.length > 1 ? 's' : '' }} {{ p.cuotas.join(', ') }}</ng-container>
+                    <ng-container *ngIf="p.recargo > 0"> · recargo {{ p.recargo | currency:'ARS':'symbol-narrow':'1.0-2' }}</ng-container>
+                  </span>
+                </span>
+                <span class="cc-importe pago">{{ p.importe + p.recargo | currency:'ARS':'symbol-narrow':'1.0-2' }}</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </ng-container>
     </div>
 
     <!-- ================= MIS DATOS ================= -->

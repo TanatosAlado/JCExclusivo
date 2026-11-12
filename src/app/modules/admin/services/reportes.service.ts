@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { Firestore, collection, query, where, getDocs, doc, getDoc, Timestamp } from '@angular/fire/firestore';
 import { pagosDeVenta, aCuentaDeVenta, esCobroDeuda, esCobroCuota, creditoDeVenta } from 'src/app/modules/despacho/services/pagos';
 import { resumenCartera } from 'src/app/modules/despacho/services/credito-casa';
+import { conTotalEnPesos } from 'src/app/shared/utils/total-pedido';
 import { totalesDesglose } from 'src/app/modules/despacho/services/desglose-reparacion';
 import { sucursalTaller } from 'src/app/modules/despacho/services/cuenta-taller';
 import { FilaSucursal, filasPorSucursal, totalesTaller, totalFilas, TrabajoTaller, trabajosDelPeriodo } from './resultado-sucursales';
@@ -193,12 +194,19 @@ export class ReportesService {
       return { cuentasInternas: [], trabajosTaller: [] };
     });
 
+    const dolar = Number((info as any)?.data?.()?.dolar) || 1;
+    const dolarJC = Number((info as any)?.data?.()?.dolarJC) || 0;
+    // Pedidos que quedaron con el total en dólares (error viejo): se toman en pesos
+    const cot = { dolar, dolarJC };
     return {
-      ventas, pedidosFinalizados, pedidosPendientes, gastos, movimientos,
+      ventas,
+      pedidosFinalizados: pedidosFinalizados.map((p: any) => conTotalEnPesos(p, cot)),
+      pedidosPendientes: pedidosPendientes.map((p: any) => conTotalEnPesos(p, cot)),
+      gastos, movimientos,
       cajasAbiertas, cajasPeriodo, productos, ordenesPendientes, cuentas, equipos,
       sucursales, cuentasInternas, trabajosTaller, creditos,
-      dolar: Number((info as any)?.data?.()?.dolar) || 1,
-      dolarJC: Number((info as any)?.data?.()?.dolarJC) || 0
+      dolar,
+      dolarJC
     };
   }
 
@@ -396,8 +404,10 @@ export class ReportesService {
       totalVendidoAnterior: this.redondear(totalVendidoAnterior),
       variacion,
       ventasLocal: this.redondear(ventasLocal),
-      ticketsLocal: ventasProductos.length,
-      ticketPromedio: ventasProductos.length ? this.redondear(ventasLocal / ventasProductos.length) : 0,
+      // ↩ Las notas de devolución restan del total pero no son tickets de venta
+      ticketsLocal: ventasProductos.filter(v => v.tipoVenta !== 'devolucion').length,
+      ticketPromedio: ventasProductos.some(v => v.tipoVenta !== 'devolucion')
+        ? this.redondear(ventasLocal / ventasProductos.filter(v => v.tipoVenta !== 'devolucion').length) : 0,
       anuladosLocal: ventasPeriodo.length - vigentes.length,
       ventasWeb: this.redondear(ventasWeb),
       pedidosWeb: webPeriodo.length,

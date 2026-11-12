@@ -49,6 +49,7 @@
       <div class="d-flex gap-3">
         <a routerLink="/inicio" class="nav-link text-white">Inicio</a>
         <a routerLink="/productos" class="nav-link text-white">Productos</a>
+        <a *ngIf="cotizaHabilitado" routerLink="/cotiza-tu-usado" class="nav-link text-white">Cotizá tu usado</a>
         <a routerLink="/nosotros" class="nav-link text-white">Nosotros</a>
         <a routerLink="/contacto" class="nav-link text-white">Contacto</a>
         <a (click)="abrirModalReparacion()" class="nav-link text-white">Reparación</a>
@@ -97,6 +98,7 @@
     <!-- Cada opción cierra el menú (si no, quedaba abierto con el fondo gris) -->
     <a routerLink="/inicio" class="nav-link" (click)="cerrarMenu()">Inicio</a>
     <a routerLink="/productos" class="nav-link" (click)="cerrarMenu()">Productos</a>
+    <a *ngIf="cotizaHabilitado" routerLink="/cotiza-tu-usado" class="nav-link" (click)="cerrarMenu()">Cotizá tu usado</a>
     <a routerLink="/nosotros" class="nav-link" (click)="cerrarMenu()">Nosotros</a>
     <a routerLink="/contacto" class="nav-link" (click)="cerrarMenu()">Contacto</a>
     <ng-container *ngIf="(clienteActual$ | async) as cliente">

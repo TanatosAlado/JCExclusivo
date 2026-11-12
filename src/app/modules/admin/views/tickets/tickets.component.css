@@ -24,3 +24,110 @@
 .ticket-anulado td:nth-child(7) {
   text-decoration: line-through;
 }
+
+
+/* ---------- 📱 Filtros en pantallas angostas ---------- */
+@media (max-width: 991.98px) {
+  .campo-texto { min-width: 0; width: 100%; }
+  .filtro { flex: 1 1 160px; }
+}
+
+/* ---------- Tabla angosta (lo decide el ancho de la tabla): cada ticket es una tarjeta ---------- */
+.tabla-tickets.tarjetas { overflow-x: visible; }
+.tabla-tickets.tarjetas table thead { display: none; }
+.tabla-tickets.tarjetas table,
+.tabla-tickets.tarjetas table tbody { display: block; width: 100%; }
+
+.tabla-tickets.tarjetas table tr {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 2px 16px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  border: 1px solid #e3e6eb;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.tabla-tickets.tarjetas table td {
+  display: block;
+  border: 0;
+  padding: 2px 0;
+  text-align: left !important;
+  white-space: normal;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.tabla-tickets.tarjetas table td[data-label]::before {
+  content: attr(data-label);
+  display: block;
+  font-size: 0.72rem;
+  color: #8a8f98;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* Arriba: Nº (con el tipo) a la izquierda y el total a la derecha; acciones abajo a lo ancho */
+.tabla-tickets.tarjetas table td.col-numero {
+  grid-column: 1 / -2;
+  font-size: 1.05rem;
+  white-space: normal;
+}
+.tabla-tickets.tarjetas table td.col-numero .badge { display: inline-block; margin: 2px 4px 0 0; white-space: normal; text-align: left; }
+.tabla-tickets.tarjetas table td.col-total {
+  grid-column: -2 / -1;
+  grid-row: 1;
+  text-align: right !important;
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+.tabla-tickets.tarjetas table td.col-total::before { text-align: right; }
+.tabla-tickets.tarjetas table td.col-acciones {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid #eef0f3;
+  margin-top: 4px;
+  padding-top: 4px;
+}
+.tabla-tickets.tarjetas table td[colspan] { grid-column: 1 / -1; text-align: center !important; }
+
+/* Anulado: la tarjeta se ve apagada (no se tachan los títulos) */
+.tabla-tickets.tarjetas .ticket-anulado td,
+.tabla-tickets.tarjetas .ticket-anulado td:first-child,
+.tabla-tickets.tarjetas .ticket-anulado td:nth-child(7) { text-decoration: none; }
+.tabla-tickets.tarjetas .ticket-anulado { background: #fafafa; }
+
+/* Tarjeta muy angosta (celular): una sola columna */
+@media (max-width: 359.98px) {
+  .tabla-tickets.tarjetas table tr { grid-template-columns: 1fr; }
+  .tabla-tickets.tarjetas table td.col-numero,
+  .tabla-tickets.tarjetas table td.col-total { grid-column: 1; grid-row: auto; text-align: left !important; }
+  .tabla-tickets.tarjetas table td.col-total::before { text-align: left; }
+}
+
+
+/* ---------- ↩ Devolución parcial ---------- */
+.dev-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 24px 12px;
+  overflow-y: auto;
+}
+.dev-modal {
+  background: #fff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 720px;
+  padding: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+}
+.dev-tabla tr.elegido td { background: #eef5ff; }
+.cant-dev { width: 72px; }
+.dev-reparto { padding: 8px 10px; border-radius: 8px; background: #f6f8fb; }

@@ -4,6 +4,7 @@ import { collection, doc, Firestore, getDoc, getDocs, query, updateDoc, where } 
 import { AuthService } from 'src/app/modules/auth/services/auth.service';
 import { GeneralService } from 'src/app/shared/services/general.service';
 import { armarHistorial, COLECCIONES_PEDIDOS, CompraHistorial } from 'src/app/shared/utils/historial-cliente';
+import { armarCreditoCliente, CreditoCliente, ordenarCreditosCliente } from 'src/app/shared/utils/creditos-cliente';
 import { errorDatosSolicitud, nuevaSolicitud, puedePedirMayorista, SolicitudMayorista } from 'src/app/shared/utils/solicitud-mayorista';
 
 export class MiCuentaError extends Error {
@@ -18,6 +19,30 @@ export const MIN_LARGO_CLAVE = 6;   // mínimo de Firebase
  * "Mi cuenta" del cliente de la tienda: sus datos, cambio de contraseña e historial de compras.
  * Todo con la sesión de Firebase del propio cliente (las reglas solo le dejan leer lo suyo).
  */
+/** 📒 Un movimiento de la cuenta corriente, como lo ve el cliente */
+export interface MovimientoCliente {
+  id: string;
+  tipo: 'cargo' | 'pago';
+  fecha: string | null;
+  nroTicket: number | null;
+  importe: number;      // compra: lo que se cargó · pago: la deuda que canceló
+  pagado: number;       // pago: lo que pagó (puede tener descuento)
+  pendiente: number;    // compra: lo que falta pagar de esa compra
+  devuelto: number;     // compra: lo que se descontó por devolución de productos
+  detalle: string;
+  anulado: boolean;
+}
+
+export interface EstadoCuentaCliente {
+  saldo: number;
+  totalCompras: number;
+  totalPagos: number;
+  ultimaCompra: string | null;
+  ultimoPago: string | null;
+  pendientes: MovimientoCliente[];   // compras que todavía debe (la más vieja primero)
+  movimientos: MovimientoCliente[];  // los más nuevos primero
+}
+
 @Injectable({ providedIn: 'root' })
 export class MiCuentaService {
 
@@ -47,6 +72,74 @@ export class MiCuentaService {
   // =====================================================
 
   /** Datos actualizados del cliente (puntos, teléfono, dirección, historial…) */
+  /**
+   * 📒 Estado de la cuenta corriente del cliente (solo para ver). null si no tiene cuenta corriente.
+   * Movimientos: los más nuevos primero (hasta 100).
+   */
+  async obtenerCuentaCorriente(): Promise<EstadoCuentaCliente | null> {
+    const uid = await this.uidActual();
+    const snap = await getDoc(doc(this.firestore, 'CuentasCorrientes', uid));
+    if (!snap.exists()) return null;
+    const c: any = snap.data();
+    const movSnap = await getDocs(collection(this.firestore, 'CuentasCorrientes', uid, 'Movimientos'));
+    const todos: MovimientoCliente[] = movSnap.docs.map((d): MovimientoCliente => {
+      const m: any = d.data();
+      return {
+        id: d.id,
+        tipo: m.tipo === 'pago' ? 'pago' : 'cargo',
+        fecha: m.fecha || null,
+        nroTicket: m.nroTicket ?? null,
+        importe: Number(m.importe) || 0,
+        pagado: m.tipo === 'pago' ? (Number(m.cobrado ?? m.importe) || 0) : 0,
+        pendiente: m.tipo === 'cargo' ? Math.max(0, Number(m.pendiente) || 0) : 0,
+        devuelto: Number(m.devuelto) || 0,
+        detalle: m.detalle || '',
+        anulado: m.anulado === true
+      };
+    }).sort((a, b) => String(b.fecha || '').localeCompare(String(a.fecha || '')));
+    // Los totales se calculan con los movimientos (no con los acumulados guardados, que pueden haber quedado desfasados)
+    const vigentes = todos.filter(m => !m.anulado);
+    const comprado = vigentes.filter(m => m.tipo === 'cargo').reduce((x, m) => x + Math.max(0, m.importe - m.devuelto), 0);
+    const pagado = vigentes.filter(m => m.tipo === 'pago').reduce((x, m) => x + m.importe, 0);
+    const ultimaCompra = vigentes.find(m => m.tipo === 'cargo')?.fecha || null;
+    const ultimoPago = vigentes.find(m => m.tipo === 'pago')?.fecha || null;
+    const movimientos = todos.slice(0, 100);
+    const pendientes = todos.filter(m => m.tipo === 'cargo' && !m.anulado && m.pendiente > 0.004)
+      .sort((a, b) => String(a.fecha || '').localeCompare(String(b.fecha || '')));
+    return {
+      saldo: Math.max(0, Number(c.saldo) || 0),
+      totalCompras: Math.round(comprado * 100) / 100,
+      totalPagos: Math.round(pagado * 100) / 100,
+      ultimaCompra: ultimaCompra || c.ultimaCompra || null,
+      ultimoPago: ultimoPago || c.ultimoPago || null,
+      pendientes,
+      movimientos
+    };
+  }
+
+  /**
+   * 🏠 Créditos de la casa del cliente (solo para ver): cuotas, pagos, deuda y próximo vencimiento.
+   * Los anulados no se muestran. Lista vacía si no tiene.
+   */
+  async obtenerCreditos(): Promise<CreditoCliente[]> {
+    const uid = await this.uidActual();
+    const snap = await getDocs(query(collection(this.firestore, 'Creditos'), where('cliente.id', '==', uid)));
+    const hoy = new Date();
+    const lista = await Promise.all(snap.docs.map(async d => {
+      const credito: any = { id: d.id, ...(d.data() as any) };
+      if (credito.estado === 'anulado' || credito.anulado) return null;
+      let pagos: any[] = [];
+      try {
+        const ps = await getDocs(collection(this.firestore, 'Creditos', d.id, 'Pagos'));
+        pagos = ps.docs.map(x => ({ id: x.id, ...(x.data() as any) }));
+      } catch (err) {
+        console.warn('No se pudieron leer los pagos del crédito', d.id, err);
+      }
+      return armarCreditoCliente(credito, pagos, hoy);
+    }));
+    return ordenarCreditosCliente(lista.filter((c): c is CreditoCliente => !!c));
+  }
+
   async obtenerCliente(): Promise<any> {
     const uid = await this.uidActual();
     const snap = await getDoc(doc(this.firestore, 'Clientes', uid));

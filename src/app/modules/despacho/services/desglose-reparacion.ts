@@ -105,9 +105,84 @@ export function totalesDesglose(ventas: any[]): { manoObra: number; repuestos: n
     if (des && esNumero(des.manoObra) && esNumero(des.repuestos)) {
       manoObra += des.manoObra;
       repuestos += des.repuestos;
+      // Ticket de varias órdenes: la parte de las órdenes sin discriminar viene aparte
+      if (esNumero(des.sinDiscriminar)) sinDiscriminar += des.sinDiscriminar;
     } else {
       sinDiscriminar += Number(v?.total) || 0;
     }
   }
   return { manoObra: redondear(manoObra), repuestos: redondear(repuestos), sinDiscriminar: redondear(sinDiscriminar) };
+}
+
+
+// =====================================================
+// VARIAS ÓRDENES EN UN MISMO COBRO
+// =====================================================
+
+/** Cuánto se lleva cada orden de un cobro */
+export interface ParteCobroOrden {
+  importe: number;     // saldo de la orden que cancela (incluye el descuento)
+  descuento: number;   // parte del descuento por efectivo / transferencia
+  cobrado: number;     // lo que entra a la caja por esta orden
+}
+
+/**
+ * Reparte un cobro entre varias órdenes, ya ordenadas (la última es la de número más alto).
+ * Todas se cancelan completas menos la última, que puede quedar con saldo.
+ * El descuento se reparte en proporción a lo que cancela cada una.
+ */
+export function repartirCobroOrdenes(saldos: number[], importe: number, descuento = 0): { partes: ParteCobroOrden[] | null; error: string | null } {
+  const n = (saldos || []).length;
+  importe = redondear(importe);
+  descuento = Math.min(Math.max(0, redondear(descuento)), importe);
+  if (!n) return { partes: null, error: 'No hay órdenes para cobrar.' };
+  if (!(importe > 0)) return { partes: null, error: 'El monto tiene que ser mayor a 0.' };
+  const total = redondear(saldos.reduce((a, x) => a + (Number(x) || 0), 0));
+  if (importe > total + 0.009) return { partes: null, error: 'El monto supera el saldo pendiente.' };
+  const anteriores = redondear(saldos.slice(0, -1).reduce((a, x) => a + (Number(x) || 0), 0));
+  const resto = redondear(importe - anteriores);
+  if (n > 1 && resto <= 0.009) {
+    return { partes: null, error: 'Con varias órdenes, todas se cancelan completas: solo la última puede quedar con saldo.' };
+  }
+  const importes = saldos.map((x, i) => i < n - 1 ? redondear(x) : Math.min(redondear(x), resto));
+  let descRepartido = 0;
+  const partes = importes.map((imp, i) => {
+    const d = i < n - 1 ? redondear(descuento * imp / importe) : redondear(descuento - descRepartido);
+    descRepartido = redondear(descRepartido + d);
+    return { importe: imp, descuento: d, cobrado: redondear(imp - d) };
+  });
+  return { partes, error: null };
+}
+
+/** Desglose de un ticket de varias órdenes: suma de los de cada una (null si ninguna está discriminada) */
+export function sumarDesgloses(partes: { desglose: DesgloseCobro | null; cobrado: number }[]):
+  (DesgloseCobro & { sinDiscriminar: number }) | null {
+  if (!partes.some(p => p.desglose)) return null;
+  const t = { manoObra: 0, repuestos: 0, manoObraCancelada: 0, repuestosCancelado: 0, sinDiscriminar: 0 };
+  for (const p of partes) {
+    if (p.desglose) {
+      t.manoObra += p.desglose.manoObra;
+      t.repuestos += p.desglose.repuestos;
+      t.manoObraCancelada += p.desglose.manoObraCancelada;
+      t.repuestosCancelado += p.desglose.repuestosCancelado;
+    } else {
+      t.sinDiscriminar += Number(p.cobrado) || 0;
+    }
+  }
+  return {
+    manoObra: redondear(t.manoObra), repuestos: redondear(t.repuestos),
+    manoObraCancelada: redondear(t.manoObraCancelada), repuestosCancelado: redondear(t.repuestosCancelado),
+    sinDiscriminar: redondear(t.sinDiscriminar)
+  };
+}
+
+/** Órdenes que cobra un ticket de reparación (los viejos tienen una sola, en venta.orden) */
+export function ordenesDeVenta(v: any): { id: string; numeroOrden: any; equipo?: string; imei?: string }[] {
+  if (Array.isArray(v?.ordenes) && v.ordenes.length) return v.ordenes;
+  return v?.orden?.id ? [v.orden] : [];
+}
+
+/** "#1234" o "#1234, #1240" */
+export function textoOrdenes(v: any): string {
+  return ordenesDeVenta(v).map(o => '#' + (o.numeroOrden ?? '?')).join(', ');
 }

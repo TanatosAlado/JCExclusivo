@@ -3,10 +3,11 @@ import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AuthService } from 'src/app/modules/auth/services/auth.service';
 import { CompraHistorial, TEXTO_ESTADO, TipoCompra } from 'src/app/shared/utils/historial-cliente';
-import { MIN_LARGO_CLAVE, MiCuentaError, MiCuentaService } from '../../services/mi-cuenta.service';
+import { EstadoCuentaCliente, MIN_LARGO_CLAVE, MiCuentaError, MiCuentaService, MovimientoCliente } from '../../services/mi-cuenta.service';
+import { CreditoCliente, CuotaCliente, RECARGO_DIARIO_CLIENTE, resumenCreditosCliente } from 'src/app/shared/utils/creditos-cliente';
 import { errorDatosSolicitud, estadoSolicitud, formatearCuit, puedePedirMayorista } from 'src/app/shared/utils/solicitud-mayorista';
 
-type Pestana = 'compras' | 'datos' | 'clave';
+type Pestana = 'compras' | 'cuenta' | 'creditos' | 'datos' | 'clave';
 type Filtro = 'todas' | 'web' | 'local';
 
 /**
@@ -32,6 +33,20 @@ export class MiCuentaComponent implements OnInit, OnDestroy {
   filtro: Filtro = 'todas';
   abiertas = new Set<string>();
   readonly textoEstado = TEXTO_ESTADO;
+
+  // 📒 Cuenta corriente (solo para ver; la solapa aparece si tiene cuenta)
+  cuenta: EstadoCuentaCliente | null = null;
+  cargandoCuenta = false;
+  errorCuenta: string | null = null;
+  verAnulados = false;
+
+  // 🏠 Créditos de la casa (solo para ver; la solapa aparece si tiene alguno)
+  creditos: CreditoCliente[] = [];
+  cargandoCreditos = false;
+  errorCreditos: string | null = null;
+  creditosAbiertos = new Set<string>();
+  verTerminados = false;
+  readonly recargoDiario = RECARGO_DIARIO_CLIENTE;
 
   // Datos
   telefono = '';
@@ -86,12 +101,83 @@ export class MiCuentaComponent implements OnInit, OnDestroy {
       this.telefono = this.cliente.telefono || '';
       this.direccion = this.cliente.direccion || '';
       this.cargarCompras();
+      this.cargarCuenta();
+      this.cargarCreditos();
     } catch (err: any) {
       this.error = err instanceof MiCuentaError ? err.message : 'No pudimos cargar tu cuenta. Probá de nuevo.';
       console.error(err);
     } finally {
       this.cargando = false;
     }
+  }
+
+  async cargarCuenta() {
+    this.cargandoCuenta = true;
+    this.errorCuenta = null;
+    try {
+      this.cuenta = await this.miCuenta.obtenerCuentaCorriente();
+    } catch (err) {
+      console.error(err);
+      this.errorCuenta = 'No pudimos cargar tu cuenta corriente. Probá de nuevo.';
+    } finally {
+      this.cargandoCuenta = false;
+    }
+  }
+
+  async cargarCreditos() {
+    this.cargandoCreditos = true;
+    this.errorCreditos = null;
+    try {
+      this.creditos = await this.miCuenta.obtenerCreditos();
+      // Los que tienen deuda se muestran abiertos
+      this.creditosAbiertos = new Set(this.creditos.filter(c => c.estado === 'vigente').map(c => c.id));
+    } catch (err) {
+      console.error(err);
+      this.errorCreditos = 'No pudimos cargar tus créditos. Probá de nuevo.';
+    } finally {
+      this.cargandoCreditos = false;
+    }
+  }
+
+  get resumenCreditos() {
+    return resumenCreditosCliente(this.creditos);
+  }
+
+  get hayCreditosAtrasados(): boolean {
+    return this.creditos.some(c => c.estado === 'vigente' && c.situacion.estado === 'vencido');
+  }
+
+  /** Créditos a mostrar (los terminados o refinanciados, solo si los pide, salvo que no haya vigentes) */
+  get creditosVisibles(): CreditoCliente[] {
+    const vigentes = this.creditos.filter(c => c.estado === 'vigente');
+    return this.verTerminados || !vigentes.length ? this.creditos : vigentes;
+  }
+
+  get hayCreditosTerminados(): boolean {
+    return this.creditos.some(c => c.estado !== 'vigente') && this.creditos.some(c => c.estado === 'vigente');
+  }
+
+  /** La primera cuota que falta pagar del crédito */
+  proximaDe(c: CreditoCliente): CuotaCliente | null {
+    return c.cuotas.find(q => q.estado !== 'pagada') || null;
+  }
+
+  alternarCredito(id: string) {
+    if (this.creditosAbiertos.has(id)) this.creditosAbiertos.delete(id);
+    else this.creditosAbiertos.add(id);
+  }
+
+  /** Movimientos a mostrar (los anulados, solo si los pide) */
+  get movimientosVisibles(): MovimientoCliente[] {
+    return (this.cuenta?.movimientos || []).filter(m => this.verAnulados || !m.anulado);
+  }
+
+  get hayAnulados(): boolean {
+    return (this.cuenta?.movimientos || []).some(m => m.anulado);
+  }
+
+  nroTicket(n: number | null): string {
+    return n === null || n === undefined ? '' : String(n).padStart(8, '0');
   }
 
   async cargarCompras() {

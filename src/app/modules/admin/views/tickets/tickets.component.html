@@ -76,7 +76,7 @@
         <span *ngIf="cantidadAnulados"> · {{ cantidadAnulados }} anulado{{ cantidadAnulados === 1 ? '' : 's' }}</span>
       </p>
 
-      <div class="table-responsive">
+      <div #contenedorTabla class="table-responsive tabla-tickets" [class.tarjetas]="modoTarjetas">
         <table class="table table-sm align-middle">
           <thead>
             <tr>
@@ -92,39 +92,45 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let t of filtrados" [class.ticket-anulado]="t.anulada">
-              <td class="fw-bold text-nowrap">
+            <tr *ngFor="let t of paginaActual" [class.ticket-anulado]="t.anulada">
+              <td class="fw-bold text-nowrap col-numero" data-label="Ticket">
                 {{ ticketsService.numeroFormateado(t) }}
-                <div *ngIf="t.tipoVenta === 'reparacion'" class="badge bg-info text-dark">🔧 Reparación #{{ t.orden?.numeroOrden }}</div>
+                <div *ngIf="t.tipoVenta === 'reparacion'" class="badge bg-info text-dark">🔧 Reparación {{ t.ordenes?.length > 1 ? textoOrdenes(t) : '#' + t.orden?.numeroOrden }}</div>
                 <div *ngIf="t.tipoVenta === 'cobrocuenta'" class="badge bg-warning text-dark">📒 Cobro cuenta corriente</div>
                 <div *ngIf="t.tipoVenta === 'cobrocuota'" class="badge bg-primary">🏠 Cobro cuota</div>
+                <div *ngIf="t.tipoVenta === 'refinanciacion'" class="badge bg-primary">🔁 Refinanciación</div>
                 <div *ngIf="t.credito" class="badge bg-light text-dark border">🏠 Venta a crédito</div>
+                <div *ngIf="t.tipoVenta === 'devolucion'" class="badge bg-secondary">↩ Devolución del {{ t.ventaOriginal?.nroTicket ? (t.ventaOriginal.nroTicket + '').padStart(8, '0') : '—' }}</div>
+                <div *ngIf="devueltas(t)" class="badge bg-light text-dark border" [title]="'Devuelto: ' + (totalDevuelto(t) | currency:'ARS')">↩ Con devolución</div>
               </td>
-              <td class="text-nowrap">{{ t.fecha | date:'dd/MM/yyyy HH:mm' }}</td>
-              <td>{{ nombresSucursales[t.sucursalId] || '-' }}</td>
-              <td>
+              <td class="text-nowrap" data-label="Fecha">{{ t.fecha | date:'dd/MM/yyyy HH:mm' }}</td>
+              <td data-label="Sucursal">{{ nombresSucursales[t.sucursalId] || '-' }}</td>
+              <td data-label="Cliente">
                 {{ t.cliente?.nombre || 'Consumidor final' }}
                 <div class="small text-muted" *ngIf="t.cliente?.dni">DNI {{ t.cliente.dni }}</div>
               </td>
-              <td>
+              <td data-label="Cajero">
                 {{ t.cajero ? t.cajero.nombre + ' ' + t.cajero.apellido : '-' }}
                 <div class="small text-muted" *ngIf="t.usuario">sesión: {{ t.usuario.usuario || t.usuario.nombre }}</div>
               </td>
-              <td>{{ pagos(t) }}</td>
-              <td class="text-end text-nowrap">{{ t.total | currency:'ARS' }}</td>
-              <td>
+              <td data-label="Pago">{{ pagos(t) }}</td>
+              <td class="text-end text-nowrap col-total" data-label="Total">{{ t.total | currency:'ARS' }}</td>
+              <td data-label="Estado">
                 <span *ngIf="!t.anulada" class="badge bg-success">Vigente</span>
                 <ng-container *ngIf="t.anulada">
                   <span class="badge bg-danger">Anulado</span>
                   <div class="small text-muted">{{ t.motivoAnulacion }}</div>
                 </ng-container>
               </td>
-              <td class="text-nowrap">
+              <td class="text-nowrap col-acciones">
                 <button mat-icon-button type="button" (click)="ver(t)" matTooltip="Vista previa">
                   <mat-icon>visibility</mat-icon>
                 </button>
                 <button mat-icon-button type="button" (click)="imprimir(t)" matTooltip="Reimprimir">
                   <mat-icon>print</mat-icon>
+                </button>
+                <button *ngIf="puedeDevolver(t)" mat-icon-button type="button" (click)="abrirDevolucion(t)" matTooltip="Devolver productos">
+                  <mat-icon>assignment_return</mat-icon>
                 </button>
                 <button *ngIf="!t.anulada" mat-icon-button color="warn" type="button" (click)="anular(t)" matTooltip="Anular ticket">
                   <mat-icon>block</mat-icon>
@@ -137,6 +143,97 @@
           </tbody>
         </table>
       </div>
+
+      <mat-paginator *ngIf="filtrados.length > opcionesPorPagina[0]"
+        [length]="filtrados.length" [pageIndex]="pagina" [pageSize]="porPagina" [pageSizeOptions]="opcionesPorPagina"
+        (page)="cambiarPagina($event)" [showFirstLastButtons]="true" aria-label="Páginas de tickets">
+      </mat-paginator>
     </mat-card-content>
   </mat-card>
+</div>
+
+<!-- ↩ Devolución parcial de productos -->
+<div *ngIf="devVenta" class="dev-overlay" (click)="cerrarDevolucion()">
+  <div class="dev-modal" (click)="$event.stopPropagation()" role="dialog" aria-label="Devolver productos">
+    <div class="d-flex justify-content-between align-items-start mb-2">
+      <div>
+        <h4 class="m-0">↩ Devolver productos</h4>
+        <small class="text-muted">Ticket Nº {{ ticketsService.numeroFormateado(devVenta) }} · {{ devVenta.fecha | date:'dd/MM/yyyy HH:mm' }}
+          · {{ devVenta.cliente?.nombre || 'Consumidor final' }} · total {{ devVenta.total | currency:'ARS' }}</small>
+      </div>
+      <button mat-icon-button type="button" (click)="cerrarDevolucion()" [disabled]="devProcesando" aria-label="Cerrar"><mat-icon>close</mat-icon></button>
+    </div>
+
+    <div *ngIf="devCargando" class="small text-muted mb-2"><span class="spinner-border spinner-border-sm"></span> Cargando…</div>
+
+    <table class="table table-sm align-middle dev-tabla">
+      <thead><tr><th>Producto</th><th class="text-center">Vendidos</th><th class="text-end">Precio pagado</th><th class="text-center">Devuelve</th></tr></thead>
+      <tbody>
+        <tr *ngFor="let r of devRenglones" [class.elegido]="r.cantidad > 0">
+          <td>
+            {{ r.nombre }}<small *ngIf="r.modelo" class="text-muted d-block">Modelo: {{ r.modelo }}</small>
+            <small *ngIf="r.devuelta" class="text-muted d-block">Ya devueltos: {{ r.devuelta }}</small>
+          </td>
+          <td class="text-center">{{ r.vendida }}</td>
+          <td class="text-end text-nowrap">{{ r.precioNeto | currency:'ARS' }}</td>
+          <td class="text-center text-nowrap">
+            <input type="number" min="0" [max]="r.disponible" step="1" class="form-control form-control-sm d-inline-block cant-dev"
+              [ngModel]="r.cantidad" (ngModelChange)="cambioCantidad(r, $event)" [attr.aria-label]="'Cantidad a devolver de ' + r.nombre">
+            <button type="button" class="btn btn-link btn-sm p-0 ms-1" (click)="todo(r)" *ngIf="r.cantidad !== r.disponible">todos ({{ r.disponible }})</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="small text-muted mb-2">El precio pagado ya tiene aplicados los descuentos del ticket (cupón, efectivo, puntos).</div>
+
+    <div class="row g-2 align-items-end">
+      <div class="col-sm-5">
+        <label class="form-label small mb-1" for="devImporte">Importe a devolver</label>
+        <input id="devImporte" type="number" min="0" step="0.01" class="form-control" [ngModel]="devImporte" (ngModelChange)="cambioImporte($event)">
+        <button type="button" class="btn btn-link btn-sm p-0" *ngIf="devImporteEditado && devSugerido" (click)="usarSugerido()">
+          usar lo que pagó ({{ devSugerido | currency:'ARS' }})</button>
+      </div>
+      <div class="col-sm-7">
+        <label class="form-label small mb-1" for="devCajero">Cajero que hace la devolución</label>
+        <select id="devCajero" class="form-select" [(ngModel)]="devCajeroId">
+          <option [ngValue]="null">{{ devCajeros.length ? 'Elegí quién la hace (opcional)…' : 'Sin cajeros cargados' }}</option>
+          <option *ngFor="let c of devCajeros" [ngValue]="c.id">{{ nombreCajero(c) }}</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Cómo se devuelve -->
+    <div class="dev-reparto mt-2" *ngIf="(devImporte || 0) > 0">
+      <div *ngIf="devReparto.aCuenta > 0">📒 Se descuenta de su cuenta corriente: <strong>{{ devReparto.aCuenta | currency:'ARS' }}</strong>
+        <span class="small text-muted">(compró a cuenta: no se devuelve plata por esa parte)</span></div>
+      <ng-container *ngIf="devReparto.dinero > 0">
+        <div>💵 Se le devuelve: <strong>{{ devReparto.dinero | currency:'ARS' }}</strong></div>
+        <div class="btn-group btn-group-sm mt-1 flex-wrap" role="group" aria-label="Medio de la devolución">
+          <button *ngFor="let m of metodosDevolucion" type="button" class="btn"
+            [class.btn-primary]="devMetodo === m" [class.btn-outline-primary]="devMetodo !== m" (click)="devMetodo = m">
+            {{ nombreMetodo(m) }}
+          </button>
+        </div>
+        <div class="small mt-1" [class.text-danger]="!devCaja" [class.text-muted]="devCaja">
+          <ng-container *ngIf="devCaja">Sale de la caja abierta{{ caja?.id ? '' : ' de la sucursal del ticket' }}.</ng-container>
+          <ng-container *ngIf="!devCaja && !devCargando">No hay una caja abierta en la sucursal del ticket: abrila para poder devolver plata.</ng-container>
+        </div>
+      </ng-container>
+    </div>
+
+    <div class="mt-2">
+      <label class="form-label small mb-1" for="devMotivo">Motivo</label>
+      <input id="devMotivo" type="text" class="form-control" [(ngModel)]="devMotivo" maxlength="200" placeholder="Ej: la funda no era del modelo">
+    </div>
+
+    <div *ngIf="devError" class="alert alert-danger py-2 small mt-2 mb-0">{{ devError }}</div>
+    <div *ngIf="!devError && devErrorValidacion && devSugerido > 0" class="small text-muted mt-2">{{ devErrorValidacion }}</div>
+
+    <div class="d-flex justify-content-end gap-2 mt-3">
+      <button mat-button type="button" (click)="cerrarDevolucion()" [disabled]="devProcesando">Cancelar</button>
+      <button mat-raised-button color="primary" type="button" (click)="confirmarDevolucion()" [disabled]="!!devErrorValidacion || devProcesando || devCargando">
+        <mat-icon>assignment_return</mat-icon> {{ devProcesando ? 'Registrando…' : 'Registrar devolución' }}
+      </button>
+    </div>
+  </div>
 </div>

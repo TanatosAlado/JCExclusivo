@@ -1,0 +1,48 @@
+.tasador { font-size: 0.92rem; }
+.lista-modelos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 6px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.modelo, .capacidad {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid #d6dbe3;
+  border-radius: 10px;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+.modelo:hover, .capacidad:hover { border-color: #0d6efd; }
+.modelo small, .capacidad small { color: #6c757d; }
+.capacidades { display: flex; flex-wrap: wrap; gap: 6px; }
+.capacidad { align-items: center; min-width: 92px; }
+.capacidad.elegida { background: #0d6efd; border-color: #0d6efd; color: #fff; }
+.capacidad.elegida small { color: rgba(255, 255, 255, 0.85); }
+.preguntas { display: flex; flex-direction: column; gap: 4px; }
+.pregunta {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: #f6f8fb;
+}
+.pregunta .num { color: #8a8f98; }
+.resultado {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #eef5ff;
+  border: 1px solid #cfe0fb;
+}
+.resultado .total { font-size: 1.15rem; margin-top: 4px; }
+@media (max-width: 480px) {
+  .pregunta { grid-template-columns: 1fr auto; }
+}

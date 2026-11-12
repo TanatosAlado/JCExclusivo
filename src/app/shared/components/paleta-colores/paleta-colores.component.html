@@ -1,0 +1,46 @@
+<ng-container *ngIf="visible">
+  <button type="button" class="boton-paleta" (click)="abierta = !abierta" [attr.aria-expanded]="abierta"
+    title="Probar colores del sitio (solo lo ven los administradores)" aria-label="Probar colores del sitio">🎨</button>
+
+  <div *ngIf="abierta" class="panel-paleta" role="dialog" aria-label="Paleta de colores de prueba">
+    <div class="d-flex justify-content-between align-items-start mb-2">
+      <div>
+        <strong>🎨 Probar colores</strong>
+        <div class="nota">Solo lo ves vos, en este navegador. Los clientes ven el sitio como siempre.</div>
+      </div>
+      <button type="button" class="btn-close" (click)="abierta = false" aria-label="Cerrar"></button>
+    </div>
+
+    <div class="titulo">Color principal <span>(barra, pie, botones)</span></div>
+    <div class="muestras">
+      <button *ngFor="let c of sugeridosPrimario" type="button" class="muestra" [style.background]="c.color"
+        [class.elegida]="paleta.primario === c.color" [title]="c.nombre + ' ' + c.color" [attr.aria-label]="c.nombre"
+        (click)="elegirPrimario(c.color)"></button>
+      <label class="muestra libre" title="Elegir cualquier color">
+        <input type="color" [value]="paleta.primario" (input)="elegirPrimario($any($event.target).value)" aria-label="Elegir color principal">
+        +
+      </label>
+    </div>
+    <div *ngIf="avisoContraste" class="aviso">⚠️ Con este color, las letras blancas de la barra pueden no leerse bien.</div>
+
+    <div class="titulo mt-2">Fondo de la página</div>
+    <div class="muestras">
+      <button *ngFor="let c of sugeridosFondo" type="button" class="muestra" [style.background]="c.color"
+        [class.elegida]="paleta.fondo === c.color" [title]="c.nombre + ' ' + c.color" [attr.aria-label]="c.nombre"
+        (click)="elegirFondo(c.color)"></button>
+      <label class="muestra libre" title="Elegir cualquier color">
+        <input type="color" [value]="paleta.fondo" (input)="elegirFondo($any($event.target).value)" aria-label="Elegir color de fondo">
+        +
+      </label>
+    </div>
+
+    <div class="elegido">
+      <span class="chip" [style.background]="paleta.primario"></span> {{ paleta.primario }}
+      <span class="chip ms-2" [style.background]="paleta.fondo"></span> {{ paleta.fondo }}
+    </div>
+    <div class="d-flex gap-2 mt-2">
+      <button type="button" class="btn btn-sm btn-outline-secondary" (click)="restablecer()" [disabled]="!cambiada">Volver al original</button>
+      <button type="button" class="btn btn-sm btn-dark" (click)="copiar()">{{ copiado ? '✔ Copiado' : 'Copiar colores' }}</button>
+    </div>
+  </div>
+</ng-container>

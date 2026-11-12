@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { Cotizacion, descuentoPedido, totalConCarrito, totalPedidoEnPesos, totalQuedoEnDolares } from '../utils/total-pedido';
 import { addDoc, collection, collectionData, deleteDoc, doc, Firestore, getDoc, runTransaction, setDoc, updateDoc } from '@angular/fire/firestore';
 import { Observable } from 'rxjs';
 import { Pedido } from 'src/app/modules/shop/models/pedido.model';
@@ -140,18 +141,25 @@ export class PedidosService {
   }
 
     //SERVICIO PARA ACTUALIZAR LA CANTIDAD DE PRODUCTOS Y TOTAL EN PEDIDOS PENDIENTES
-  async updateCarroEnPedido(idPedido: string, nuevoCarro: any[]) {
-    // Un equipo es una unidad única: la cantidad siempre es 1
-    nuevoCarro = (nuevoCarro || []).map(i => this.esEquipo(i) ? { ...i, cantidad: 1 } : i);
-    const nuevoTotal = nuevoCarro.reduce((acc, item) => acc + item.precioFinal * item.cantidad, 0);
+  async updateCarroEnPedido(idPedido: string, nuevoCarro: any[], cot: Cotizacion) {
+    // Un equipo es una unidad única: la cantidad siempre es 1. (editandoCantidad es solo de la pantalla)
+    nuevoCarro = (nuevoCarro || []).map(i => {
+      const { editandoCantidad, ...item } = i || {};
+      return this.esEquipo(item) ? { ...item, cantidad: 1 } : item;
+    });
+    this.exigirCotizacion(nuevoCarro, cot);
     const antes = await this.auditoria.capturar('Pedidos Pendientes', idPedido);
+    // Total en pesos (los USD con su cotización), manteniendo el descuento del pedido (cupón + puntos)
+    const descuento = descuentoPedido(antes, cot);
+    const nuevoTotal = totalConCarrito({ ...antes, descuento }, nuevoCarro, cot);
     // Equipos que se sacaron del pedido: vuelven a la venta
     const quitados = (antes?.carrito || []).filter((i: any) => this.esEquipo(i) && !nuevoCarro.some(n => n.equipoId === i.equipoId));
     if (quitados.length) await this.devolverEquiposPedido(idPedido, quitados, `Quitado del pedido #${antes?.nroPedido ?? '?'}`);
     const pedidoRef = doc(this.firestore, 'Pedidos Pendientes', idPedido);
     await updateDoc(pedidoRef, {
       carrito: nuevoCarro,
-      total: nuevoTotal
+      total: nuevoTotal,
+      descuento
     });
     this.auditoria.registrar({
       accion: 'modificar',
@@ -168,7 +176,7 @@ export class PedidosService {
     return (carrito || []).map(i => `${i.cantidad} x ${i.nombre}`).join(', ');
   }
 
-    deleteProductoDelCarrito(idPedido: string, idProducto: string) {
+    deleteProductoDelCarrito(idPedido: string, idProducto: string, cot: Cotizacion) {
     const pedidoRef = doc(this.firestore, 'Pedidos Pendientes', idPedido);
 
     return getDoc(pedidoRef).then(async (docSnap) => {
@@ -192,16 +200,50 @@ export class PedidosService {
       if (carritoActualizado.length === 0) {
         return deleteDoc(pedidoRef);
       }
-      const totalActualizado = carritoActualizado.reduce(
-        (acc: number, producto: any) => acc + producto.precioFinal * producto.cantidad, 0
-      );
+      this.exigirCotizacion(carritoActualizado, cot);
+      const descuento = descuentoPedido(pedidoData, cot);
+      const totalActualizado = totalConCarrito({ ...pedidoData, descuento }, carritoActualizado, cot);
 
       return updateDoc(pedidoRef, {
         carrito: carritoActualizado,
-        total: totalActualizado
+        total: totalActualizado,
+        descuento
       });
     });
   }
+
+  /** Sin la cotización cargada no se puede pasar a pesos lo que está en dólares */
+  private exigirCotizacion(carrito: any[], cot: Cotizacion) {
+    if ((carrito || []).some(i => i?.moneda === 'USD') && !(Number(cot?.dolar) > 0)) {
+      throw new Error('Todavía no cargó la cotización del dólar. Esperá un momento y volvé a intentar.');
+    }
+  }
+
+  // =====================================================
+  // PEDIDOS CON EL TOTAL GUARDADO EN DÓLARES (error viejo)
+  // =====================================================
+
+  /** Guarda el total recalculado en pesos. Devuelve true si había que corregirlo. */
+  async corregirTotal(coleccion: string, idPedido: string, cot: Cotizacion): Promise<boolean> {
+    const ref = doc(this.firestore, coleccion, idPedido);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return false;
+    const pedido: any = snap.data();
+    if (!totalQuedoEnDolares(pedido, cot)) return false;
+    const total = totalPedidoEnPesos(pedido, cot);
+    const descuento = descuentoPedido(pedido, cot);
+    await updateDoc(ref, { total, descuento, totalOriginal: pedido.total, totalCorregidoEn: new Date().toISOString() });
+    this.auditoria.registrar({
+      accion: 'modificar',
+      entidad: coleccion,
+      entidadId: idPedido,
+      descripcion: `Corrigió el total del pedido #${pedido.nroPedido ?? '?'}: estaba guardado en dólares (${pedido.total}) → $${total}`,
+      antes: { total: pedido.total },
+      despues: { total, descuento }
+    });
+    return true;
+  }
+
 
   async moverDocumento(
     id: string,

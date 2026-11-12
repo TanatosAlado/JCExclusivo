@@ -67,6 +67,12 @@ export class GestionesComponent {
       ruta: '/gestiones/equipos',
     },
     {
+      titulo: 'Tasador de equipos',
+      descripcion: 'Precio por modelo y capacidad, y las preguntas que descuentan, para tasar el usado del plan canje',
+      icono: 'fas fa-calculator',
+      ruta: '/gestiones/tasador',
+    },
+    {
       titulo: 'Pedidos',
       descripcion: 'Gestión de pedidos',
       icono: 'fas fa-shopping-cart',

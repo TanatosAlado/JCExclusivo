@@ -13,10 +13,13 @@ import { AuditoriaService } from 'src/app/shared/services/auditoria.service';
 import { TicketsService } from './tickets.service';
 import { PagoVenta, metodoResumen, limpiarDetalle } from './pagos';
 import { CajeroVenta, nombreCajero } from 'src/app/modules/admin/services/cajeros.service';
-import { DesgloseCobro, imputarCobroReparacion } from './desglose-reparacion';
+import { DesgloseCobro, imputarCobroReparacion, repartirCobroOrdenes, sumarDesgloses } from './desglose-reparacion';
 
 /** Medios a los que se les puede hacer descuento al cobrar una reparación */
 export const METODOS_CON_DESCUENTO_REPARACION = ['efectivo', 'transferencia'];
+
+/** Cuántas órdenes se pueden cobrar juntas en un mismo ticket */
+export const MAX_ORDENES_POR_COBRO = 15;
 
 /** Colecciones donde puede estar una orden de taller */
 export const COLECCIONES_ORDENES = ['Ordenes Pendientes', 'Ordenes Finalizadas'];
@@ -126,11 +129,46 @@ export class CobroReparacionesService {
     cajero: CajeroVenta | null,
     efectivo: { efectivoRecibido: number | null; vuelto: number | null } = { efectivoRecibido: null, vuelto: null }
   ): Promise<{ venta: any; saldoRestante: number; entregada: boolean }> {
+    const r = await this.cobrarOrdenes(caja, [orden], pagosIngresados, entregar ? [orden.id] : [], cajero, efectivo);
+    return { venta: r.venta, saldoRestante: r.saldoRestante, entregada: r.entregadas.length > 0 };
+  }
+
+  /**
+   * Cobra una o varias órdenes del mismo cliente (mismo DNI / CUIT) con un solo ticket.
+   * Con varias, todas se cancelan completas menos la última (la de número más alto), que puede quedar con saldo.
+   * @param entregarIds órdenes pendientes cuyo equipo se entrega (pasan a Finalizadas)
+   */
+  async cobrarOrdenes(
+    caja: any,
+    ordenesIngresadas: any[],
+    pagosIngresados: { metodo: string; monto: number; porcentajeDescuento?: number; descuento?: number; detalle?: string }[],
+    entregarIds: string[],
+    cajero: CajeroVenta | null,
+    efectivo: { efectivoRecibido: number | null; vuelto: number | null } = { efectivoRecibido: null, vuelto: null }
+  ): Promise<{ venta: any; saldoRestante: number; entregadas: number[] }> {
 
     const usuario = this.auditoria.getUsuarioActual();
     if (!usuario) throw new CobroReparacionError('No se pudo identificar al usuario. Volvé a iniciar sesión.');
     if (!caja?.id) throw new CobroReparacionError('No hay una caja abierta.');
     if (!cajero?.id) throw new CobroReparacionError('Elegí el cajero que cobra.');
+
+    // Órdenes: sin repetir, de la más vieja a la más nueva
+    const vistas = new Set<string>();
+    const ordenes = (ordenesIngresadas || []).filter(o => {
+      if (!o?.id || vistas.has(o.id)) return false;
+      vistas.add(o.id);
+      return true;
+    }).sort((a, b) => (Number(a.numeroOrden) || 0) - (Number(b.numeroOrden) || 0));
+    if (!ordenes.length) throw new CobroReparacionError('Elegí la orden a cobrar.');
+    if (ordenes.length > MAX_ORDENES_POR_COBRO) throw new CobroReparacionError(`Se pueden cobrar hasta ${MAX_ORDENES_POR_COBRO} órdenes juntas.`);
+    const varias = ordenes.length > 1;
+    if (varias) {
+      const doc0 = String(ordenes[0].dniCliente ?? '').trim();
+      if (!doc0 || ordenes.some(o => String(o.dniCliente ?? '').trim() !== doc0)) {
+        throw new CobroReparacionError('Solo se pueden cobrar juntas órdenes del mismo cliente (mismo DNI / CUIT).');
+      }
+    }
+    const entregar = new Set(entregarIds || []);
 
     const pagos: PagoVenta[] = (pagosIngresados || []).map(p => {
       const pct = METODOS_CON_DESCUENTO_REPARACION.includes(p.metodo) ? Math.max(0, Number(p.porcentajeDescuento) || 0) : 0;
@@ -164,38 +202,35 @@ export class CobroReparacionesService {
       : pagos.map(p => `${p.metodo} $${p.monto.toFixed(2)}`).join(' + ')) +
       (descuento > 0 ? `, descuento ${pctTexto}%: $${descuento.toFixed(2)}` : '');
 
-    const ordenRef = doc(this.firestore, orden.coleccion, orden.id);
+    const ordenRefs = ordenes.map(o => doc(this.firestore, o.coleccion, o.id));
     const cajaRef = doc(this.firestore, 'Cajas', caja.id);
     const contadorRef = this.tickets.refContador();
     const ventaRef = doc(collection(this.firestore, 'Ventas'));
 
-    const nombreCliente = [orden.nombreCliente, orden.apellidoCliente].filter(Boolean).join(' ') || 'Cliente';
+    const primera = ordenes[0];
+    const nombreCliente = [primera.nombreCliente, primera.apellidoCliente].filter(Boolean).join(' ') || 'Cliente';
+    const numeros = ordenes.map(o => '#' + o.numeroOrden).join(', ');
+    const seEntrega = ordenes.filter(o => entregar.has(o.id) && o.coleccion === 'Ordenes Pendientes');
 
     const venta: any = {
       fecha: new Date().toISOString(),
       tipoVenta: 'reparacion',
       tipoPrecio: 'minorista',
       cliente: {
-        id: orden.idCliente || null,
-        dni: orden.dniCliente ?? null,
+        id: primera.idCliente || null,
+        dni: primera.dniCliente ?? null,
         nombre: nombreCliente,
         tipo: 'minorista'
       },
+      // La primera orden (los tickets de una sola orden siguen igual que siempre)
       orden: {
-        id: orden.id,
-        numeroOrden: orden.numeroOrden ?? null,
-        equipo: orden.equipo || '',
-        imei: orden.imei || ''
+        id: primera.id,
+        numeroOrden: primera.numeroOrden ?? null,
+        equipo: primera.equipo || '',
+        imei: primera.imei || ''
       },
-      items: [{
-        productoId: null,
-        tipo: 'reparacion',
-        nombre: `Reparación orden #${orden.numeroOrden} - ${orden.equipo || 'equipo'}`,
-        cantidad: 1,
-        precioUnitario: importe,
-        subtotal: importe
-      }],
-      subtotal: importe,                 // saldo de la orden que se cancela
+      items: [],                         // se arman en la transacción (con los saldos actuales)
+      subtotal: importe,                 // saldo que se cancela
       descuentoPago: descuento,          // descuento por efectivo / transferencia
       porcentajeDescuentoPago: pagos.length === 1 && descuento > 0 ? pagos[0].porcentajeDescuento : null,
       total: cobrado,                    // lo que efectivamente pagó (entra a la caja)
@@ -214,45 +249,88 @@ export class CobroReparacionesService {
       accion: 'venta',
       entidad: 'Ventas',
       entidadId: ventaRef.id,
-      descripcion: `Cobro de reparación orden #${orden.numeroOrden} por $${cobrado.toFixed(2)}` +
+      descripcion: `Cobro de reparación ${varias ? 'órdenes' : 'orden'} ${numeros} por $${cobrado.toFixed(2)}` +
         (descuento > 0 ? ` (cancela $${importe.toFixed(2)} del saldo)` : '') + ` (${textoPagos})` +
-        (entregar ? ' y entrega del equipo' : '') + ` · cobró ${nombreCajero(cajero)}`,
-      extra: { ordenId: orden.id, numeroOrden: orden.numeroOrden, monto: importe, cobrado, descuento, metodoPago, pagos: pagos.map(p => `${p.metodo}: ${p.monto}${p.detalle ? ` (${p.detalle})` : ""}`), entregar }
+        (seEntrega.length ? (varias ? ` y entrega de ${seEntrega.map(o => '#' + o.numeroOrden).join(', ')}` : ' y entrega del equipo') : '') +
+        ` · cobró ${nombreCajero(cajero)}`,
+      extra: {
+        ordenId: primera.id, numeroOrden: primera.numeroOrden,
+        ...(varias ? { ordenes: ordenes.map(o => o.numeroOrden) } : {}),
+        monto: importe, cobrado, descuento, metodoPago,
+        pagos: pagos.map(p => `${p.metodo}: ${p.monto}${p.detalle ? ` (${p.detalle})` : ""}`),
+        entregar: varias ? seEntrega.map(o => o.numeroOrden) : seEntrega.length > 0
+      }
     });
     const descripcionBase = registro?.descripcion || '';
 
     let saldoRestante = 0;
-    let entregada = false;
+    let entregadas: number[] = [];
 
     await runTransaction(this.firestore, async (tx) => {
       // ---------- Lecturas ----------
-      const ordenSnap = await tx.get(ordenRef);
+      const ordenSnaps = [];
+      for (const ref of ordenRefs) ordenSnaps.push(await tx.get(ref));
       const cajaSnap = await tx.get(cajaRef);
       const contadorSnap = await tx.get(contadorRef);
 
-      if (!ordenSnap.exists()) {
-        throw new CobroReparacionError('La orden ya no está en ' + orden.coleccion + '. Volvé a buscarla.');
-      }
-      const datosOrden: any = ordenSnap.data();
+      const datos: any[] = ordenSnaps.map((snap, i) => {
+        if (!snap.exists()) {
+          throw new CobroReparacionError(varias
+            ? `La orden #${ordenes[i].numeroOrden} ya no está en ${ordenes[i].coleccion}. Volvé a buscarla.`
+            : 'La orden ya no está en ' + ordenes[i].coleccion + '. Volvé a buscarla.');
+        }
+        return snap.data();
+      });
 
       const datosCaja: any = cajaSnap.exists() ? cajaSnap.data() : null;
       if (!datosCaja || datosCaja.abierta === false) {
         throw new CobroReparacionError('La caja está cerrada. Abrí una caja para cobrar.');
       }
 
-      // ---------- Validación del saldo (con los datos actuales de la orden) ----------
-      const saldoActual = this.saldo(datosOrden);
-      if (saldoActual <= 0) {
-        throw new CobroReparacionError('Esta orden ya está totalmente pagada.');
+      // ---------- Validación de los saldos (con los datos actuales de las órdenes) ----------
+      const saldos = datos.map(d => this.saldo(d));
+      saldos.forEach((sal, i) => {
+        if (sal <= 0) {
+          throw new CobroReparacionError(varias ? `La orden #${ordenes[i].numeroOrden} ya está totalmente pagada.` : 'Esta orden ya está totalmente pagada.');
+        }
+      });
+      const totalSaldos = this.redondear(saldos.reduce((a, x) => a + x, 0));
+      if (importe > totalSaldos + 0.009) {
+        throw new CobroReparacionError(varias
+          ? `El monto supera el saldo pendiente de las órdenes (${this.moneda(totalSaldos)}).`
+          : `El monto supera el saldo pendiente (${this.moneda(totalSaldos)}).`);
       }
-      if (importe > saldoActual + 0.009) {
-        throw new CobroReparacionError(`El monto supera el saldo pendiente (${this.moneda(saldoActual)}).`);
-      }
-      saldoRestante = this.redondear(saldoActual - importe);
+      const reparto = repartirCobroOrdenes(saldos, importe, descuento);
+      if (!reparto.partes) throw new CobroReparacionError(reparto.error || 'No se pudo repartir el cobro.');
+      const partes = reparto.partes;
+      saldoRestante = this.redondear(totalSaldos - importe);
 
-      // ---------- Mano de obra / repuestos (con los datos actuales de la orden) ----------
-      const desglose = imputarCobroReparacion(datosOrden, importe, descuento);
-      venta.desglose = desglose;
+      // ---------- Mano de obra / repuestos de cada orden ----------
+      const desgloses = partes.map((p, i) => imputarCobroReparacion(datos[i], p.importe, p.descuento));
+      venta.desglose = varias
+        ? sumarDesgloses(partes.map((p, i) => ({ desglose: desgloses[i], cobrado: p.cobrado })))
+        : desgloses[0];
+      venta.items = ordenes.map((o, i) => ({
+        productoId: null,
+        tipo: 'reparacion',
+        nombre: `Reparación orden #${o.numeroOrden} - ${datos[i].equipo || o.equipo || 'equipo'}`,
+        cantidad: 1,
+        precioUnitario: partes[i].importe,
+        subtotal: partes[i].importe
+      }));
+      if (varias) {
+        venta.ordenes = ordenes.map((o, i) => ({
+          id: o.id,
+          numeroOrden: o.numeroOrden ?? null,
+          equipo: datos[i].equipo || o.equipo || '',
+          imei: datos[i].imei || o.imei || '',
+          monto: partes[i].importe,
+          cobrado: partes[i].cobrado,
+          descuento: partes[i].descuento,
+          saldoRestante: this.redondear(saldos[i] - partes[i].importe),
+          entregada: entregar.has(o.id) && o.coleccion === 'Ordenes Pendientes'
+        }));
+      }
 
       // ---------- Escrituras ----------
       const ultimo = contadorSnap.exists() ? (Number((contadorSnap.data() as any).valor) || 0) : 0;
@@ -261,40 +339,45 @@ export class CobroReparacionesService {
       tx.set(contadorRef, { valor: venta.nroTicket }, { merge: true });
       tx.set(ventaRef, venta);
 
-      const cobro: CobroOrden = {
-        ventaId: ventaRef.id,
-        nroTicket: venta.nroTicket,
-        monto: importe,
-        cobrado,
-        descuento,
-        metodoPago,
-        pagos,
-        fecha: venta.fecha,
-        usuario,
-        cajero,
-        anulado: false,
-        desglose
-      };
-      const cobros = [...(datosOrden.cobros || []), cobro];
-      const datosPago = {
-        cobros,
-        totalPagado: this.redondear(this.totalPagado({ cobros })),
-        pagada: saldoRestante <= 0
-      };
+      entregadas = [];
+      ordenes.forEach((o, i) => {
+        const datosOrden = datos[i];
+        const cobro: CobroOrden = {
+          ventaId: ventaRef.id,
+          nroTicket: venta.nroTicket,
+          monto: partes[i].importe,
+          cobrado: partes[i].cobrado,
+          descuento: partes[i].descuento,
+          metodoPago,
+          pagos,
+          fecha: venta.fecha,
+          usuario,
+          cajero,
+          anulado: false,
+          desglose: desgloses[i]
+        };
+        const cobros = [...(datosOrden.cobros || []), cobro];
+        const restante = this.redondear(saldos[i] - partes[i].importe);
+        const datosPago = {
+          cobros,
+          totalPagado: this.redondear(this.totalPagado({ cobros })),
+          pagada: restante <= 0
+        };
 
-      if (entregar && orden.coleccion === 'Ordenes Pendientes') {
-        // Misma lógica que "Finalizar" en el taller: se mueve a Finalizadas
-        tx.set(doc(this.firestore, 'Ordenes Finalizadas', orden.id), {
-          ...datosOrden,
-          ...datosPago,
-          estado: 'Finalizado',
-          fechaEntrega: new Date()
-        });
-        tx.delete(ordenRef);
-        entregada = true;
-      } else {
-        tx.update(ordenRef, datosPago);
-      }
+        if (entregar.has(o.id) && o.coleccion === 'Ordenes Pendientes') {
+          // Misma lógica que "Finalizar" en el taller: se mueve a Finalizadas
+          tx.set(doc(this.firestore, 'Ordenes Finalizadas', o.id), {
+            ...datosOrden,
+            ...datosPago,
+            estado: 'Finalizado',
+            fechaEntrega: new Date()
+          });
+          tx.delete(ordenRefs[i]);
+          entregadas.push(o.numeroOrden);
+        } else {
+          tx.update(ordenRefs[i], datosPago);
+        }
+      });
 
       tx.update(cajaRef, { cantidadVentas: (Number(datosCaja.cantidadVentas) || 0) + 1 });
 
@@ -304,7 +387,7 @@ export class CobroReparacionesService {
       this.auditoria.registrarEnTransaccion(tx, registro);
     });
 
-    return { venta: { ...venta, id: ventaRef.id }, saldoRestante, entregada };
+    return { venta: { ...venta, id: ventaRef.id }, saldoRestante, entregadas };
   }
 
   private moneda(n: number): string {

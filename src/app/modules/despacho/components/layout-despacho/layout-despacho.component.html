@@ -443,15 +443,82 @@
                   <span class="input-group-text">$</span>
                   <input id="canjeMonto" type="number" min="0" step="0.01" class="form-control form-control-sm"
                     [(ngModel)]="canjeMonto" (ngModelChange)="mostrarErrorPago = false" placeholder="0">
+                  <button type="button" class="btn btn-sm btn-outline-primary ms-1 text-nowrap" (click)="abrirTasador()" title="Tasar el equipo con el tasador">
+                    🧮 Tasar
+                  </button>
+                </div>
+                <small *ngIf="canjeTasacion as t" class="text-muted d-block">
+                  Tasado: {{ t.modelo }} {{ t.capacidad }} · {{ textoUSD(t.totalUSD) }}<ng-container *ngIf="t.cotizacion"> × {{ t.cotizacion | currency:'ARS':'symbol-narrow':'1.0-2' }}</ng-container>
+                </small>
+              </div>
+              <div class="campo ancho d-flex align-items-end">
+                <div class="form-check mb-1">
+                  <input class="form-check-input" type="checkbox" id="canjeAlta" [(ngModel)]="canjeAlta" (ngModelChange)="mostrarErrorPago = false">
+                  <label class="form-check-label small" for="canjeAlta">
+                    Dar de alta el equipo en stock <span class="text-muted">(queda "En preparación")</span>
+                  </label>
                 </div>
               </div>
-              <div class="campo ancho">
+            </div>
+
+            <!-- Ficha del equipo usado (sin precios ni fotos: se cargan después en Gestiones → Equipos) -->
+            <ng-container *ngIf="canjeAlta; else sinAlta">
+              <div class="fila-campos">
+                <div class="campo ancho">
+                  <label for="canjeModelo" class="small mb-1">Modelo</label>
+                  <input id="canjeModelo" type="text" class="form-control form-control-sm" [(ngModel)]="canjeEquipo.modelo"
+                    maxlength="80" placeholder="Ej: 11 PRO" autocomplete="off" (ngModelChange)="mostrarErrorPago = false">
+                </div>
+                <div class="campo">
+                  <label for="canjeCapacidad" class="small mb-1">Capacidad</label>
+                  <select id="canjeCapacidad" class="form-select form-select-sm" [(ngModel)]="canjeEquipo.capacidad" (ngModelChange)="mostrarErrorPago = false">
+                    <option value="" disabled>Elegí…</option>
+                    <option *ngFor="let c of capacidadesCanje" [value]="c">{{ c }}</option>
+                  </select>
+                </div>
+                <div class="campo">
+                  <label for="canjeColor" class="small mb-1">Color</label>
+                  <input id="canjeColor" type="text" class="form-control form-control-sm" [(ngModel)]="canjeEquipo.color"
+                    maxlength="40" placeholder="Ej: NEGRO" autocomplete="off" (ngModelChange)="mostrarErrorPago = false">
+                </div>
+              </div>
+              <div class="fila-campos">
+                <div class="campo ancho">
+                  <label for="canjeImei" class="small mb-1">IMEI / Nº de serie</label>
+                  <input id="canjeImei" type="text" class="form-control form-control-sm" [(ngModel)]="canjeEquipo.imei"
+                    maxlength="24" autocomplete="off" (ngModelChange)="mostrarErrorPago = false">
+                  <div *ngIf="avisoImeiCanje" class="small text-warning-emphasis">{{ avisoImeiCanje }}</div>
+                </div>
+                <div class="campo">
+                  <label for="canjeBateria" class="small mb-1">Batería %</label>
+                  <input id="canjeBateria" type="number" min="0" max="100" class="form-control form-control-sm" [(ngModel)]="canjeEquipo.bateria"
+                    (ngModelChange)="mostrarErrorPago = false">
+                </div>
+                <div class="campo">
+                  <label for="canjeGrado" class="small mb-1">Grado</label>
+                  <select id="canjeGrado" class="form-select form-select-sm" [(ngModel)]="canjeEquipo.grado" (ngModelChange)="mostrarErrorPago = false">
+                    <option value="" disabled>Elegí…</option>
+                    <option *ngFor="let g of gradosCanje" [value]="g">{{ g }}</option>
+                  </select>
+                </div>
+              </div>
+              <div class="mb-1">
+                <label for="canjeObs" class="small mb-1">Observaciones <span class="text-muted">(opcional)</span></label>
+                <input id="canjeObs" type="text" class="form-control form-control-sm" [(ngModel)]="canjeEquipo.observaciones"
+                  maxlength="300" placeholder="Ej: pantalla con detalle, sin caja" autocomplete="off">
+              </div>
+              <div class="small text-muted">
+                Las fotos y los precios de venta se cargan después en <strong>Gestiones → Equipos</strong>: hasta publicarlo no se ve en la tienda ni se puede vender.
+              </div>
+            </ng-container>
+            <ng-template #sinAlta>
+              <div class="mb-1">
                 <label for="canjeDetalle" class="small mb-1">Equipo que entrega</label>
                 <input id="canjeDetalle" type="text" class="form-control form-control-sm" [(ngModel)]="canjeDetalle"
-                  [maxlength]="maxDetalleCanje" placeholder="Ej: iPhone 11 64 GB · IMEI 35…" autocomplete="off"
+                  [maxlength]="maxDetalleCanje" placeholder="Ej: iPhone 11 roto, para repuestos" autocomplete="off"
                   (ngModelChange)="mostrarErrorPago = false">
               </div>
-            </div>
+            </ng-template>
             <div class="small text-muted">No es dinero: no entra a la caja. Se descuenta de lo que hay que pagar.</div>
           </div>
 
@@ -470,17 +537,17 @@
           <div *ngIf="ventaCredito && clienteActual" class="bloque-credito">
             <div class="fila-campos">
               <div class="campo">
-                <label for="creditoPrecio" class="small mb-1">Precio financiado</label>
+                <label for="creditoPrecio" class="small mb-1">Precio de contado</label>
                 <div class="paga-con">
                   <span class="input-group-text">$</span>
                   <input id="creditoPrecio" type="number" min="0" step="0.01" class="form-control form-control-sm"
-                    [(ngModel)]="creditoPrecio" (ngModelChange)="mostrarErrorPago = false" [placeholder]="'' + resumen.totalBase">
+                    [(ngModel)]="creditoPrecio" (ngModelChange)="mostrarErrorPago = false" [placeholder]="placeholderContado">
                 </div>
                 <div class="small text-muted">
-                  Contado: {{ resumen.totalBase | currency }}
-                  <ng-container *ngIf="resumen.credito?.recargo">
-                    · <strong>{{ resumen.credito!.recargo > 0 ? '+' : '' }}{{ porcentajeRecargo(resumen.credito!) }}%</strong>
+                  <ng-container *ngIf="canjeEnCredito > 0; else soloLista">
+                    Equipo {{ resumen.totalBase | currency }} − canje {{ canjeEnCredito | currency }}
                   </ng-container>
+                  <ng-template #soloLista>Lista: {{ resumen.totalBase | currency }}</ng-template>
                   <button *ngIf="creditoPrecio !== null" type="button" class="btn btn-sm btn-link p-0 ms-1" (click)="restablecerPrecioCredito()">Restablecer</button>
                 </div>
               </div>
@@ -494,11 +561,14 @@
               </div>
             </div>
 
-            <label class="small mb-1 d-block">Cuotas</label>
-            <div class="btn-group btn-group-sm cuotas" role="group" aria-label="Cantidad de cuotas">
-              <button *ngFor="let n of opcionesCuotas" type="button" class="btn"
-                [class.btn-primary]="creditoCuotas === n" [class.btn-outline-secondary]="creditoCuotas !== n"
-                (click)="creditoCuotas = n; mostrarErrorPago = false">{{ n }}</button>
+            <label class="small mb-1 d-block">Plan de cuotas <span class="text-muted">(el interés es sobre lo que se financia)</span></label>
+            <div class="planes-cuotas" role="group" aria-label="Plan de cuotas">
+              <button *ngFor="let p of planesCredito" type="button" class="plan"
+                [class.elegido]="creditoCuotas === p.cuotas" (click)="creditoCuotas = p.cuotas; mostrarErrorPago = false">
+                <strong>{{ p.cuotas }}</strong> <span>cuota{{ p.cuotas > 1 ? 's' : '' }}</span>
+                <small>+{{ p.interes }}%</small>
+                <small *ngIf="cuotaDePlan(p) as q" class="valor">{{ q | currency:'ARS':'symbol-narrow':'1.0-0' }}</small>
+              </button>
             </div>
 
             <div class="fila-campos mt-2">
@@ -517,9 +587,14 @@
 
             <!-- Plan de pagos -->
             <div *ngIf="resumen.credito as c" class="plan-credito mt-2">
-              <div class="d-flex justify-content-between"><span>Precio financiado</span><strong>{{ c.precioFinanciado | currency }}</strong></div>
-              <div *ngIf="c.canje" class="d-flex justify-content-between text-muted"><span>− Plan canje</span><span>{{ c.canje | currency }}</span></div>
+              <ng-container *ngIf="c.canje">
+                <div class="d-flex justify-content-between text-muted"><span>Precio del equipo</span><span>{{ c.precioContado | currency }}</span></div>
+                <div class="d-flex justify-content-between text-muted"><span>− Plan canje</span><span>{{ c.canje | currency }}</span></div>
+              </ng-container>
+              <div class="d-flex justify-content-between"><span>Precio de contado</span><span>{{ c.precioContado - c.canje | currency }}</span></div>
               <div *ngIf="c.entrega" class="d-flex justify-content-between text-muted"><span>− Entrega hoy</span><span>{{ c.entrega | currency }}</span></div>
+              <div class="d-flex justify-content-between"><span>A financiar</span><span>{{ c.aFinanciar | currency }}</span></div>
+              <div class="d-flex justify-content-between text-muted"><span>+ Interés {{ c.interes }}% ({{ c.cuotas.length }} cuota{{ c.cuotas.length > 1 ? 's' : '' }})</span><span>{{ c.recargo | currency }}</span></div>
               <div class="d-flex justify-content-between fw-bold border-top mt-1 pt-1"><span>Financia</span><span>{{ c.saldo | currency }}</span></div>
               <table class="table table-sm mb-0 mt-1">
                 <tbody>
@@ -533,7 +608,9 @@
             </div>
           </div>
 
-          <div *ngIf="(usaCanje || ventaCredito) && resumen.errorPago && resumen.errorPago !== 'Elegí el método de pago.'"
+          <!-- (sin cliente ya lo avisa la leyenda de arriba: no se repite) -->
+          <div *ngIf="(usaCanje || ventaCredito) && resumen.errorPago && resumen.errorPago !== 'Elegí el método de pago.'
+                      && !(ventaCredito && !clienteActual)"
                class="text-danger small mt-2">{{ resumen.errorPago }}</div>
         </div>
       </div>
@@ -668,6 +745,10 @@
             <span>Descuento equipos ({{ resumen.porcentajeEquipos }}%)</span>
             <span>-{{ resumen.descuentoEquipos | currency }}</span>
           </div>
+          <div *ngIf="resumen.canje" class="d-flex justify-content-between small text-success">
+            <span>📲 Plan canje</span>
+            <span>-{{ resumen.canje.monto | currency }}</span>
+          </div>
           <ng-container *ngIf="!resumen.errorPago">
             <ng-container *ngFor="let p of resumen.pagos">
               <div *ngIf="p.descuento > 0" class="d-flex justify-content-between small text-success">
@@ -677,31 +758,42 @@
             </ng-container>
           </ng-container>
           <hr class="my-2">
-          <ng-container *ngIf="!resumen.credito">
+          <ng-container *ngIf="!ventaCredito">
             <div class="d-flex justify-content-between align-items-center">
               <h5 class="m-0">Total a pagar:</h5>
-              <div class="text-success fw-bold fs-4">{{ resumen.totalFinal | currency }}</div>
+              <div class="text-success fw-bold fs-4">{{ totalAPagar | currency }}</div>
             </div>
-            <div *ngIf="resumen.canje && !resumen.errorPago" class="d-flex justify-content-between small text-muted">
-              <span>📲 Plan canje</span><span>−{{ resumen.canje.monto | currency }}</span>
+            <div *ngIf="pagoDividido && !resumen.errorPago" class="small mt-1">
+              <ng-container *ngFor="let p of resumen.pagos">
+                <div *ngIf="p.metodo !== 'canje'" class="d-flex justify-content-between text-muted">
+                  <span>{{ nombreMetodo(p.metodo) }}</span><span>{{ p.monto | currency }}</span>
+                </div>
+              </ng-container>
             </div>
-            <div *ngIf="(pagoDividido || resumen.canje) && !resumen.errorPago" class="small mt-1">
-              <div *ngFor="let p of resumen.pagos" class="d-flex justify-content-between text-muted">
-                <span>{{ nombreMetodo(p.metodo) }}</span><span>{{ p.monto | currency }}</span>
-              </div>
+          </ng-container>
+          <!-- Crédito sin plan elegido todavía: lo que ya se sabe -->
+          <ng-container *ngIf="ventaCredito && !resumen.credito">
+            <div class="d-flex justify-content-between align-items-center">
+              <h5 class="m-0">Precio de contado:</h5>
+              <div class="fw-bold fs-5">{{ contadoConCanje | currency }}</div>
             </div>
+            <div class="d-flex justify-content-between align-items-center" *ngIf="creditoEntrega">
+              <h5 class="m-0">Paga hoy:</h5>
+              <div class="text-success fw-bold fs-4">{{ creditoEntrega | currency }}</div>
+            </div>
+            <div class="small text-muted text-end">Elegí el plan de cuotas para ver el total con interés.</div>
           </ng-container>
           <ng-container *ngIf="resumen.credito as c">
             <div class="d-flex justify-content-between align-items-center">
-              <h5 class="m-0">Precio financiado:</h5>
-              <div class="fw-bold fs-5">{{ c.precioFinanciado | currency }}</div>
+              <h5 class="m-0">Total a pagar:</h5>
+              <div class="fw-bold fs-5" title="Entrega + cuotas (con el interés del plan)">{{ totalAPagar | currency }}</div>
             </div>
             <div class="d-flex justify-content-between align-items-center">
               <h5 class="m-0">Paga hoy:</h5>
               <div class="text-success fw-bold fs-4">{{ c.entrega | currency }}</div>
             </div>
             <div class="small text-muted text-end">
-              🏠 {{ c.cuotas.length }} cuota{{ c.cuotas.length > 1 ? 's' : '' }} de {{ c.cuotas[0].importe | currency }}{{ c.canje ? ' · canje ' : '' }}{{ c.canje ? (c.canje | currency) : '' }}
+              🏠 {{ c.cuotas.length }} cuota{{ c.cuotas.length > 1 ? 's' : '' }} de {{ c.cuotas[0].importe | currency }}
             </div>
           </ng-container>
           <div *ngIf="!resumen.credito && resumen.subtotal - resumen.totalFinal > 0.004" class="text-success small text-end">
@@ -990,7 +1082,7 @@
       <h4 class="m-0">🧾 Tickets</h4>
       <button class="btn btn-sm btn-outline-secondary" (click)="cerrarBuscadorTickets()">✕ Cerrar</button>
     </div>
-    <app-tickets [embebido]="true" [sucursalInicial]="selectedSucursal?.id || null"></app-tickets>
+    <app-tickets [embebido]="true" [sucursalInicial]="selectedSucursal?.id || null" [caja]="cajaActiva"></app-tickets>
   </div>
 </div>
 
@@ -1025,7 +1117,10 @@
         <tr *ngFor="let o of repResultados" [class.table-active]="repOrden?.id === o.id">
           <td>#{{ o.numeroOrden }}</td>
           <td>{{ o.equipo }}</td>
-          <td>{{ o.nombreCliente }} {{ o.apellidoCliente }}</td>
+          <td>
+            {{ o.nombreCliente }} {{ o.apellidoCliente }}
+            <span *ngIf="o.esGremio" class="badge badge-gremio ms-1" [title]="'Gremio: ' + (nombreGremio(o) || 'sin nombre')">🏛️ Gremio</span>
+          </td>
           <td><span class="badge" [class.bg-warning]="o.coleccion === 'Ordenes Pendientes'" [class.text-dark]="o.coleccion === 'Ordenes Pendientes'"
               [class.bg-secondary]="o.coleccion !== 'Ordenes Pendientes'">{{ o.coleccion === 'Ordenes Pendientes' ? (o.estado || 'Pendiente') : 'Entregada' }}</span></td>
           <td class="text-end">{{ repSaldo(o) | currency }}</td>
@@ -1049,6 +1144,16 @@
             {{ repOrden.coleccion === 'Ordenes Pendientes' ? (repOrden.estado || 'Pendiente') : 'Entregada' }}
           </span>
         </div>
+      </div>
+
+      <!-- 🏛️ ¿Cliente del gremio? -->
+      <div class="tipo-cliente-orden mt-2" [class.es-gremio]="repOrden.esGremio">
+        <ng-container *ngIf="repOrden.esGremio; else particular">
+          🏛️ <strong>Cliente del gremio</strong>
+          <span *ngIf="nombreGremio(repOrden)"> · {{ nombreGremio(repOrden) }}</span>
+          <span *ngIf="!nombreGremio(repOrden)" class="text-muted"> · sin nombre cargado</span>
+        </ng-container>
+        <ng-template #particular>👤 Cliente particular <span class="text-muted">(no es del gremio)</span></ng-template>
       </div>
 
       <table class="table table-sm mt-2 mb-2">
@@ -1080,9 +1185,28 @@
       </div>
 
       <ng-container *ngIf="repSaldo(repOrden) > 0">
+        <!-- 🔧 Otras órdenes del mismo cliente (mismo DNI / CUIT): se cobran juntas en un solo ticket -->
+        <div *ngIf="repBuscandoOtras" class="small text-muted mb-2"><span class="spinner-border spinner-border-sm"></span> Buscando otras órdenes del cliente…</div>
+        <div *ngIf="repOtras.length" class="otras-ordenes mb-2">
+          <div class="small fw-bold mb-1">Otras órdenes de este cliente con saldo <span class="fw-normal text-muted">— tildá las que paga ahora</span></div>
+          <label *ngFor="let o of repOtras" class="otra-orden" [class.elegida]="repIncluida(o)">
+            <input type="checkbox" class="form-check-input m-0" [checked]="repIncluida(o)" (change)="alternarOrden(o)"
+              [disabled]="repCobrando || (!repIncluida(o) && repOrdenesCobro.length >= maxOrdenesPorCobro)">
+            <span class="flex-grow-1">
+              <strong>#{{ o.numeroOrden }}</strong> · {{ o.equipo }}
+              <span class="badge ms-1" [class.bg-warning]="o.coleccion === 'Ordenes Pendientes'" [class.text-dark]="o.coleccion === 'Ordenes Pendientes'"
+                [class.bg-secondary]="o.coleccion !== 'Ordenes Pendientes'">{{ o.coleccion === 'Ordenes Pendientes' ? (o.estado || 'Pendiente') : 'Entregada' }}</span>
+            </span>
+            <span class="text-end">{{ repSaldo(o) | currency }}</span>
+          </label>
+          <div *ngIf="repVarias" class="d-flex justify-content-between fw-bold mt-1 px-1">
+            <span>Total de {{ repOrdenesCobro.length }} órdenes</span><span>{{ repSaldoTotal | currency }}</span>
+          </div>
+        </div>
+
         <div class="row g-2 align-items-end">
           <div class="col-sm-5">
-            <label class="form-label small mb-1">Saldo a cancelar</label>
+            <label class="form-label small mb-1">{{ repVarias ? 'Total a cancelar' : 'Saldo a cancelar' }}</label>
             <input type="number" min="0" step="0.01" class="form-control form-control-lg" [(ngModel)]="repMonto">
           </div>
         </div>
@@ -1192,16 +1316,29 @@
             </div>
           </div>
         </div>
-        <div *ngIf="repMonto && repMonto > repSaldo(repOrden) + 0.009" class="text-danger small mt-1">
-          El monto no puede superar el saldo pendiente.
+        <div *ngIf="repMonto && repMonto > repSaldoTotal + 0.009" class="text-danger small mt-1">
+          El monto no puede superar el saldo pendiente{{ repVarias ? ' de las órdenes' : '' }}.
         </div>
-        <div *ngIf="repMonto && repMonto < repSaldo(repOrden) - 0.009" class="text-info small mt-1">
-          Cobro parcial (seña): queda un saldo de {{ repSaldo(repOrden) - repMonto | currency }}.
+        <div *ngIf="repErrorReparto" class="text-danger small mt-1">
+          {{ repErrorReparto }} Tiene que pagar más de {{ repSaldoTotal - repSaldo(repUltimaOrden) | currency }}.
+        </div>
+        <div *ngIf="repMonto && repMonto < repSaldoTotal - 0.009 && !repErrorReparto" class="text-info small mt-1">
+          <ng-container *ngIf="!repVarias">Cobro parcial (seña): queda un saldo de {{ repSaldoTotal - repMonto | currency }}.</ng-container>
+          <ng-container *ngIf="repVarias">Pago parcial: las demás se cancelan completas y la orden #{{ repUltimaOrden?.numeroOrden }}
+            queda con un saldo de {{ repSaldoTotal - repMonto | currency }}.</ng-container>
         </div>
 
-        <div class="form-check mt-2" *ngIf="repOrden.coleccion === 'Ordenes Pendientes'">
+        <div class="form-check mt-2" *ngIf="!repVarias && repOrden.coleccion === 'Ordenes Pendientes'">
           <input class="form-check-input" type="checkbox" id="repEntregar" [(ngModel)]="repEntregar">
           <label class="form-check-label" for="repEntregar">Entregar el equipo (la orden pasa a Finalizadas)</label>
+        </div>
+        <div class="mt-2" *ngIf="repVarias">
+          <ng-container *ngFor="let o of repOrdenesCobro">
+            <div class="form-check" *ngIf="o.coleccion === 'Ordenes Pendientes'">
+              <input class="form-check-input" type="checkbox" [id]="'repEntregar-' + o.id" [checked]="repEntrega(o)" (change)="alternarEntrega(o)">
+              <label class="form-check-label" [for]="'repEntregar-' + o.id">Entregar el equipo de la orden #{{ o.numeroOrden }} ({{ o.equipo }})</label>
+            </div>
+          </ng-container>
         </div>
 
         <div class="mt-3">
@@ -1464,6 +1601,7 @@
           <button type="button" class="item-cuenta" *ngFor="let c of cuCreditosFiltrados" (click)="elegirCredito(c)">
             <span>
               <strong>{{ c.cliente.nombre }}</strong>
+              <span *ngIf="estaBloqueado(c)" class="badge bg-danger ms-1">🔒 Bloqueado</span>
               <small class="text-muted d-block">{{ c.equipos[0]?.nombre || c.detalle }}<ng-container *ngIf="c.cliente.dni"> · DNI {{ c.cliente.dni }}</ng-container></small>
             </span>
             <span class="text-end">
@@ -1487,8 +1625,11 @@
           <strong>{{ cuCredito.cliente.nombre }}</strong>
           <div class="small text-muted">
             {{ cuCredito.equipos[0]?.nombre || cuCredito.detalle }}
-            · compra {{ cuCredito.fecha | date:'dd/MM/yy' }} (ticket {{ nroTicketTexto(cuCredito.nroTicket) }})
-            <button type="button" class="btn btn-link btn-sm p-0 ms-1" (click)="reimprimirComprobante(cuCredito.ventaId)">ver</button>
+            <ng-container *ngIf="cuCredito.origen !== 'manual'; else creditoManual">
+              · compra {{ cuCredito.fecha | date:'dd/MM/yy' }} (ticket {{ nroTicketTexto(cuCredito.nroTicket) }})
+              <button type="button" class="btn btn-link btn-sm p-0 ms-1" (click)="reimprimirComprobante(cuCredito.ventaId)">ver</button>
+            </ng-container>
+            <ng-template #creditoManual>· entrega {{ cuCredito.fecha | date:'dd/MM/yy' }} (crédito anterior al sistema)</ng-template>
           </div>
           <div class="small text-muted" *ngIf="cuCredito.cliente.telefono">📞 {{ cuCredito.cliente.telefono }}</div>
         </div>
@@ -1498,11 +1639,147 @@
           <div class="small text-danger" *ngIf="s.montoVencido > 0">Vencido: {{ s.montoVencido | currency }}</div>
         </div>
       </div>
-      <button class="btn btn-link btn-sm p-0" (click)="volverAListaCreditos()" [disabled]="cuCobrando">← Elegir otro crédito</button>
+      <div *ngIf="estaBloqueado(cuCredito)" class="alert alert-danger py-2 px-3 small mt-2 mb-1" role="alert">
+        <strong>🔒 Crédito bloqueado</strong> · {{ cuCredito.bloqueo?.motivo }}
+        <ng-container *ngIf="ultimaCarta(cuCredito)?.observacion"> ({{ ultimaCarta(cuCredito)?.observacion }})</ng-container>.
+        Se le puede cobrar igual; para desbloquearlo, Gestiones → Créditos de la casa.
+      </div>
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <button class="btn btn-link btn-sm p-0" (click)="volverAListaCreditos()" [disabled]="cuCobrando || rfProcesando">← Elegir otro crédito</button>
+        <!-- 🔁 Cobrar una cuota o refinanciar el saldo -->
+        <div class="btn-group btn-group-sm" role="group" aria-label="Qué hacer con el crédito">
+          <button type="button" class="btn" [class.btn-primary]="cuModo === 'cobro'" [class.btn-outline-primary]="cuModo !== 'cobro'"
+            (click)="cambiarModoCuota('cobro')">💵 Cobrar cuota</button>
+          <button type="button" class="btn" [class.btn-primary]="cuModo === 'refinanciar'" [class.btn-outline-primary]="cuModo !== 'refinanciar'"
+            (click)="cambiarModoCuota('refinanciar')">🔁 Refinanciar</button>
+        </div>
+      </div>
 
       <div *ngIf="cuCargandoDetalle" class="text-muted small mt-2"><span class="spinner-border spinner-border-sm"></span> Leyendo el crédito…</div>
 
+      <!-- 🔁 REFINANCIACIÓN -->
+      <ng-container *ngIf="cuModo === 'refinanciar' && !cuCargandoDetalle && cuSituacion as s">
+        <div class="refinanciacion mt-2">
+          <div class="small text-muted mb-2">
+            Se refinancia el saldo (más el recargo por atraso, si corresponde) menos lo que entregue ahora, con el interés del plan.
+            El crédito actual queda como refinanciado y se crea uno nuevo.
+          </div>
+          <table class="table table-sm mb-2">
+            <tbody>
+              <tr><td>Saldo adeudado <small class="text-muted">({{ cuCredito.cantidadCuotas - s.cuotasPagadas }} cuota(s) sin pagar)</small></td>
+                <td class="text-end">{{ s.saldo | currency }}</td></tr>
+              <tr>
+                <td>
+                  Recargo por atraso
+                  <div class="small" *ngIf="rfRecargoSugerido.detalle.length">
+                    <span class="text-danger" *ngFor="let d of rfRecargoSugerido.detalle; let ult = last">
+                      Cuota {{ d.numero }}: {{ d.dias }} d × {{ recargoDiario }}% = {{ d.recargo | currency:'ARS':'symbol-narrow':'1.0-0' }}{{ ult ? '' : ' · ' }}</span>
+                    <span *ngIf="rfRecargoEditado" class="text-muted"> (cambiado a mano)</span>
+                  </div>
+                </td>
+                <td class="text-end">
+                  <div class="paga-con justify-content-end">
+                    <span class="input-group-text">$</span>
+                    <input type="number" min="0" step="0.01" class="form-control form-control-sm" style="max-width: 130px"
+                      [ngModel]="rfRecargoValor" (ngModelChange)="cambiarRecargoRefinanciacion($event)" placeholder="0" aria-label="Recargo por atraso">
+                  </div>
+                  <button type="button" class="btn btn-link btn-sm p-0" *ngIf="rfRecargoValor" (click)="cambiarRecargoRefinanciacion(null)">Sacar recargo</button>
+                  <button type="button" class="btn btn-link btn-sm p-0 ms-2" *ngIf="rfRecargoEditado" (click)="recalcularRecargoRefinanciacion()">Recalcular</button>
+                </td>
+              </tr>
+              <tr>
+                <td>Entrega <small class="text-muted">(lo que paga ahora, opcional)</small></td>
+                <td class="text-end">
+                  <div class="paga-con justify-content-end">
+                    <span class="input-group-text">$</span>
+                    <input type="number" min="0" step="0.01" class="form-control form-control-sm" style="max-width: 130px"
+                      [(ngModel)]="rfEntrega" placeholder="0" aria-label="Entrega">
+                  </div>
+                </td>
+              </tr>
+              <tr class="fw-bold" *ngIf="rfResultado.calculo as c">
+                <td>A refinanciar</td><td class="text-end">{{ c.aRefinanciar | currency }}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <label class="form-label small mb-1">¿En cuántas cuotas?</label>
+          <div class="planes-cuotas" role="group" aria-label="Plan de la refinanciación">
+            <button *ngFor="let p of planesCredito" type="button" class="plan" [class.elegido]="rfCuotas === p.cuotas"
+              (click)="rfCuotas = p.cuotas" [disabled]="cuotaRefinanciacion(p.cuotas) === null">
+              <strong>{{ p.cuotas }}</strong> <span>cuota{{ p.cuotas > 1 ? 's' : '' }}</span>
+              <small>+{{ p.interes }}%</small>
+              <small *ngIf="cuotaRefinanciacion(p.cuotas) as v" class="valor">{{ v | currency:'ARS':'symbol-narrow':'1.0-0' }}</small>
+            </button>
+          </div>
+
+          <div *ngIf="rfResultado.calculo as c" class="resumen-descuento mt-2">
+            <div class="d-flex justify-content-between fw-bold">
+              <span>{{ c.cuotas.length }} cuota{{ c.cuotas.length > 1 ? 's' : '' }} de {{ c.cuotas[0].importe | currency }}</span>
+              <span>Total {{ c.financiado | currency }}</span>
+            </div>
+            <div class="small text-muted">
+              Vencen del 1 al 10 de cada mes, de {{ mesCuota(c.cuotas[0]) }} a {{ mesCuota(c.cuotas[c.cuotas.length - 1]) }}
+              <ng-container *ngIf="c.cuotas.length > 1 && c.cuotas[c.cuotas.length - 1].importe !== c.cuotas[0].importe">
+                · la última de {{ c.cuotas[c.cuotas.length - 1].importe | currency }}</ng-container>
+            </div>
+          </div>
+          <div *ngIf="estaBloqueado(cuCredito)" class="small text-danger mt-1">🔒 El crédito nuevo sigue bloqueado (carta documento).</div>
+
+          <!-- Medio(s) de pago de la entrega -->
+          <div class="mt-2" *ngIf="rfEntregaValor > 0">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <label class="form-label small m-0">{{ rfLineas.length > 1 ? 'Medios de pago de la entrega' : 'Con qué paga la entrega' }}</label>
+              <button *ngIf="rfLineas.length < metodosPago.length" type="button" class="btn btn-link btn-sm p-0" (click)="agregarMedioPago(rfLineas)">
+                <i class="fas fa-plus"></i> {{ rfLineas.length > 1 ? 'Agregar otro medio' : 'Pagar con varios medios' }}
+              </button>
+            </div>
+            <div class="linea-pago" *ngFor="let l of rfLineas; let i = index; let ultima = last" [class.dividido]="rfLineas.length > 1">
+              <div class="btn-group btn-group-sm medios" role="group">
+                <button *ngFor="let m of metodosPago" type="button" class="btn"
+                  [class.btn-primary]="l.metodo === m.valor" [class.btn-outline-secondary]="l.metodo !== m.valor"
+                  (click)="elegirMetodo(rfLineas, i, m.valor)">{{ m.icono }} {{ m.nombre }}</button>
+              </div>
+              <ng-container *ngIf="rfLineas.length > 1">
+                <div class="monto-pago" *ngIf="!ultima">
+                  <span class="input-group-text">$</span>
+                  <input type="number" min="0" step="0.01" class="form-control form-control-sm" placeholder="Monto" [(ngModel)]="l.monto">
+                </div>
+                <div class="monto-pago resto" *ngIf="ultima">
+                  <span class="small text-muted me-1">resto</span>
+                  <strong>{{ (rfPagos.error ? 0 : rfPagos.pagos[i]?.monto) | currency }}</strong>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-danger quitar" (click)="quitarMedioPago(rfLineas, i)" title="Quitar este medio">
+                  <i class="fas fa-times"></i>
+                </button>
+              </ng-container>
+            </div>
+            <div *ngIf="pagaConTarjeta(rfLineas)" class="detalle-tarjeta">
+              <label for="rfDetalleTarjeta" class="small mb-1">💳 Nº de operación / detalle de la tarjeta <span class="text-muted">(opcional)</span></label>
+              <input id="rfDetalleTarjeta" type="text" class="form-control form-control-sm" [(ngModel)]="rfDetalleTarjeta"
+                [maxlength]="maxDetallePago" placeholder="Ej: Op. 004512 · Visa débito" autocomplete="off">
+            </div>
+          </div>
+
+          <div class="mt-3">
+            <label class="form-label small mb-1" for="cajeroRefinanciacion">Cajero</label>
+            <select id="cajeroRefinanciacion" class="form-select" [(ngModel)]="cuCajeroId" [disabled]="!cajeros.length" [class.is-invalid]="!cajeros.length">
+              <option [ngValue]="null" disabled>{{ cajeros.length ? 'Elegí quién lo hace…' : 'No hay cajeros cargados' }}</option>
+              <option *ngFor="let c of cajeros" [ngValue]="c.id">{{ c.apellido }}, {{ c.nombre }}</option>
+            </select>
+          </div>
+
+          <div *ngIf="rfError && (rfCuotas || rfEntrega)" class="small text-danger mt-2">{{ rfError }}</div>
+          <div class="text-end mt-3">
+            <button class="btn btn-success" (click)="confirmarRefinanciacion()" [disabled]="!!rfError || rfProcesando || !rfResultado.calculo">
+              {{ rfProcesando ? 'Refinanciando…' : '🔁 Refinanciar' }}
+            </button>
+          </div>
+        </div>
+      </ng-container>
+
       <!-- Cuotas -->
+      <ng-container *ngIf="cuModo === 'cobro'">
       <table *ngIf="!cuCargandoDetalle" class="table table-sm mt-2 mb-2 tabla-pendientes">
         <thead>
           <tr><th>Cuota</th><th>Vence</th><th class="text-end">Falta</th><th class="text-end">Se paga</th></tr>
@@ -1541,14 +1818,23 @@
         </div>
         <div *ngIf="cuMonto && cuMonto > s.saldo + 0.009" class="text-danger small mt-1">El monto no puede superar lo que debe.</div>
 
-        <!-- Recargo por mora (opcional, lo decide el cajero) -->
+        <!-- Recargo por atraso: se calcula solo (1% por día corrido) y el cajero lo puede cambiar o borrar -->
         <div class="descuento-efectivo mt-2" [class.con-error]="cuRecargoInvalido">
-          <label for="cuRecargo" class="small mb-0">Recargo fuera de término <span class="text-muted">(opcional)</span></label>
+          <label for="cuRecargo" class="small mb-0">Recargo fuera de término</label>
           <div class="paga-con">
             <span class="input-group-text">$</span>
-            <input id="cuRecargo" type="number" min="0" step="0.01" class="form-control form-control-sm" [(ngModel)]="cuRecargo" placeholder="0">
+            <input id="cuRecargo" type="number" min="0" step="0.01" class="form-control form-control-sm"
+              [ngModel]="cuRecargoValor" (ngModelChange)="cambiarRecargo($event)" placeholder="0">
           </div>
-          <span *ngIf="s.cuotasVencidas" class="small text-danger">{{ s.cuotasVencidas }} cuota(s) vencida(s), {{ s.diasAtraso }} días de atraso</span>
+          <button *ngIf="cuRecargoEditado" type="button" class="btn btn-link btn-sm p-0" (click)="recalcularRecargo()"
+            [title]="'Volver al calculado: ' + (cuRecargoSugerido.total | currency)">Recalcular</button>
+          <div class="small w-100" *ngIf="cuRecargoSugerido.detalle.length">
+            <span class="text-danger" *ngFor="let d of cuRecargoSugerido.detalle; let ult = last">
+              Cuota {{ d.numero }}: {{ d.dias }} día{{ d.dias > 1 ? 's' : '' }} × {{ recargoDiario }}% = {{ d.recargo | currency:'ARS':'symbol-narrow':'1.0-0' }}{{ ult ? '' : ' · ' }}
+            </span>
+            <span *ngIf="cuRecargoEditado" class="text-muted"> (cambiado a mano)</span>
+          </div>
+          <span *ngIf="s.cuotasVencidas && !cuRecargoSugerido.detalle.length" class="small text-danger">{{ s.cuotasVencidas }} cuota(s) vencida(s), {{ s.diasAtraso }} días de atraso</span>
           <div *ngIf="cuRecargoInvalido" class="text-danger small w-100">El recargo no puede ser negativo.</div>
         </div>
 
@@ -1589,11 +1875,11 @@
           </div>
 
           <div class="resumen-descuento" *ngIf="cuTotal > 0">
-            <div class="d-flex justify-content-between small text-muted" *ngIf="cuRecargo && !cuRecargoInvalido">
+            <div class="d-flex justify-content-between small text-muted" *ngIf="cuRecargoValor && !cuRecargoInvalido">
               <span>Cuotas</span><span>{{ cuMonto | currency }}</span>
             </div>
-            <div class="d-flex justify-content-between small text-muted" *ngIf="cuRecargo && !cuRecargoInvalido">
-              <span>Recargo</span><span>{{ cuRecargo | currency }}</span>
+            <div class="d-flex justify-content-between small text-muted" *ngIf="cuRecargoValor && !cuRecargoInvalido">
+              <span>Recargo</span><span>{{ cuRecargoValor | currency }}</span>
             </div>
             <div class="d-flex justify-content-between fw-bold">
               <span>El cliente paga</span><span>{{ cuTotal | currency }}</span>
@@ -1639,6 +1925,7 @@
           </button>
         </div>
       </ng-container>
+      </ng-container>
 
       <!-- Pagos anteriores (comprobantes guardados) -->
       <div *ngIf="!cuCargandoDetalle && cuPagosAnteriores.length" class="mt-3">
@@ -1646,10 +1933,11 @@
         <table class="table table-sm mb-0">
           <tbody>
             <tr *ngFor="let p of cuPagosAnteriores" [class.text-decoration-line-through]="p.anulado" [class.text-muted]="p.anulado">
-              <td class="small">{{ p.fecha | date:'dd/MM/yy HH:mm' }} · ticket {{ nroTicketTexto(p.nroTicket) }}</td>
+              <td class="small" *ngIf="!p.anterior">{{ p.fecha | date:'dd/MM/yy HH:mm' }} · ticket {{ nroTicketTexto(p.nroTicket) }}</td>
+              <td class="small" *ngIf="p.anterior">{{ p.fecha | date:'dd/MM/yy' }} · pago anterior</td>
               <td class="small">cuota(s) {{ cuotasDePago(p) }}<span *ngIf="p.anulado"> · ANULADO</span></td>
               <td class="text-end small">{{ p.cobrado | currency }}</td>
-              <td class="text-end"><button type="button" class="btn btn-sm btn-link p-0" (click)="reimprimirComprobante(p.ventaId)">🖨</button></td>
+              <td class="text-end"><button *ngIf="!p.anterior" type="button" class="btn btn-sm btn-link p-0" (click)="reimprimirComprobante(p.ventaId)">🖨</button></td>
             </tr>
           </tbody>
         </table>
@@ -1702,5 +1990,18 @@
         </div>
       </div>
     </ng-container>
+  </div>
+</div>
+
+<!-- 🧮 Tasador del Plan canje -->
+<div *ngIf="mostrarTasador" class="tasador-overlay" (click)="mostrarTasador = false">
+  <div class="tasador-modal" (click)="$event.stopPropagation()" role="dialog" aria-label="Tasar equipo">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h4 class="m-0">🧮 Tasar equipo usado</h4>
+      <button type="button" class="btn-close" (click)="mostrarTasador = false" aria-label="Cerrar"></button>
+    </div>
+    <div *ngIf="cargandoTasador" class="small text-muted"><span class="spinner-border spinner-border-sm"></span> Cargando modelos…</div>
+    <app-tasar-equipo *ngIf="!cargandoTasador" [modelos]="modelosTasador" [cotizacion]="cotizacionEquipos"
+      textoBoton="Usar este valor en el canje" (usar)="usarTasacion($event)" (cancelar)="mostrarTasador = false"></app-tasar-equipo>
   </div>
 </div>

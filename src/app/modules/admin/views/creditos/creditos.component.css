@@ -326,3 +326,91 @@ tr.fila-apagada { opacity: 0.6; }
   padding-top: 12px;
   border-top: 1px solid var(--borde);
 }
+
+
+/* ---------- Planes de cuotas e interés ---------- */
+.barra-planes { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+.panel-planes {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  background: #f8fafd;
+}
+.tabla-planes { background: #fff; }
+.tabla-planes .campo-cuotas { width: 80px; }
+.tabla-planes .campo-interes { width: 130px; }
+.tabla-planes .ejemplo { width: 110px; margin-left: 4px; }
+.acciones-planes { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.acciones-planes .espacio { flex: 1; }
+
+
+/* ---------- ➕ Cargar crédito existente / pagos anteriores ---------- */
+.barra-planes { display: flex; flex-wrap: wrap; gap: 8px; }
+.bloque-alta { margin-top: 12px; }
+.titulo-bloque { font-weight: 600; font-size: 0.9rem; margin-bottom: 6px; }
+.grilla-alta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 8px 12px;
+}
+.grilla-alta label, .bloque-alta > label { font-size: 0.8rem; color: var(--tinta-2); }
+.grilla-alta label .form-control, .grilla-alta label .form-select, .bloque-alta > label .form-control { margin-top: 2px; }
+.buscador-cliente { position: relative; margin-bottom: 8px; }
+.lista-sugerencias {
+  position: absolute;
+  z-index: 5;
+  left: 0;
+  right: 0;
+  top: 100%;
+  background: #fff;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  max-height: 260px;
+  overflow: auto;
+}
+.lista-sugerencias button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+}
+.lista-sugerencias button:hover, .lista-sugerencias button:focus { background: #f1f4f9; }
+.icono-chico { font-size: 16px; width: 16px; height: 16px; vertical-align: -3px; }
+.previa-alta { margin-top: 8px; padding: 6px 10px; background: #f6f8fb; border-radius: 8px; }
+.panel-pago-anterior {
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px dashed var(--borde);
+  border-radius: 10px;
+  background: #fbfcfe;
+}
+.texto-acuerdo { font-weight: 500; white-space: pre-wrap; }
+
+/* ---------- ✉️ Carta documento / bloqueo ---------- */
+.estado.bloqueado { background: #fde8e8; color: #9b1c1c; }
+.panel-bloqueo {
+  margin: 12px 0 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+}
+.panel-bloqueo.activo { border-color: #f5b5b5; background: #fff6f6; }
+.lista-cartas { list-style: none; padding: 0; margin: 8px 0 0; font-size: 0.85rem; }
+.lista-cartas li { padding: 2px 0; }
+
+
+/* ---------- 🔁 Refinanciación ---------- */
+.estado.refinanciado { background: #ede7f6; color: #4a2c8a; }
+.panel-refinanciacion {
+  margin: 12px 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #d9cdf0;
+  background: #f8f5fd;
+  font-size: 0.9rem;
+}

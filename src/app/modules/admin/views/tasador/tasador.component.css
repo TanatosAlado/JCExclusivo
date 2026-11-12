@@ -1,0 +1,55 @@
+.barra { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0 12px; }
+.barra .buscar { max-width: 260px; }
+.espacio { flex: 1; }
+.panel {
+  border: 1px solid #e3e6eb;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  background: #fbfcfe;
+}
+.subtitulo { font-size: 1.05rem; font-weight: 600; margin: 0 0 8px; }
+.titulo-bloque { font-weight: 600; font-size: 0.9rem; margin-bottom: 6px; }
+.fila { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
+.fila label, .panel label { font-size: 0.8rem; color: #555; }
+.capacidad { display: grid; grid-template-columns: 140px 180px auto; gap: 8px; margin-bottom: 6px; align-items: center; }
+.pregunta {
+  display: grid;
+  grid-template-columns: 26px minmax(180px, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px dashed #e3e6eb;
+}
+.pregunta .num { color: #8a8f98; text-align: right; }
+.pregunta .regla { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.pregunta .regla select { width: 70px; }
+.pregunta .monto { width: 130px; }
+.pregunta .acciones { display: flex; gap: 4px; }
+.vacio { padding: 16px; border: 1px dashed #cfd5dd; border-radius: 10px; color: #6c757d; text-align: center; }
+.modelos { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 12px; }
+.tarjeta { border: 1px solid #e3e6eb; border-radius: 12px; padding: 12px; background: #fff; display: flex; flex-direction: column; gap: 6px; }
+.tarjeta.inactivo { opacity: 0.6; }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip { font-size: 0.78rem; padding: 2px 8px; border-radius: 999px; background: #eef2f7; }
+.lista-preguntas { margin: 0; padding-left: 18px; font-size: 0.82rem; }
+.acciones-tarjeta { display: flex; flex-wrap: wrap; gap: 2px; margin-top: auto; }
+@media (max-width: 767.98px) {
+  .capacidad { grid-template-columns: 1fr 1fr auto; }
+  .pregunta { grid-template-columns: 22px 1fr; }
+  .pregunta .regla, .pregunta .acciones { grid-column: 2; }
+}
+
+.publico {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  margin: 8px 0 4px;
+  border-radius: 12px;
+  border: 1px dashed #cfd5dd;
+  background: #f8f9fb;
+}
+.publico.activo { border-style: solid; border-color: #b7e0c4; background: #f2fbf5; }

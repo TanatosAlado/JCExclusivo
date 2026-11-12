@@ -226,7 +226,7 @@ export function esCobroCuenta(venta: any): boolean {
 
 /** ¿Es el cobro de cuotas del crédito de la casa? (no es una venta: la venta se contó al financiar) */
 export function esCobroCuota(venta: any): boolean {
-  return venta?.tipoVenta === 'cobrocuota';
+  return venta?.tipoVenta === 'cobrocuota' || venta?.tipoVenta === 'refinanciacion';   // 🔁 la entrega de una refinanciación también
 }
 
 /** Cobro de una deuda (cuenta corriente o cuotas): entra a la caja pero no es una venta nueva */

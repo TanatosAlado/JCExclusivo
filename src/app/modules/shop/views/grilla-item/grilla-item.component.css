@@ -180,3 +180,39 @@ app-item {
     margin-bottom:1.25rem !important;
 
 }
+
+/* ---------- 📱 Filtros en el celular: cerrados hasta tocar "Filtros" ---------- */
+.barra-filtros-movil {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: 0 .75rem;
+}
+
+.btn-filtros {
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+}
+
+.acciones-filtros-movil {
+    display: flex;
+    gap: .5rem;
+    margin-top: 1.25rem;
+}
+
+.acciones-filtros-movil .btn {
+    flex: 1;
+    border-radius: 10px;
+}
+
+@media (max-width: 991.98px) {
+    .col-filtros:not(.abierto) {
+        display: none;
+    }
+
+    .col-filtros .filtros-card .card-body {
+        padding: 1.1rem;
+    }
+}

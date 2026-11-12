@@ -8,6 +8,15 @@
             <div class="title-section">
 
                 <div *ngIf="showTablaPedido">
+                    <!-- Pedidos que quedaron con el total en dólares (error ya corregido): se guardan en pesos -->
+                    <div *ngIf="pedidosACorregir.length" class="aviso-total-dolares mb-3">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>{{ pedidosACorregir.length }}</strong> pedido(s) quedaron guardados con el total en dólares
+                        (Nº {{ numerosACorregir }}). En la lista ya se ven en pesos; guardá la corrección para que el dashboard también dé bien.
+                        <button type="button" class="btn btn-sm btn-warning ms-2" (click)="corregirTotales()" [disabled]="corrigiendo">
+                            {{ corrigiendo ? 'Corrigiendo…' : 'Corregir los totales' }}
+                        </button>
+                    </div>
                     <div class="tabs-container">
                         <div class="tabs">
                             <div class="tab" (click)="setPaginator(1)" [class.active]="activeTab === 1"
@@ -71,7 +80,11 @@
                                             </ng-container>
                                             <ng-container matColumnDef="total">
                                                 <th mat-header-cell *matHeaderCellDef class="cabecera">Total</th>
-                                                <td mat-cell *matCellDef="let pedidos">$ {{ pedidos.total }}</td>
+                                                <td mat-cell *matCellDef="let pedidos">
+                                                    {{ totalPedido(pedidos) | currency:'ARS' }}
+                                                    <i *ngIf="totalEnDolares(pedidos)" class="fas fa-exclamation-triangle text-warning ms-1"
+                                                        title="Este pedido quedó guardado con el total en dólares: se muestra recalculado en pesos"></i>
+                                                </td>
                                             </ng-container>
 
                                             <ng-container matColumnDef="acciones">
@@ -155,7 +168,11 @@
                                             </ng-container>
                                             <ng-container matColumnDef="total">
                                                 <th mat-header-cell *matHeaderCellDef class="cabecera">Total</th>
-                                                <td mat-cell *matCellDef="let pedidos">$ {{ pedidos.total }}</td>
+                                                <td mat-cell *matCellDef="let pedidos">
+                                                    {{ totalPedido(pedidos) | currency:'ARS' }}
+                                                    <i *ngIf="totalEnDolares(pedidos)" class="fas fa-exclamation-triangle text-warning ms-1"
+                                                        title="Este pedido quedó guardado con el total en dólares: se muestra recalculado en pesos"></i>
+                                                </td>
                                             </ng-container>
 
                                             <ng-container matColumnDef="acciones">
@@ -238,7 +255,11 @@
                                             </ng-container>
                                             <ng-container matColumnDef="total">
                                                 <th mat-header-cell *matHeaderCellDef class="cabecera">Total</th>
-                                                <td mat-cell *matCellDef="let pedidos">$ {{ pedidos.total }}</td>
+                                                <td mat-cell *matCellDef="let pedidos">
+                                                    {{ totalPedido(pedidos) | currency:'ARS' }}
+                                                    <i *ngIf="totalEnDolares(pedidos)" class="fas fa-exclamation-triangle text-warning ms-1"
+                                                        title="Este pedido quedó guardado con el total en dólares: se muestra recalculado en pesos"></i>
+                                                </td>
                                             </ng-container>
 
                                             <ng-container matColumnDef="acciones">
@@ -328,7 +349,14 @@
                                     style="color:var( --color-primario); cursor: pointer;" (click)="eliminarProductoCarro(carro)"></i>
                             </div>
                         </div>
-                        <div class="total">Total: ${{pedidoEncontrado.total}}</div>
+                        <div class="total">Total: {{ totalPedido(pedidoEncontrado) | currency:'ARS' }}</div>
+                        <div *ngIf="totalEnDolares(pedidoEncontrado)" class="aviso-total-dolares">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Este pedido quedó guardado con el total en dólares ({{ pedidoEncontrado.total }}). Se muestra recalculado en pesos.
+                            <button type="button" class="btn btn-sm btn-warning ms-2" (click)="corregirTotales(pedidoEncontrado)" [disabled]="corrigiendo">
+                                Guardar el total corregido
+                            </button>
+                        </div>
                         <div class="acciones-pedido">
                             <i class="fas fa-print print-icon" title="Imprimir pedido" (click)="abrirModalImpresion()"
                                 style="cursor: pointer; margin-top: 20px; font-size: 1.3rem; color: #333;"></i>

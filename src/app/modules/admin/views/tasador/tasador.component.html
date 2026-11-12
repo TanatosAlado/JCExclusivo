@@ -1,0 +1,175 @@
+<app-encabezado>
+  Tasador de equipos
+</app-encabezado>
+
+<div class="container mt-4 mb-5">
+  <mat-card>
+    <mat-card-subtitle class="mt-2">
+      Cada modelo tiene su precio en USD por capacidad (en las mejores condiciones) y sus preguntas: si la respuesta es la que descuenta, se resta un monto fijo.
+      Se usa en Despacho, en "¿Usa plan canje?", con el botón "Tasar".
+    </mat-card-subtitle>
+
+    <mat-card-content>
+      <!-- 🌐 Cotizá tu usado (web) -->
+      <div class="publico" [class.activo]="publico">
+        <div>
+          <strong>🌐 "Cotizá tu usado" en la web:</strong>
+          <span class="badge ms-1" [class.bg-success]="publico" [class.bg-secondary]="!publico">{{ publico ? 'Visible para los clientes' : 'Oculto' }}</span>
+          <div class="small text-muted">
+            {{ publico ? 'Aparece en el menú de la tienda y los clientes cotizan con los modelos activos.'
+                       : 'Está listo pero los clientes no lo ven. Podés mirarlo como vista previa antes de mostrarlo.' }}
+          </div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+          <a mat-stroked-button routerLink="/cotiza-tu-usado" target="_blank"><mat-icon>open_in_new</mat-icon> {{ publico ? 'Ver la página' : 'Vista previa' }}</a>
+          <button mat-raised-button [color]="publico ? 'warn' : 'primary'" type="button" (click)="alternarPublico()" [disabled]="cambiandoPublico">
+            <mat-icon>{{ publico ? 'visibility_off' : 'public' }}</mat-icon> {{ publico ? 'Ocultar de la web' : 'Mostrar a los clientes' }}
+          </button>
+        </div>
+      </div>
+
+      <div class="barra">
+        <input type="text" class="form-control form-control-sm buscar" [(ngModel)]="filtro" placeholder="Buscar modelo…" aria-label="Buscar modelo">
+        <span class="espacio"></span>
+        <button mat-stroked-button type="button" (click)="verHistorial()" [attr.aria-expanded]="mostrarHistorial">
+          <mat-icon>history</mat-icon> Tasaciones
+        </button>
+        <button mat-stroked-button type="button" (click)="probar()" [disabled]="!activos.length" [attr.aria-expanded]="probando">
+          <mat-icon>calculate</mat-icon> Probar tasación
+        </button>
+        <button mat-raised-button color="primary" type="button" (click)="nuevo()">
+          <mat-icon>add</mat-icon> Nuevo modelo
+        </button>
+      </div>
+
+      <!-- 🧪 Probar -->
+      <div class="panel" *ngIf="probando">
+        <app-tasar-equipo [modelos]="activos" [cotizacion]="cotizacion" textoBoton="Listo" (usar)="alProbar($event)" (cancelar)="probando = false"></app-tasar-equipo>
+      </div>
+
+      <!-- ✏️ Editor -->
+      <div class="panel" *ngIf="editando as m">
+        <h3 class="subtitulo">{{ m.id ? 'Editar modelo' : 'Nuevo modelo' }}</h3>
+        <div class="fila">
+          <label class="flex-grow-1">Modelo
+            <input type="text" class="form-control form-control-sm" [(ngModel)]="m.nombre" maxlength="80" placeholder="Ej: iPhone 17 Pro Max"
+              (ngModelChange)="errorEdicion = ''">
+          </label>
+          <div class="form-check form-switch mb-1">
+            <input class="form-check-input" type="checkbox" role="switch" id="tasActivo" [(ngModel)]="m.activo">
+            <label class="form-check-label small" for="tasActivo">Activo (aparece para tasar)</label>
+          </div>
+        </div>
+
+        <div class="titulo-bloque mt-3">Precio por capacidad <span class="text-muted fw-normal">(USD, en las mejores condiciones)</span></div>
+        <div class="capacidad" *ngFor="let c of m.capacidades; let i = index">
+          <select class="form-select form-select-sm" [(ngModel)]="c.capacidad" [attr.aria-label]="'Capacidad ' + (i + 1)">
+            <option value="" disabled>Capacidad…</option>
+            <option *ngFor="let cap of capacidades" [value]="cap">{{ cap }}</option>
+          </select>
+          <div class="input-group input-group-sm">
+            <span class="input-group-text">USD</span>
+            <input type="number" min="0" step="1" class="form-control" [(ngModel)]="c.precio" placeholder="800" [attr.aria-label]="'Precio ' + (c.capacidad || (i + 1))">
+          </div>
+          <button type="button" class="btn btn-sm btn-outline-danger" (click)="quitarCapacidad(i)" title="Quitar" [disabled]="m.capacidades.length === 1">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <button type="button" class="btn btn-link btn-sm p-0" (click)="agregarCapacidad()" *ngIf="m.capacidades.length < maxCapacidades">
+          <i class="fas fa-plus"></i> Agregar capacidad
+        </button>
+
+        <div class="titulo-bloque mt-3">Preguntas <span class="text-muted fw-normal">(en el orden en que se hacen)</span></div>
+        <div class="small text-muted mb-2" *ngIf="!m.preguntas.length">Todavía no tiene preguntas: se tomaría al precio de la capacidad.</div>
+        <div class="pregunta" *ngFor="let p of m.preguntas; let i = index; let primera = first; let ultima = last; trackBy: trackPregunta">
+          <span class="num">{{ i + 1 }}.</span>
+          <input type="text" class="form-control form-control-sm texto" [(ngModel)]="p.texto" maxlength="200" placeholder="Ej: ¿Pantalla sana?"
+            [attr.aria-label]="'Pregunta ' + (i + 1)" (ngModelChange)="errorEdicion = ''">
+          <div class="regla">
+            <span class="small text-muted">si responde</span>
+            <select class="form-select form-select-sm" [(ngModel)]="p.descuentaSi" [attr.aria-label]="'Respuesta que descuenta, pregunta ' + (i + 1)">
+              <option value="no">No</option>
+              <option value="si">Sí</option>
+            </select>
+            <span class="small text-muted">descuenta</span>
+            <div class="input-group input-group-sm monto">
+              <span class="input-group-text">USD</span>
+              <input type="number" min="0" step="1" class="form-control" [(ngModel)]="p.descuento" placeholder="0" [attr.aria-label]="'Descuento, pregunta ' + (i + 1)">
+            </div>
+          </div>
+          <div class="acciones">
+            <button type="button" class="btn btn-sm btn-light" (click)="moverPregunta(i, -1)" [disabled]="primera" title="Subir"><i class="fas fa-arrow-up"></i></button>
+            <button type="button" class="btn btn-sm btn-light" (click)="moverPregunta(i, 1)" [disabled]="ultima" title="Bajar"><i class="fas fa-arrow-down"></i></button>
+            <button type="button" class="btn btn-sm btn-outline-danger" (click)="quitarPregunta(i)" title="Quitar"><i class="fas fa-times"></i></button>
+          </div>
+        </div>
+        <button type="button" class="btn btn-link btn-sm p-0" (click)="agregarPregunta()" *ngIf="m.preguntas.length < maxPreguntas">
+          <i class="fas fa-plus"></i> Agregar pregunta
+        </button>
+
+        <div *ngIf="errorEdicion" class="alert alert-danger py-2 small mt-2 mb-0">{{ errorEdicion }}</div>
+        <div class="d-flex justify-content-end gap-2 mt-3">
+          <button mat-button type="button" (click)="cancelarEdicion()">Cancelar</button>
+          <button mat-raised-button color="primary" type="button" (click)="guardar()" [disabled]="guardando">
+            <mat-icon>save</mat-icon> {{ guardando ? 'Guardando…' : 'Guardar modelo' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- 📜 Historial -->
+      <div class="panel" *ngIf="mostrarHistorial">
+        <h3 class="subtitulo">Últimas tasaciones</h3>
+        <div *ngIf="cargandoHistorial" class="small text-muted"><span class="spinner-border spinner-border-sm"></span> Cargando…</div>
+        <div *ngIf="!cargandoHistorial && !historial.length" class="small text-muted">Todavía no hay tasaciones.</div>
+        <div class="table-responsive" *ngIf="historial.length">
+          <table class="table table-sm align-middle">
+            <thead><tr><th>Fecha</th><th>Equipo</th><th>Descuentos</th><th class="text-end">Valor</th><th>Dónde</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let t of historial">
+                <td class="text-nowrap">{{ t.fecha | date:'dd/MM/yy HH:mm' }}</td>
+                <td>{{ t.modelo }} {{ t.capacidad }}<small class="d-block text-muted">base {{ textoUSD(t.precioBase) }}</small></td>
+                <td class="small">{{ descuentosDe(t) }}</td>
+                <td class="text-end text-nowrap"><strong>{{ textoUSD(t.totalUSD) }}</strong>
+                  <small class="d-block" *ngIf="t.totalARS !== null">{{ t.totalARS | currency:'ARS':'symbol-narrow':'1.0-0' }}</small></td>
+                <td class="small">{{ t.origen === 'despacho' ? 'Despacho' : t.origen === 'web' ? '🌐 Web (cliente)' : 'Prueba' }}<span class="d-block text-muted">{{ t.cajero?.nombre || t.usuario?.nombre || '' }}</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Listado -->
+      <div *ngIf="error" class="alert alert-danger py-2 small">{{ error }}</div>
+      <div *ngIf="cargando" class="small text-muted"><span class="spinner-border spinner-border-sm"></span> Cargando…</div>
+      <div *ngIf="!cargando && !modelos.length" class="vacio">
+        Todavía no hay modelos. Tocá <strong>Nuevo modelo</strong> para cargar el primero (ej: iPhone 17 Pro Max · 256 GB USD 800 · "¿Pantalla sana?" No → −120).
+      </div>
+      <div class="modelos">
+        <div class="tarjeta" *ngFor="let m of visibles" [class.inactivo]="m.activo === false">
+          <div class="d-flex justify-content-between align-items-start gap-2">
+            <div>
+              <strong>{{ m.nombre }}</strong>
+              <span *ngIf="m.activo === false" class="badge bg-secondary ms-1">Inactivo</span>
+              <div class="small text-muted">{{ rango(m) }} · {{ m.preguntas.length }} pregunta{{ m.preguntas.length === 1 ? '' : 's' }}</div>
+            </div>
+          </div>
+          <div class="chips">
+            <span class="chip" *ngFor="let c of m.capacidades">{{ c.capacidad }}: {{ textoUSD(c.precio) }}</span>
+          </div>
+          <ol class="lista-preguntas" *ngIf="m.preguntas.length">
+            <li *ngFor="let p of m.preguntas.slice(0, 4)">{{ p.texto }} <span class="text-danger">({{ p.descuentaSi === 'si' ? 'Sí' : 'No' }}: −{{ textoUSD(p.descuento) }})</span></li>
+            <li *ngIf="m.preguntas.length > 4" class="text-muted">y {{ m.preguntas.length - 4 }} más…</li>
+          </ol>
+          <div class="acciones-tarjeta">
+            <button mat-button type="button" (click)="editar(m)"><mat-icon>edit</mat-icon> Editar</button>
+            <button mat-button type="button" (click)="duplicar(m)" title="Copiar para cargar uno parecido"><mat-icon>content_copy</mat-icon> Duplicar</button>
+            <button mat-button type="button" (click)="alternarActivo(m)">
+              <mat-icon>{{ m.activo === false ? 'visibility' : 'visibility_off' }}</mat-icon> {{ m.activo === false ? 'Activar' : 'Desactivar' }}
+            </button>
+            <button mat-button color="warn" type="button" (click)="eliminar(m)"><mat-icon>delete</mat-icon></button>
+          </div>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

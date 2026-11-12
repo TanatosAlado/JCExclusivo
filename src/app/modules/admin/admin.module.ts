@@ -44,6 +44,7 @@ import { CajerosComponent } from './views/cajeros/cajeros.component';
 import { CuentasCorrientesComponent } from './views/cuentas-corrientes/cuentas-corrientes.component';
 import { CreditosComponent } from './views/creditos/creditos.component';
 import { EquiposComponent } from './views/equipos/equipos.component';
+import { TasadorComponent } from './views/tasador/tasador.component';
 import { EditorFotosComponent } from './components/editor-fotos/editor-fotos.component';
 import { AnalyticsTiendaComponent } from './views/analytics-tienda/analytics-tienda.component';
 import { SolicitudesMayoristasComponent } from './views/solicitudes-mayoristas/solicitudes-mayoristas.component';
@@ -101,6 +102,7 @@ import { PermisosUsuariosComponent } from './views/permisos-usuarios/permisos-us
     CuentasCorrientesComponent,
     CreditosComponent,
     EquiposComponent,
+    TasadorComponent,
     PermisosUsuariosComponent,
   ],
   exports: [

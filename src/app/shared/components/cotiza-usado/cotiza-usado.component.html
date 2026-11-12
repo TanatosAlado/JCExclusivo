@@ -1,0 +1,46 @@
+<section class="cotiza container py-4">
+  <div class="encabezado text-center mb-3">
+    <h1>📲 Cotizá tu usado</h1>
+    <p class="text-muted m-0">Respondé unas preguntas y mirá cuánto te tomamos tu iPhone en plan canje.</p>
+  </div>
+
+  <div *ngIf="esAdmin && !habilitado && !cargando" class="alert alert-warning py-2 small text-center">
+    👀 <strong>Vista previa:</strong> los clientes todavía no ven esta página. Se habilita en Gestiones → Tasador.
+  </div>
+
+  <div *ngIf="cargando" class="text-center text-muted py-5"><span class="spinner-border spinner-border-sm"></span> Cargando…</div>
+
+  <!-- No habilitada (clientes) -->
+  <div *ngIf="!cargando && !puedeVer" class="tarjeta text-center py-5">
+    <p class="mb-3">Esta sección todavía no está disponible.</p>
+    <a routerLink="/productos" class="btn btn-dark">Ver productos</a>
+  </div>
+
+  <div *ngIf="error" class="alert alert-danger py-2 small">{{ error }}</div>
+
+  <ng-container *ngIf="!cargando && puedeVer && !error">
+    <!-- Resultado -->
+    <div *ngIf="resultado as r" class="tarjeta resultado text-center">
+      <div class="small text-muted">{{ r.modelo }} · {{ r.capacidad }}</div>
+      <div class="valor">{{ textoUSD(r.totalUSD) }}</div>
+      <div class="small text-muted mb-3">Te lo tomamos en hasta este valor en plan canje*</div>
+      <div class="d-flex flex-wrap justify-content-center gap-2">
+        <button *ngIf="numeroWhatsapp" type="button" class="btn btn-success" (click)="consultar()">
+          <i class="fab fa-whatsapp"></i> Quiero canjearlo
+        </button>
+        <a routerLink="/productos" class="btn btn-outline-dark">Ver equipos</a>
+        <button type="button" class="btn btn-link" (click)="otra()">Cotizar otro equipo</button>
+      </div>
+      <p class="aclaracion">* Valor estimado según tus respuestas. El precio final se confirma al revisar el equipo en el local.</p>
+    </div>
+
+    <!-- Preguntas -->
+    <div *ngIf="!resultado" class="tarjeta">
+      <div *ngIf="!modelos.length" class="text-center text-muted py-4">Por ahora no hay equipos para cotizar. ¡Volvé pronto!</div>
+      <ng-container *ngFor="let v of [vuelta]">
+        <app-tasar-equipo *ngIf="modelos.length" [modelos]="modelos" [cotizacion]="null" [mostrarValor]="false" textoBoton="Ver cuánto me dan"
+          (usar)="alCotizar($event)" (cancelar)="otra()"></app-tasar-equipo>
+      </ng-container>
+    </div>
+  </ng-container>
+</section>

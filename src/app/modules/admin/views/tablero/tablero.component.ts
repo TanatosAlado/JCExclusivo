@@ -346,7 +346,8 @@ export class TableroComponent implements OnInit {
         Fecha: fecha(v.fecha),
         Sucursal: this.nombreSucursal(v.sucursalId),
         Tipo: v.tipoVenta === 'reparacion' ? 'Reparación' : v.tipoVenta === 'cobrocuenta' ? 'Cobro cuenta corriente'
-          : v.tipoVenta === 'cobrocuota' ? 'Cobro cuota crédito' : v.credito ? 'Venta a crédito' : 'Venta',
+          : v.tipoVenta === 'cobrocuota' ? 'Cobro cuota crédito' : v.tipoVenta === 'refinanciacion' ? 'Refinanciación crédito'
+          : v.tipoVenta === 'devolucion' ? 'Devolución' : v.credito ? 'Venta a crédito' : 'Venta',
         Cliente: v.cliente?.nombre || 'Consumidor final',
         Lista: v.tipoPrecio || '',
         'Medio de pago': textoPagos(v, n => this.moneda(n)),
@@ -484,7 +485,7 @@ export class TableroComponent implements OnInit {
       x.cantidad += c; x.monto += m; mapa.set(n, x);
     };
     this.datos.ventas
-      .filter(v => (!suc || v.sucursalId === suc) && !v.anulada && v.tipoVenta !== 'reparacion' && v.tipoVenta !== 'cobrocuenta' && v.tipoVenta !== 'cobrocuota')
+      .filter(v => (!suc || v.sucursalId === suc) && !v.anulada && v.tipoVenta !== 'reparacion' && v.tipoVenta !== 'cobrocuenta' && v.tipoVenta !== 'cobrocuota' && v.tipoVenta !== 'refinanciacion')
       .filter(v => { const f = new Date(v.fecha); return f >= r.inicio && f <= r.fin; })
       .forEach(v => (v.items || []).forEach((i: any) => sumar(i.nombre || '?', Number(i.cantidad) || 0, Number(i.subtotal) || 0)));
     this.datos.pedidosFinalizados

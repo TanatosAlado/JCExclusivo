@@ -5,15 +5,16 @@ import { ProductosCacheService } from '../../services/productos-cache.service';
 import { CajaService, ResumenCaja, CierreCajaError } from '../../services/caja.service';
 import { InformeCierreService } from '../../services/informe-cierre.service';
 import { TicketsService } from '../../services/tickets.service';
-import { CobroReparacionesService, CobroReparacionError, METODOS_CON_DESCUENTO_REPARACION } from '../../services/cobro-reparaciones.service';
-import { desgloseDeOrden, imputarCobroReparacion } from '../../services/desglose-reparacion';
+import { CobroReparacionesService, CobroReparacionError, METODOS_CON_DESCUENTO_REPARACION, MAX_ORDENES_POR_COBRO } from '../../services/cobro-reparaciones.service';
+import { desgloseDeOrden, imputarCobroReparacion, repartirCobroOrdenes, sumarDesgloses } from '../../services/desglose-reparacion';
 import {
   METODOS_PAGO, METODO_CUENTA_CORRIENTE, MetodoPago, LineaPago, PagoVenta, calcularPagos, metodoResumen, nombreMetodo, textoPagos,
   conDetalleTarjeta, MAX_DETALLE_PAGO, ResultadoPagos
 } from '../../services/pagos';
 import {
-  CalculoCredito, DatosCanje, MAX_CUOTAS, MAX_DETALLE_CANJE, calcularCredito, datosFaltantes, mesCuota, textoVencimiento, validarCanje,
-  SituacionCredito, situacionCredito, estadoCuota, faltaCuota, imputarCuotas
+  CalculoCredito, DatosCanje, MAX_DETALLE_CANJE, calcularCredito, PLANES_INICIALES, PlanCuotas, conInteres, datosFaltantes, mesCuota, textoVencimiento, validarCanje,
+  SituacionCredito, situacionCredito, estadoCuota, faltaCuota, imputarCuotas, estaBloqueado, ultimaCarta, fechaCorta,
+  RECARGO_DIARIO, recargoPorAtraso, recargoRefinanciacion, calcularRefinanciacion, CalculoRefinanciacion
 } from '../../services/credito-casa';
 import { Credito, CreditoError, CreditosService, PagoCredito } from '../../services/creditos.service';
 import { CuentaCorrienteService, CuentaCorrienteError, CuentaCorriente, MovimientoCuenta } from '../../services/cuenta-corriente.service';
@@ -36,8 +37,13 @@ import { AuditoriaService, UsuarioRegistro } from 'src/app/shared/services/audit
 import { BuscadorClientesService, ClienteEncontrado } from 'src/app/shared/services/buscador-clientes.service';
 import { colorValido, nombreColor } from 'src/app/shared/utils/colores';
 import { CajerosService, Cajero, cajeroParaVenta, nombreCajero } from 'src/app/modules/admin/services/cajeros.service';
-import { EquiposService, Equipo, nombreEquipo, condicionDe, nombreCondicion } from 'src/app/modules/admin/services/equipos.service';
+import {
+  EquiposService, Equipo, nombreEquipo, condicionDe, nombreCondicion,
+  CAPACIDADES, GRADOS, DatosEquipoCanje, validarEquipoCanje, fichaEquipoCanje, normalizarImei, imeiValido
+} from 'src/app/modules/admin/services/equipos.service';
 import { cotizacionEquipos } from 'src/app/shared/utils/equipos-tienda';
+import { TasadorService } from 'src/app/modules/admin/services/tasador.service';
+import { ModeloTasador, ResultadoTasacion, textoUSD } from 'src/app/shared/utils/tasador';
 
 interface ClientePOS {
   id: string;
@@ -209,14 +215,24 @@ export class LayoutDespachoComponent implements OnInit, OnDestroy {
   // ===== 📲 Plan canje y 🏠 crédito de la casa (solo ventas con equipo) =====
   usaCanje = false;
   canjeMonto: number | null = null;
-  canjeDetalle = '';
+  canjeDetalle = '';                      // solo si NO se da de alta el equipo (roto, para repuestos…)
+  canjeAlta = true;                       // dar de alta el equipo usado (queda "En preparación")
+  canjeEquipo: DatosEquipoCanje = this.canjeEquipoVacio();
+  // 🧮 Tasador (Plan canje)
+  mostrarTasador = false;
+  modelosTasador: ModeloTasador[] = [];
+  cargandoTasador = false;
+  canjeTasacion: ResultadoTasacion | null = null;   // la última tasación usada (se muestra al lado del importe)
+  readonly textoUSD = textoUSD;
+  readonly capacidadesCanje = CAPACIDADES;
+  readonly gradosCanje = GRADOS;
   ventaCredito = false;
-  creditoPrecio: number | null = null;    // precio financiado (vacío = precio de contado)
+  creditoPrecio: number | null = null;    // precio de contado YA CON EL CANJE DESCONTADO, ajustado al cobrar (vacío = lista − canje)
   creditoEntrega: number | null = null;
   creditoCuotas: number | null = null;
   creditoTelefono = '';                   // se completan con los del cliente y se pueden corregir
   creditoDireccion = '';
-  readonly opcionesCuotas = Array.from({ length: MAX_CUOTAS }, (_, i) => i + 1);
+  planesCredito: PlanCuotas[] = PLANES_INICIALES.map(p => ({ ...p }));   // se leen de Gestiones → Créditos
   readonly maxDetalleCanje = MAX_DETALLE_CANJE;
   readonly textoVencimiento = textoVencimiento;
   readonly nombreMetodo = nombreMetodo;
@@ -290,11 +306,13 @@ export class LayoutDespachoComponent implements OnInit, OnDestroy {
     private cajerosService: CajerosService,
     private cuentasCorrientes: CuentaCorrienteService,
     private equiposService: EquiposService,
-    private creditos: CreditosService
+    private creditos: CreditosService,
+    private tasador: TasadorService
   ) { }
 
 
 async ngOnInit() {
+  this.cargarPlanesCredito();
   // Cajeros activos en tiempo real (si se da de alta uno, aparece sin recargar)
   this.cajerosSub = this.cajerosService.listar().subscribe({
     next: lista => {
@@ -1314,10 +1332,12 @@ abrirCaja(sucursalIdExistente?: string) {
       filas.push(`${nombreMetodo(p.metodo)} (${p.porcentajeDescuento}%${resumen.pagos.length > 1 ? ' sobre su parte' : ''}${resumen.subtotalEquipos > 0 ? ', solo productos' : ''}): -${this.formatearMoneda(p.descuento)}`);
     }
     if (resumen.puntosASumar > 0) filas.push(`El cliente suma ${resumen.puntosASumar} puntos`);
-    const detallePagos = resumen.pagos.length > 1
-      ? `<div class="mt-2 small text-start d-inline-block">${resumen.pagos
+    // El canje va aparte (arriba del total): acá solo cómo paga
+    const pagosDinero = resumen.pagos.filter(p => p.metodo !== 'canje');
+    const detallePagos = pagosDinero.length > 1
+      ? `<div class="mt-2 small text-start d-inline-block">${pagosDinero
           .map(p => `${nombreMetodo(p.metodo)}: <strong>${this.formatearMoneda(p.monto)}</strong>${this.textoOperacion(p)}`).join('<br>')}</div>`
-      : `<div class="small text-muted">${nombreMetodo(resumen.pagos[0]?.metodo)}${this.textoOperacion(resumen.pagos[0])}</div>`;
+      : `<div class="small text-muted">${nombreMetodo(pagosDinero[0]?.metodo)}${this.textoOperacion(pagosDinero[0])}</div>`;
 
     const result = await Swal.fire({
       title: 'Confirmar venta',
@@ -1325,8 +1345,9 @@ abrirCaja(sucursalIdExistente?: string) {
         <div style="font-size: 16px;">
           <div class="text-muted">Lista ${this.tipoPrecio.toUpperCase()} · Subtotal ${this.formatearMoneda(resumen.subtotal)}</div>
           ${filas.map(f => `<div class="small">${f}</div>`).join('')}
-          <div class="mt-2">${resumen.credito ? 'Precio financiado:' : 'Total a pagar:'}</div>
-          <strong style="font-size: 22px;">${this.formatearMoneda(resumen.totalFinal)}</strong>
+          ${resumen.canje ? `<div class="small">📲 Plan canje: -${this.formatearMoneda(resumen.canje.monto)}</div>` : ''}
+          <div class="mt-2">Total a pagar${resumen.credito ? ' (entrega + cuotas)' : ''}:</div>
+          <strong style="font-size: 22px;">${this.formatearMoneda(this.totalAPagar)}</strong>
           ${detallePagos}
           ${this.vuelto !== null ? `<div class="mt-2" style="font-size:15px">Paga con ${this.formatearMoneda(this.pagaCon as number)} · ` +
             `<strong>Vuelto: ${this.formatearMoneda(this.vuelto)}</strong></div>` : ''}
@@ -1423,9 +1444,12 @@ abrirCaja(sucursalIdExistente?: string) {
       // 🏠 Crédito de la casa (el detalle y el seguimiento están en Creditos/{id de la venta})
       credito: resumen.credito ? {
         creditoId: '',
+        precioLista: resumen.credito.precioLista,
         precioContado: resumen.credito.precioContado,
         precioFinanciado: resumen.credito.precioFinanciado,
         recargo: resumen.credito.recargo,
+        interes: resumen.credito.interes,
+        aFinanciar: resumen.credito.aFinanciar,
         canje: resumen.credito.canje,
         entrega: resumen.credito.entrega,
         saldo: resumen.credito.saldo,
@@ -1448,6 +1472,11 @@ abrirCaja(sucursalIdExistente?: string) {
       direccion: String(this.creditoDireccion || '').trim().slice(0, 200)
     } : null;
     const creditoRef = venta.credito ? doc(this.firestore, 'Creditos', ventaRef.id) : null;
+    // 📲 Plan canje con alta: el equipo usado entra a Equipos "En preparación" en la misma operación
+    const datosEquipoCanje = resumen.canje && this.canjeAlta ? { ...this.canjeEquipo } : null;
+    const equipoCanjeRef = datosEquipoCanje ? doc(collection(this.firestore, 'Equipos')) : null;
+    const imeiCanjeRef = datosEquipoCanje ? this.equiposService.refIndiceImei(datosEquipoCanje.imei) : null;
+    if (venta.canje && equipoCanjeRef) venta.canje = { ...venta.canje, equipoId: equipoCanjeRef.id };
     const clienteCreditoRef = venta.credito && cliente ? doc(this.firestore, 'Clientes', cliente.id) : null;
     const contadorTicketsRef = this.tickets.refContador();
     const registroAuditoria = await this.auditoria.armarRegistro({
@@ -1467,7 +1496,7 @@ abrirCaja(sucursalIdExistente?: string) {
         descuentoEquipos: resumen.descuentoEquipos ? `${resumen.porcentajeEquipos}%: ${resumen.descuentoEquipos}` : null,
         canje: resumen.canje ? `${resumen.canje.monto} (${resumen.canje.detalle})` : null,
         credito: resumen.credito
-          ? `contado ${resumen.credito.precioContado} → financiado ${resumen.credito.precioFinanciado}; entrega ${resumen.credito.entrega}; ` +
+          ? `contado ${resumen.credito.precioContado} → financiado ${resumen.credito.precioFinanciado} (interés ${resumen.credito.interes}%); entrega ${resumen.credito.entrega}; ` +
             `${resumen.credito.cuotas.length} cuota(s) de ${resumen.credito.cuotas[0]?.importe}`
           : null,
         sucursalId: venta.sucursalId,
@@ -1516,6 +1545,13 @@ abrirCaja(sucursalIdExistente?: string) {
           const imeiRef = data?.imei ? this.equiposService.refIndiceImei(data.imei) : null;
           const imeiSnap = imeiRef ? await tx.get(imeiRef) : null;
           lecturasEquipos.push({ item, ref, imeiRef, data, imeiData: imeiSnap?.exists() ? imeiSnap.data() : null });
+        }
+        // 📲 El IMEI del equipo del canje no puede estar cargado en otro equipo
+        const imeiCanjeSnap = imeiCanjeRef ? await tx.get(imeiCanjeRef) : null;
+        if (imeiCanjeSnap?.exists()) {
+          const otro: any = imeiCanjeSnap.data();
+          throw new VentaError(`El IMEI del equipo del plan canje ya está cargado en otro equipo${otro?.modelo ? ` (${otro.modelo})` : ''}. ` +
+            'Revisalo o destildá "Dar de alta el equipo".');
         }
         const equiposNoDisponibles = lecturasEquipos.filter(l => !l.data || l.data.estado !== 'disponible');
         if (equiposNoDisponibles.length) {
@@ -1682,9 +1718,12 @@ abrirCaja(sucursalIdExistente?: string) {
             detalle: venta.items.map(i => `${i.cantidad} x ${i.nombre}`).join(', ').slice(0, 300),
             equipos: venta.items.filter((i: any) => i.tipo === 'equipo')
               .map((i: any) => ({ nombre: i.nombre, imei: i.equipo?.imei || '' })),
+            precioLista: venta.credito.precioLista,
             precioContado: venta.credito.precioContado,
             precioFinanciado: venta.credito.precioFinanciado,
-            recargo: venta.credito.recargo,
+            recargo: venta.credito.recargo,         // interés en pesos
+            interes: venta.credito.interes,         // % del plan
+            aFinanciar: venta.credito.aFinanciar,   // sin interés
             canje: venta.canje || null,
             entrega: venta.credito.entrega,
             importe: venta.credito.saldo,     // lo financiado (no cambia)
@@ -1700,6 +1739,23 @@ abrirCaja(sucursalIdExistente?: string) {
           if (registroAuditoria) {
             registroAuditoria.descripcion += ` · 🏠 crédito de la casa: ${this.formatearMoneda(venta.credito.saldo)} en ` +
               `${venta.credito.cantidadCuotas} cuota(s)`;
+          }
+        }
+
+        // 📲 Alta del equipo del plan canje (usado, en preparación: sin precios ni fotos)
+        if (equipoCanjeRef && imeiCanjeRef && datosEquipoCanje && venta.canje) {
+          const ficha = fichaEquipoCanje(datosEquipoCanje, {
+            ventaId: ventaRef.id,
+            nroTicket: venta.nroTicket ?? null,
+            monto: venta.canje.monto,
+            fecha: venta.fecha,
+            cliente: { id: cliente?.id || null, nombre: cliente?.nombre || 'Consumidor final' },
+            sucursalId: venta.sucursalId || null
+          }, venta.usuario);
+          tx.set(equipoCanjeRef, ficha);
+          tx.set(imeiCanjeRef, { equipoId: equipoCanjeRef.id, modelo: ficha.modelo });
+          if (registroAuditoria) {
+            registroAuditoria.descripcion += ` · 📲 plan canje: entró ${nombreEquipo(ficha)} (IMEI ${ficha.imei}) en preparación`;
           }
         }
 
@@ -1752,6 +1808,10 @@ abrirCaja(sucursalIdExistente?: string) {
       title: `✅ Venta realizada · Ticket Nº ${this.tickets.numeroFormateado(venta)}`,
       html: (venta.vuelto !== null && venta.vuelto !== undefined
           ? `<div style="font-size:22px;margin-bottom:8px">Vuelto: <strong>${this.formatearMoneda(venta.vuelto)}</strong></div>`
+          : '') +
+        (venta.canje?.equipoId
+          ? `<div style="margin-bottom:8px">📲 El equipo del plan canje quedó cargado <strong>En preparación</strong><br>
+             <small>Cuando tengas tiempo, cargale fotos y precios en Gestiones → Equipos y publicalo.</small></div>`
           : '') +
         (venta.credito
           ? `<div style="margin-bottom:8px">🏠 Crédito de la casa: <strong>${venta.credito.cantidadCuotas} cuota(s) de ` +
@@ -1809,10 +1869,12 @@ abrirCaja(sucursalIdExistente?: string) {
   private htmlConfirmacionCredito(c: CalculoCredito): string {
     const $ = (n: number) => this.formatearMoneda(n);
     const filas = [
-      `Precio de contado: ${$(c.precioContado)}`,
-      c.recargo ? `Recargo por financiar: ${c.recargo > 0 ? '+' : '−'}${$(Math.abs(c.recargo))}` : '',
+      c.canje ? `Precio del equipo: ${$(c.precioContado)}` : '',
       c.canje ? `Plan canje: −${$(c.canje)}` : '',
-      c.entrega ? `Entrega hoy: −${$(c.entrega)}` : ''
+      `Precio de contado: ${$(c.precioContado - c.canje)}${c.precioContado !== c.precioLista ? ` <small>(ajustado; lista ${$(c.precioLista)})</small>` : ''}`,
+      c.entrega ? `Entrega hoy: −${$(c.entrega)}` : '',
+      `A financiar: ${$(c.aFinanciar)}`,
+      `Interés del plan (${c.cuotas.length} cuota${c.cuotas.length > 1 ? 's' : ''}, ${c.interes}%): +${$(c.recargo)}`
     ].filter(Boolean).map(f => `<div>${f}</div>`).join('');
     const cuotas = c.cuotas.map(q => `<div>Cuota ${q.numero}: <strong>${$(q.importe)}</strong> · vence del ${this.escaparHtml(textoVencimiento(q))}</div>`).join('');
     return `<div class="mt-2 p-2 text-start" style="background:#eef6ff;border-radius:6px;font-size:14px">
@@ -1976,7 +2038,15 @@ abrirCaja(sucursalIdExistente?: string) {
       descuentos: this.lineasPago.some(l => l.metodo === 'tarjeta') ? [] : [
         { medio: 'efectivo', porcentaje: this.porcentajeDeMetodoLista('efectivo') },
         { medio: 'transferencia', porcentaje: this.porcentajeDeMetodoLista('transferencia') }
-      ]
+      ],
+      // 🏠 Crédito: solo si eligieron un plan (si no, el cliente no preguntó por cuotas)
+      credito: this.ventaCredito && this.resumen.credito ? {
+        precioEquipo: this.resumen.credito.precioContado,
+        canje: this.resumen.credito.canje,
+        canjeDetalle: this.resumen.canje?.detalle || '',
+        entrega: this.resumen.credito.entrega,
+        cuotas: this.resumen.credito.cuotas
+      } : null
     });
   }
 
@@ -2217,7 +2287,13 @@ abrirCaja(sucursalIdExistente?: string) {
   repPorcentaje: number | null = null;
   /** Nº de operación del posnet si paga con tarjeta (opcional) */
   repDetalleTarjeta = '';
-  repEntregar = true;
+  repEntregar = true;              // (una sola orden) se entrega el equipo
+  // 🔧 Varias órdenes del mismo cliente (mismo DNI / CUIT) en un solo ticket
+  repOtras: any[] = [];            // otras órdenes del cliente con saldo
+  repBuscandoOtras = false;
+  repExtras = new Set<string>();   // ids de las otras órdenes que se suman al cobro
+  repEntregarIds = new Set<string>(); // ids de las órdenes cuyo equipo se entrega (si son varias)
+  readonly maxOrdenesPorCobro = MAX_ORDENES_POR_COBRO;
   repCobrando = false;
 
   abrirReparaciones() {
@@ -2259,6 +2335,11 @@ abrirCaja(sucursalIdExistente?: string) {
     return this.cobroReparaciones.saldo(orden);
   }
 
+  /** Nombre del gremio de la orden (se guarda como gremioNombre; nombreGremio por si alguna quedó así) */
+  nombreGremio(orden: any): string {
+    return String(orden?.gremioNombre || orden?.nombreGremio || '').trim();
+  }
+
   repPagado(orden: any): number {
     return this.cobroReparaciones.totalPagado(orden);
   }
@@ -2274,6 +2355,92 @@ abrirCaja(sucursalIdExistente?: string) {
     this.repCajeroId = null;
     // Si se cobra todo y la orden sigue pendiente, por defecto se entrega el equipo
     this.repEntregar = orden.coleccion === 'Ordenes Pendientes';
+    this.repOtras = [];
+    this.repExtras = new Set();
+    this.repEntregarIds = new Set(orden.coleccion === 'Ordenes Pendientes' ? [orden.id] : []);
+    if (saldo > 0) this.cargarOtrasOrdenes(orden);
+  }
+
+  /** Otras órdenes del mismo cliente (mismo DNI / CUIT) que tienen saldo, para cobrarlas juntas */
+  private async cargarOtrasOrdenes(orden: any) {
+    const documento = String(orden?.dniCliente ?? '').trim();
+    const numero = Math.floor(Number(documento));
+    if (!documento || !(numero > 0)) return;
+    // Si se buscó por DNI ya están todas; si no, se buscan
+    const mismas = (l: any[]) => l.filter(o => String(o.dniCliente ?? '').trim() === documento);
+    let lista = mismas(this.repResultados);
+    const yaEstan = lista.length > 1 || this.repResultados.length > 1;
+    this.repBuscandoOtras = !yaEstan;
+    try {
+      if (!yaEstan) lista = mismas(await this.cobroReparaciones.buscarPorDni(numero));
+    } catch (e) {
+      console.error('Error buscando otras órdenes del cliente', e);
+    } finally {
+      this.repBuscandoOtras = false;
+    }
+    if (this.repOrden?.id !== orden.id) return;      // eligió otra mientras buscaba
+    this.repOtras = lista
+      .filter(o => o.id !== orden.id && this.repSaldo(o) > 0)
+      .sort((a, b) => (Number(a.numeroOrden) || 0) - (Number(b.numeroOrden) || 0));
+  }
+
+  repIncluida(o: any): boolean {
+    return this.repExtras.has(o.id);
+  }
+
+  /** Suma / saca una orden del cobro (el monto vuelve a ser el total) */
+  alternarOrden(o: any) {
+    if (this.repCobrando) return;
+    const extras = new Set(this.repExtras);
+    if (extras.has(o.id)) {
+      extras.delete(o.id);
+      this.repEntregarIds.delete(o.id);
+    } else {
+      if (extras.size + 1 >= MAX_ORDENES_POR_COBRO) return;
+      extras.add(o.id);
+      if (o.coleccion === 'Ordenes Pendientes') this.repEntregarIds.add(o.id);
+    }
+    this.repExtras = extras;
+    this.repMonto = this.repSaldoTotal > 0 ? this.repSaldoTotal : null;
+  }
+
+  /** Órdenes que entran en el cobro, de la más vieja a la más nueva (la última es la que puede quedar con saldo) */
+  get repOrdenesCobro(): any[] {
+    if (!this.repOrden) return [];
+    return [this.repOrden, ...this.repOtras.filter(o => this.repExtras.has(o.id))]
+      .sort((a, b) => (Number(a.numeroOrden) || 0) - (Number(b.numeroOrden) || 0));
+  }
+
+  get repVarias(): boolean {
+    return this.repOrdenesCobro.length > 1;
+  }
+
+  get repSaldoTotal(): number {
+    return Math.round(this.repOrdenesCobro.reduce((a, o) => a + this.repSaldo(o), 0) * 100) / 100;
+  }
+
+  /** Con varias órdenes: la última (la que se lleva el pago parcial) */
+  get repUltimaOrden(): any {
+    const l = this.repOrdenesCobro;
+    return l[l.length - 1] || null;
+  }
+
+  /** Error del reparto entre órdenes (pago parcial que no alcanza para cancelar las anteriores) */
+  get repErrorReparto(): string | null {
+    if (!this.repVarias) return null;
+    const monto = Number(this.repMonto) || 0;
+    if (!(monto > 0) || monto > this.repSaldoTotal + 0.009) return null;
+    return repartirCobroOrdenes(this.repOrdenesCobro.map(o => this.repSaldo(o)), monto, 0).error;
+  }
+
+  repEntrega(o: any): boolean {
+    return this.repVarias ? this.repEntregarIds.has(o.id) : this.repEntregar;
+  }
+
+  alternarEntrega(o: any) {
+    const ids = new Set(this.repEntregarIds);
+    if (ids.has(o.id)) ids.delete(o.id); else ids.add(o.id);
+    this.repEntregarIds = ids;
   }
 
   /** ¿Paga (una parte) en efectivo o transferencia? → se puede cargar un % de descuento */
@@ -2318,7 +2485,11 @@ abrirCaja(sucursalIdExistente?: string) {
     if (!this.repOrden || this.repPagos.error) return null;
     const monto = Number(this.repMonto) || 0;
     if (!(monto > 0)) return null;
-    return imputarCobroReparacion(this.repOrden, monto, this.repPagos.descuentoTotal || 0);
+    if (!this.repVarias) return imputarCobroReparacion(this.repOrden, monto, this.repPagos.descuentoTotal || 0);
+    const ordenes = this.repOrdenesCobro;
+    const r = repartirCobroOrdenes(ordenes.map(o => this.repSaldo(o)), monto, this.repPagos.descuentoTotal || 0);
+    if (!r.partes) return null;
+    return sumarDesgloses(r.partes.map((p, i) => ({ desglose: imputarCobroReparacion(ordenes[i], p.importe, p.descuento), cobrado: p.cobrado })));
   }
 
   /** Lo que efectivamente paga el cliente (con el descuento) */
@@ -2332,17 +2503,32 @@ abrirCaja(sucursalIdExistente?: string) {
     if (this.repPorcentajeInvalido) return false;
     if (this.repFaltaEfectivo > 0) return false; // lo que entrega no alcanza
     const monto = Number(this.repMonto);
-    return monto > 0 && monto <= this.repSaldo(this.repOrden) + 0.009;
+    if (this.repErrorReparto) return false;
+    return monto > 0 && monto <= this.repSaldoTotal + 0.009;
   }
 
   async confirmarCobroReparacion() {
     if (!this.cajaActiva || !this.repCobroValido || this.repCobrando) return;
 
     const orden = this.repOrden;
+    const ordenes = this.repOrdenesCobro;
+    const varias = ordenes.length > 1;
     const monto = Number(this.repMonto);
-    const saldo = this.repSaldo(orden);
+    const saldo = this.repSaldoTotal;
     const esParcial = monto < saldo - 0.009;
-    const entregar = this.repEntregar && orden.coleccion === 'Ordenes Pendientes';
+    const entregarIds = varias
+      ? ordenes.filter(o => this.repEntregarIds.has(o.id) && o.coleccion === 'Ordenes Pendientes').map(o => o.id)
+      : (this.repEntregar && orden.coleccion === 'Ordenes Pendientes' ? [orden.id] : []);
+    const entregar = entregarIds.length > 0;
+    const ultima = ordenes[ordenes.length - 1];
+    const textoEntrega = !entregar ? ''
+      : varias
+        ? `<br><strong>Se entregan los equipos de ${ordenes.filter(o => entregarIds.includes(o.id)).map(o => '#' + o.numeroOrden).join(', ')}</strong> (pasan a Finalizadas)`
+        : '<br><strong>Se entrega el equipo</strong> (la orden pasa a Finalizadas)';
+    const textoOrdenes = varias
+      ? `<strong>${ordenes.length} órdenes</strong> de ${this.escaparHtml([orden.nombreCliente, orden.apellidoCliente].filter(Boolean).join(' '))}<br>
+         <small>${ordenes.map(o => `#${o.numeroOrden} · ${this.escaparHtml(o.equipo || '')} · ${this.formatearMoneda(this.repSaldo(o))}`).join('<br>')}</small><br>`
+      : `Orden <strong>#${orden.numeroOrden}</strong> · ${orden.equipo || ''}<br>`;
     const pagos = conDetalleTarjeta(this.repPagos.pagos, this.repDetalleTarjeta);
     const cajero = this.cajeroSeleccionado(this.repCajeroId) as Cajero;
     const textoPagos = pagos.length === 1
@@ -2352,13 +2538,13 @@ abrirCaja(sucursalIdExistente?: string) {
     const descuentoRep = this.repPagos.descuentoTotal;
     const r = await Swal.fire({
       title: 'Confirmar cobro',
-      html: `Orden <strong>#${orden.numeroOrden}</strong> · ${orden.equipo || ''}<br>
+      html: `${textoOrdenes}
              ${descuentoRep > 0 ? `<small>Cancela ${this.formatearMoneda(monto)} del saldo · descuento ${this.repPorcentajeAplicado}%: -${this.formatearMoneda(descuentoRep)}</small><br>` : ''}
              <span style="font-size:22px">${this.formatearMoneda(this.repPagos.totalFinal)}</span><br><small>${textoPagos}</small><br>
              <small>Cobra: <strong>${this.escaparHtml(nombreCajero(cajero))}</strong></small><br>
              ${this.repVuelto !== null ? `<div style="font-size:15px;margin-top:4px">Paga con ${this.formatearMoneda(this.repPagaCon as number)} · <strong>Vuelto: ${this.formatearMoneda(this.repVuelto)}</strong></div>` : ''}
-             ${esParcial ? `<small>Cobro parcial: queda un saldo de ${this.formatearMoneda(saldo - monto)}</small><br>` : ''}
-             ${entregar ? '<br><strong>Se entrega el equipo</strong> (la orden pasa a Finalizadas)' : ''}`,
+             ${esParcial ? `<small>Cobro parcial: queda un saldo de ${this.formatearMoneda(saldo - monto)}${varias ? ` en la orden #${ultima.numeroOrden}` : ''}</small><br>` : ''}
+             ${textoEntrega}`,
       icon: 'question',
       showCancelButton: true,
       confirmButtonText: 'Cobrar',
@@ -2368,7 +2554,7 @@ abrirCaja(sucursalIdExistente?: string) {
 
     this.repCobrando = true;
     try {
-      const res = await this.cobroReparaciones.cobrar(this.cajaActiva, orden, pagos, entregar, cajeroParaVenta(cajero),
+      const res = await this.cobroReparaciones.cobrarOrdenes(this.cajaActiva, ordenes, pagos, entregarIds, cajeroParaVenta(cajero),
         { efectivoRecibido: this.repVuelto !== null ? this.repPagaCon : null, vuelto: this.repVuelto });
 
       this.mostrarReparaciones = false;
@@ -2379,9 +2565,11 @@ abrirCaja(sucursalIdExistente?: string) {
             ? `<div style="font-size:22px;margin-bottom:8px">Vuelto: <strong>${this.formatearMoneda(res.venta.vuelto)}</strong></div>`
             : '') +
           (res.saldoRestante > 0
-          ? `Saldo pendiente de la orden: <strong>${this.formatearMoneda(res.saldoRestante)}</strong>`
-          : 'La reparación quedó <strong>totalmente paga</strong>.') +
-          (res.entregada ? '<br>El equipo quedó como <strong>entregado</strong>.' : ''),
+          ? `Saldo pendiente ${varias ? `de la orden #${ultima.numeroOrden}` : 'de la orden'}: <strong>${this.formatearMoneda(res.saldoRestante)}</strong>`
+          : varias ? `Las ${ordenes.length} reparaciones quedaron <strong>totalmente pagas</strong>.` : 'La reparación quedó <strong>totalmente paga</strong>.') +
+          (res.entregadas.length
+            ? (varias ? `<br>Quedaron como <strong>entregados</strong> los equipos de ${res.entregadas.map(n => '#' + n).join(', ')}.` : '<br>El equipo quedó como <strong>entregado</strong>.')
+            : ''),
         icon: 'success',
         showCancelButton: true,
         showDenyButton: true,
@@ -2684,13 +2872,27 @@ abrirCaja(sucursalIdExistente?: string) {
   cuPagosAnteriores: PagoCredito[] = [];
   cuCargandoDetalle = false;
   cuMonto: number | null = null;                      // lo que se aplica a las cuotas
-  cuRecargo: number | null = null;                    // recargo por mora (opcional)
+  cuRecargo: number | null = null;                    // recargo por mora: lo que escribió el cajero
+  cuRecargoEditado = false;                           // false = se usa el calculado (1% por día corrido)
+  readonly recargoDiario = RECARGO_DIARIO;
   cuLineas: LineaPago[] = [{ metodo: null, monto: null }];
   cuPagaCon: number | null = null;
   cuDetalleTarjeta = '';
   cuCajeroId: string | null = null;
   cuCobrando = false;
+  // 🔁 Refinanciación (en la misma ventana, con el crédito elegido)
+  cuModo: 'cobro' | 'refinanciar' = 'cobro';
+  rfRecargo: number | null = null;
+  rfRecargoEditado = false;
+  rfEntrega: number | null = null;
+  rfCuotas: number | null = null;
+  rfLineas: LineaPago[] = [{ metodo: null, monto: null }];
+  rfDetalleTarjeta = '';
+  rfProcesando = false;
   readonly estadoCuota = estadoCuota;
+  readonly estaBloqueado = estaBloqueado;
+  readonly ultimaCarta = ultimaCarta;
+  readonly fechaCorta = fechaCorta;
   readonly faltaCuota = faltaCuota;
 
   async abrirCobroCuota() {
@@ -2737,7 +2939,7 @@ abrirCaja(sucursalIdExistente?: string) {
     if (!palabras.length) return this.cuCreditos;
     return this.cuCreditos.filter(c => {
       const texto = BuscadorClientesService.normalizar(
-        `${c.cliente?.nombre} ${c.cliente?.dni ?? ''} ${(c.equipos || []).map(e => e.nombre + ' ' + e.imei).join(' ')} ${c.nroTicket ?? ''}`);
+        `${c.cliente?.nombre} ${c.cliente?.dni ?? ''} ${c.cliente?.telefono ?? ''} ${(c.equipos || []).map(e => e.nombre + ' ' + e.imei).join(' ')} ${c.nroTicket ?? ''}`);
       return palabras.every(p => texto.includes(p));
     });
   }
@@ -2745,9 +2947,12 @@ abrirCaja(sucursalIdExistente?: string) {
   /** @param conservar true = vuelve a leer el crédito sin borrar lo cargado (monto, medios, cajero) */
   async elegirCredito(c: Credito, conservar = false) {
     this.cuCredito = c;
+    this.cuModo = 'cobro';
+    this.limpiarRefinanciacion();
     if (!conservar) {
       this.cuMonto = null;
       this.cuRecargo = null;
+      this.cuRecargoEditado = false;
       this.cuLineas = [{ metodo: null, monto: null }];
       this.cuPagaCon = null;
       this.cuDetalleTarjeta = '';
@@ -2772,8 +2977,141 @@ abrirCaja(sucursalIdExistente?: string) {
     }
   }
 
+  // =====================================================
+  // 🔁 REFINANCIACIÓN
+  // =====================================================
+
+  private limpiarRefinanciacion() {
+    this.rfRecargo = null;
+    this.rfRecargoEditado = false;
+    this.rfEntrega = null;
+    this.rfCuotas = null;
+    this.rfLineas = [{ metodo: null, monto: null }];
+    this.rfDetalleTarjeta = '';
+  }
+
+  cambiarModoCuota(modo: 'cobro' | 'refinanciar') {
+    if (this.cuCobrando || this.rfProcesando) return;
+    this.cuModo = modo;
+    if (modo === 'refinanciar') this.cargarPlanesCredito();
+  }
+
+  /** Recargo sugerido: el de todas las cuotas vencidas (1% por día corrido) */
+  get rfRecargoSugerido() {
+    return recargoRefinanciacion(this.cuCredito?.cuotas || [], new Date());
+  }
+
+  get rfRecargoValor(): number | null {
+    if (this.rfRecargoEditado) return this.rfRecargo;
+    const t = this.rfRecargoSugerido.total;
+    return t > 0 ? t : null;
+  }
+
+  cambiarRecargoRefinanciacion(v: any) {
+    this.rfRecargo = v === '' || v === undefined ? null : v;
+    this.rfRecargoEditado = true;
+  }
+
+  recalcularRecargoRefinanciacion() {
+    this.rfRecargo = null;
+    this.rfRecargoEditado = false;
+  }
+
+  /** Cálculo con un plan (para mostrar el valor de la cuota de cada uno) */
+  calculoRefinanciacion(cuotas: number | null): { calculo: CalculoRefinanciacion | null; error: string | null } {
+    const plan = this.planesCredito.find(p => p.cuotas === cuotas) || null;
+    return calcularRefinanciacion(this.cuSituacion?.saldo || 0, this.rfRecargoValor, this.rfEntrega, plan, new Date());
+  }
+
+  cuotaRefinanciacion(cuotas: number): number | null {
+    return this.calculoRefinanciacion(cuotas).calculo?.cuotas[0]?.importe ?? null;
+  }
+
+  get rfResultado() {
+    return this.calculoRefinanciacion(this.rfCuotas);
+  }
+
+  get rfEntregaValor(): number {
+    const e = Number(this.rfEntrega);
+    return e > 0 ? Math.round(e * 100) / 100 : 0;
+  }
+
+  /** Reparto de la entrega entre los medios */
+  get rfPagos() {
+    return calcularPagos(this.rfEntregaValor, this.rfLineas, () => 0);
+  }
+
+  get rfError(): string | null {
+    if (!this.cuCredito || this.cuCargandoDetalle) return null;
+    const r = this.rfResultado;
+    if (r.error) return r.error;
+    if (this.rfEntregaValor > 0 && this.rfPagos.error) return this.rfPagos.error;
+    if (!this.cajeroSeleccionado(this.cuCajeroId)) return 'Elegí el cajero.';
+    return null;
+  }
+
+  async confirmarRefinanciacion() {
+    const credito = this.cuCredito;
+    const r = this.rfResultado;
+    if (!this.cajaActiva || !credito || !r.calculo || this.rfError || this.rfProcesando) return;
+    const c = r.calculo;
+    const cajero = this.cajeroSeleccionado(this.cuCajeroId) as Cajero;
+    const pagos = this.rfEntregaValor > 0 ? conDetalleTarjeta(this.rfPagos.pagos, this.rfDetalleTarjeta) : [];
+    const ok = await Swal.fire({
+      title: '¿Refinanciar el crédito?',
+      html: `<div style="text-align:left">${this.escaparHtml(credito.cliente.nombre)}<br>
+        Saldo ${this.formatearMoneda(c.saldo)}${c.recargo > 0 ? ` + recargo ${this.formatearMoneda(c.recargo)}` : ''}${c.entrega > 0 ? ` − entrega ${this.formatearMoneda(c.entrega)}` : ''}
+        = <strong>${this.formatearMoneda(c.aRefinanciar)}</strong><br>
+        <span style="font-size:20px"><strong>${c.cuotas.length} cuota${c.cuotas.length > 1 ? 's' : ''} de ${this.formatearMoneda(c.cuotas[0].importe)}</strong></span>
+        ${c.cuotas.length > 1 && c.cuotas[c.cuotas.length - 1].importe !== c.cuotas[0].importe ? `<br><small>(la última de ${this.formatearMoneda(c.cuotas[c.cuotas.length - 1].importe)})</small>` : ''}
+        <br><small>Total financiado ${this.formatearMoneda(c.financiado)} · vencen del 1 al 10 desde ${mesCuota(c.cuotas[0])}</small>
+        ${c.entrega > 0 ? `<br><br>Cobra la entrega: <strong>${this.formatearMoneda(c.entrega)}</strong> (${pagos.map(p => nombreMetodo(p.metodo)).join(' + ')})` : ''}
+        ${estaBloqueado(credito) ? '<br><br><small>🔒 El crédito nuevo sigue bloqueado (carta documento).</small>' : ''}
+        <br><br><small>El crédito actual queda como <strong>refinanciado</strong> y se crea uno nuevo con este plan.</small></div>`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Refinanciar',
+      cancelButtonText: 'Volver'
+    });
+    if (!ok.isConfirmed) return;
+
+    this.rfProcesando = true;
+    try {
+      const plan = this.planesCredito.find(p => p.cuotas === this.rfCuotas)!;
+      const res = await this.creditos.refinanciar(this.cajaActiva, credito.id,
+        { recargo: c.recargo, entrega: c.entrega, plan, pagos, cajero: cajeroParaVenta(cajero) });
+      this.limpiarRefinanciacion();
+      this.cuModo = 'cobro';
+      this.cuCredito = null;
+      this.cuPagosAnteriores = [];
+      await this.cargarCreditosVigentes();
+      const fin = await Swal.fire({
+        title: `🔁 Crédito refinanciado · Ticket Nº ${this.tickets.numeroFormateado(res.venta)}`,
+        html: `${c.cuotas.length} cuota${c.cuotas.length > 1 ? 's' : ''} de <strong>${this.formatearMoneda(c.cuotas[0].importe)}</strong>.<br>
+               <small>Imprimí el comprobante para que el cliente firme el nuevo plan.</small>`,
+        icon: 'success',
+        showCancelButton: true,
+        showDenyButton: true,
+        confirmButtonText: '🖨 Imprimir',
+        denyButtonText: 'Ver',
+        cancelButtonText: 'Cerrar'
+      });
+      if (fin.isConfirmed) this.tickets.abrir(res.venta, 'imprimir');
+      else if (fin.isDenied) this.tickets.abrir(res.venta, 'vista');
+    } catch (err: any) {
+      if (err instanceof CreditoError) {
+        await Swal.fire('No se pudo refinanciar', err.message, 'warning');
+      } else {
+        console.error('Error refinanciando:', err);
+        await Swal.fire('Error', 'No se pudo refinanciar. ' + (err?.message || ''), 'error');
+      }
+    } finally {
+      this.rfProcesando = false;
+    }
+  }
+
   volverAListaCreditos() {
-    if (this.cuCobrando) return;
+    if (this.cuCobrando || this.rfProcesando) return;
     this.cuCredito = null;
     this.cuPagosAnteriores = [];
   }
@@ -2782,14 +3120,37 @@ abrirCaja(sucursalIdExistente?: string) {
     return this.cuCredito ? situacionCredito(this.cuCredito) : null;
   }
 
+  /** Recargo calculado: 1% del importe de cada cuota vencida que se paga, por día de atraso (corrido) */
+  get cuRecargoSugerido() {
+    const numeros = this.cuImputacion.aplicaciones.map(a => a.numero);
+    return recargoPorAtraso(this.cuCredito?.cuotas || [], numeros, new Date());
+  }
+
+  /** Lo que va en el campo: el calculado, salvo que el cajero lo haya cambiado */
+  get cuRecargoValor(): number | null {
+    if (this.cuRecargoEditado) return this.cuRecargo;
+    const t = this.cuRecargoSugerido.total;
+    return t > 0 ? t : null;
+  }
+
+  cambiarRecargo(v: any) {
+    this.cuRecargo = v === '' || v === undefined ? null : v;
+    this.cuRecargoEditado = true;
+  }
+
+  recalcularRecargo() {
+    this.cuRecargo = null;
+    this.cuRecargoEditado = false;
+  }
+
   get cuRecargoInvalido(): boolean {
-    const v = this.cuRecargo;
+    const v = this.cuRecargoValor;
     return v !== null && v !== undefined && String(v) !== '' && !(Number(v) >= 0);
   }
 
   /** Lo que paga el cliente: cuotas + recargo */
   get cuTotal(): number {
-    const recargo = this.cuRecargoInvalido ? 0 : Number(this.cuRecargo) || 0;
+    const recargo = this.cuRecargoInvalido ? 0 : Number(this.cuRecargoValor) || 0;
     return Math.round(((Number(this.cuMonto) || 0) + recargo) * 100) / 100;
   }
 
@@ -2838,7 +3199,7 @@ abrirCaja(sucursalIdExistente?: string) {
 
     const credito = this.cuCredito;
     const monto = Math.round(Number(this.cuMonto) * 100) / 100;
-    const recargo = this.cuRecargoInvalido ? 0 : Math.round((Number(this.cuRecargo) || 0) * 100) / 100;
+    const recargo = this.cuRecargoInvalido ? 0 : Math.round((Number(this.cuRecargoValor) || 0) * 100) / 100;
     const pagos = conDetalleTarjeta(this.cuPagos.pagos, this.cuDetalleTarjeta);
     const cajero = this.cajeroSeleccionado(this.cuCajeroId) as Cajero;
     const texto = pagos.length === 1
@@ -3080,14 +3441,15 @@ abrirCaja(sucursalIdExistente?: string) {
 
   /** Pagos de contado: si usa plan canje, el equipo usado va primero y los medios cubren el resto */
   private pagosConCanje(totalBase: number, porcentaje: (m: MetodoPago) => number): ResultadoPagos & { canje: DatosCanje | null } {
-    const c = validarCanje(this.usaCanje && this.hayEquiposEnCarrito, this.canjeMonto, this.canjeDetalle, totalBase);
-    if (c.error) {
+    const c = this.validarCanjeActual(this.usaCanje && this.hayEquiposEnCarrito, totalBase);
+    if (!c.canje && c.error) {
       return { pagos: [], descuentoTotal: 0, totalFinal: totalBase, resto: 0, error: c.error, canje: null };
     }
     const lineas: LineaPago[] = c.canje ? [{ metodo: 'canje', monto: c.canje.monto }, ...this.lineasPago] : this.lineasPago;
     const pago = calcularPagos(totalBase, lineas, m => m === 'canje' ? 0 : porcentaje(m));
     if (c.canje && !pago.error) pago.pagos[0] = { ...pago.pagos[0], detalle: c.canje.detalle };
-    return { ...pago, canje: c.canje };
+    // Los datos que falten del equipo del canje no cambian los montos, pero no dejan confirmar
+    return { ...pago, error: c.error || pago.error, canje: c.canje };
   }
 
   /**
@@ -3105,21 +3467,25 @@ abrirCaja(sucursalIdExistente?: string) {
     if (c.errorPago && /dólar|descuento de equipos/i.test(c.errorPago)) return conError(c.errorPago);
 
     const vacio = (v: any) => v === null || v === undefined || String(v).trim() === '';
-    const financiado = vacio(this.creditoPrecio) ? c.totalBase : Number(this.creditoPrecio);
-    const cj = validarCanje(this.usaCanje, this.canjeMonto, this.canjeDetalle, financiado);
-    if (cj.error) return conError(cj.error);
+    // El campo "Precio de contado" es sin el canje: el precio del equipo es ese + el canje
+    const contado = vacio(this.creditoPrecio) ? c.totalBase : Number(this.creditoPrecio) + this.canjeEnCredito;
+    const cj = this.validarCanjeActual(this.usaCanje, contado);
+    if (!cj.canje && cj.error) return conError(cj.error);
 
+    // Contado (ajustable) − canje − entrega = a financiar; + interés del plan elegido
     const r = calcularCredito({
-      precioContado: c.totalBase,
-      precioFinanciado: this.creditoPrecio,
+      precioLista: c.totalBase,
+      precioContado: vacio(this.creditoPrecio) ? '' : contado,
       canje: cj.canje?.monto || 0,
       entrega: this.creditoEntrega,
       cuotas: this.creditoCuotas,
+      planes: this.planesCredito,
       fecha: new Date()
     });
     if (!r.calculo) return conError(r.error!, { canje: cj.canje });
     const calc = r.calculo;
     const extra: Partial<ResumenVenta> = { canje: cj.canje, credito: calc, totalFinal: calc.precioFinanciado };
+    if (cj.error) return conError(cj.error, extra);   // faltan datos del equipo del canje (los montos ya están)
 
     const faltan = datosFaltantes({ dni: this.clienteActual.dni, telefono: this.creditoTelefono, direccion: this.creditoDireccion });
     if (faltan.length) return conError(`Faltan datos del cliente para el crédito: ${faltan.join(', ')}.`, extra);
@@ -3170,7 +3536,47 @@ abrirCaja(sucursalIdExistente?: string) {
         this.creditoTelefono = this.creditoTelefono || this.clienteActual.telefono || '';
         this.creditoDireccion = this.creditoDireccion || this.clienteActual.direccion || '';
       }
+      this.cargarPlanesCredito();   // por si los cambiaron en Gestiones
     }
+  }
+
+  /** Planes de cuotas e interés (Gestiones → Créditos de la casa) */
+  private async cargarPlanesCredito() {
+    if (!this.creditos) return;
+    const cfg = await this.creditos.planes();
+    this.planesCredito = cfg.planes;
+    if (this.creditoCuotas !== null && !this.planesCredito.some(p => p.cuotas === this.creditoCuotas)) this.creditoCuotas = null;
+  }
+
+  /** Cuánto queda cada cuota de un plan con lo que hay cargado (para los botones) */
+  cuotaDePlan(p: PlanCuotas): number | null {
+    const aFinanciar = this.contadoConCanje - (Number(this.creditoEntrega) || 0);
+    return aFinanciar > 0 ? Math.round(conInteres(aFinanciar, p.interes) / p.cuotas) : null;
+  }
+
+  /** Lo que paga el cliente con dinero: sin lo que se le toma por el plan canje (con crédito: entrega + cuotas) */
+  get totalAPagar(): number {
+    const r = this.resumen;
+    const canje = r.canje?.monto || 0;
+    const total = r.credito ? r.credito.precioFinanciado - r.credito.canje : r.totalFinal - canje;
+    return Math.round(total * 100) / 100;
+  }
+
+  /** Lo que se le toma por el equipo del plan canje (0 si no usa) */
+  get canjeEnCredito(): number {
+    return this.usaCanje ? Math.max(0, Number(this.canjeMonto) || 0) : 0;
+  }
+
+  /** Precio de contado con el canje descontado: el cargado a mano o lista − canje */
+  get contadoConCanje(): number {
+    return this.creditoPrecio !== null && String(this.creditoPrecio) !== ''
+      ? Number(this.creditoPrecio)
+      : Math.round((this.resumen.totalBase - this.canjeEnCredito) * 100) / 100;
+  }
+
+  /** Placeholder del campo (texto) */
+  get placeholderContado(): string {
+    return String(Math.round((this.resumen.totalBase - this.canjeEnCredito) * 100) / 100);
   }
 
   restablecerPrecioCredito() {
@@ -3178,15 +3584,94 @@ abrirCaja(sucursalIdExistente?: string) {
     this.mostrarErrorPago = false;
   }
 
-  /** Recargo del precio financiado sobre el de contado, en % */
-  porcentajeRecargo(c: CalculoCredito): number {
-    return c.precioContado > 0 ? Math.round((c.recargo / c.precioContado) * 1000) / 10 : 0;
+
+  // =====================================================
+  // 🧮 TASADOR (Plan canje)
+  // =====================================================
+
+  async abrirTasador() {
+    this.mostrarTasador = true;
+    if (this.modelosTasador.length || this.cargandoTasador) return;
+    this.cargandoTasador = true;
+    try {
+      this.modelosTasador = await this.tasador.modelos(true);
+    } catch (e) {
+      console.error('Error cargando el tasador', e);
+      Swal.fire('No se pudo abrir el tasador', 'Revisá la conexión e intentá de nuevo.', 'warning');
+      this.mostrarTasador = false;
+    } finally {
+      this.cargandoTasador = false;
+    }
+  }
+
+  /** Usa la tasación: completa el importe del canje (en pesos) y el modelo / capacidad de la ficha */
+  usarTasacion(r: ResultadoTasacion) {
+    this.mostrarTasador = false;
+    this.canjeTasacion = r;
+    this.canjeMonto = r.totalARS ?? Math.round(r.totalUSD * this.cotizacionEquipos);
+    if (!String(this.canjeEquipo.modelo || '').trim()) this.canjeEquipo.modelo = r.modelo.replace(/^iphone\s*/i, '').toUpperCase();
+    if (!this.canjeEquipo.capacidad && this.capacidadesCanje.includes(r.capacidad)) this.canjeEquipo.capacidad = r.capacidad;
+    if (!this.canjeAlta && !String(this.canjeDetalle || '').trim()) this.canjeDetalle = `${r.modelo} ${r.capacidad}`;
+    this.mostrarErrorPago = false;
+    const cajero = this.cajeroSeleccionado(this.cajeroId);
+    this.tasador.registrar(r, 'despacho', cajero ? cajeroParaVenta(cajero) : null);
+  }
+
+  private canjeEquipoVacio(): DatosEquipoCanje {
+    return { modelo: '', color: '', capacidad: '', imei: '', bateria: null as any, grado: '', observaciones: '' };
+  }
+
+  /** Descripción del canje: con alta, se arma con los datos del equipo; si no, la que escribieron */
+  get detalleCanje(): string {
+    if (!this.canjeAlta) return this.canjeDetalle;
+    const e = this.canjeEquipo;
+    const imei = normalizarImei(e.imei);
+    return [[e.modelo, e.capacidad, e.color].map(x => String(x || '').trim()).filter(Boolean).join(' '), imei ? `IMEI ${imei}` : '']
+      .filter(Boolean).join(' · ');
+  }
+
+  /** Errores de la ficha del equipo del canje (solo si se da de alta) */
+  get erroresEquipoCanje(): string[] {
+    return this.usaCanje && this.canjeAlta && this.hayEquiposEnCarrito ? validarEquipoCanje(this.canjeEquipo) : [];
+  }
+
+  /** Aviso (no bloquea) si el IMEI de 15 dígitos no parece válido */
+  get avisoImeiCanje(): string {
+    const imei = normalizarImei(this.canjeEquipo.imei);
+    return /^\d{15}$/.test(imei) && !imeiValido(imei) ? 'Este IMEI no parece válido: revisá los dígitos.' : '';
+  }
+
+  /** Plan canje validado (monto + descripción + ficha del equipo si se da de alta) */
+  /**
+   * Plan canje: si el MONTO es válido, el canje se descuenta aunque falten datos del equipo
+   * (así el total se ve bien mientras se completa la ficha); esos faltantes vuelven como error
+   * y no dejan confirmar la venta.
+   */
+  private validarCanjeActual(usa: boolean, total: number): { canje: DatosCanje | null; error: string | null } {
+    if (!usa) return { canje: null, error: null };
+    const monto = validarCanje(true, this.canjeMonto, 'monto', total);   // solo el monto
+    if (!monto.canje) return monto;
+    let error: string | null = null;
+    if (this.canjeAlta) {
+      const errores = validarEquipoCanje(this.canjeEquipo);
+      const imei = normalizarImei(this.canjeEquipo.imei);
+      if (errores.length) error = `Equipo del plan canje: ${errores.join(' ')}`;
+      else if (this.carrito.some(i => i.equipoId && normalizarImei((i.equipo as any)?.imei) === imei)) {
+        error = 'El IMEI del equipo del canje es el mismo de un equipo que se está vendiendo.';
+      }
+    } else {
+      error = validarCanje(true, this.canjeMonto, this.canjeDetalle, total).error;
+    }
+    return { canje: { monto: monto.canje.monto, detalle: this.detalleCanje.trim().slice(0, MAX_DETALLE_CANJE) }, error };
   }
 
   private reiniciarCreditoYCanje() {
     this.usaCanje = false;
     this.canjeMonto = null;
+    this.canjeTasacion = null;
     this.canjeDetalle = '';
+    this.canjeAlta = true;
+    this.canjeEquipo = this.canjeEquipoVacio();
     this.ventaCredito = false;
     this.creditoPrecio = null;
     this.creditoEntrega = null;

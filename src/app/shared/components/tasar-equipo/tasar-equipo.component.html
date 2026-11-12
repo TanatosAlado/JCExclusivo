@@ -1,0 +1,76 @@
+<div class="tasador">
+  <!-- 1. Modelo -->
+  <ng-container *ngIf="!modelo">
+    <label class="form-label small mb-1" for="tasarFiltro">¿Qué equipo es?</label>
+    <input id="tasarFiltro" type="text" class="form-control form-control-sm mb-2" [(ngModel)]="filtro"
+      placeholder="Buscar modelo (ej: 15 pro)" autocomplete="off">
+    <div class="lista-modelos">
+      <button *ngFor="let m of modelosFiltrados" type="button" class="modelo" (click)="elegirModelo(m)">
+        <strong>{{ m.nombre }}</strong>
+        <small>{{ m.capacidades.length }} capacidad{{ m.capacidades.length > 1 ? 'es' : '' }} · {{ m.preguntas.length }} pregunta{{ m.preguntas.length === 1 ? '' : 's' }}</small>
+      </button>
+      <div *ngIf="!modelosFiltrados.length" class="small text-muted p-2">
+        {{ modelos.length ? 'No hay modelos con ese nombre.' : 'Todavía no hay modelos cargados en el tasador (Gestiones → Tasador).' }}
+      </div>
+    </div>
+  </ng-container>
+
+  <ng-container *ngIf="modelo as m">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h5 class="m-0">📱 {{ m.nombre }}</h5>
+      <button type="button" class="btn btn-link btn-sm p-0" (click)="cambiarModelo()">Cambiar equipo</button>
+    </div>
+
+    <!-- 2. Capacidad -->
+    <label class="form-label small mb-1">Capacidad</label>
+    <div class="capacidades mb-2">
+      <button *ngFor="let c of m.capacidades" type="button" class="capacidad" [class.elegida]="capacidad === c.capacidad"
+        (click)="capacidad = c.capacidad">
+        <strong>{{ c.capacidad }}</strong>
+      </button>
+    </div>
+
+    <!-- 3. Preguntas -->
+    <ng-container *ngIf="capacidad">
+      <div *ngIf="!m.preguntas.length" class="small text-muted mb-2">Este modelo no tiene preguntas: se toma al precio de la capacidad.</div>
+      <div class="preguntas">
+        <div *ngFor="let p of m.preguntas; let i = index" class="pregunta" [class.respondida]="respuestas[p.id]">
+          <span class="texto"><span class="num">{{ i + 1 }}.</span> {{ p.texto }}</span>
+          <div class="btn-group btn-group-sm" role="group" [attr.aria-label]="p.texto">
+            <button type="button" class="btn" [class.btn-dark]="respuestas[p.id] === 'si'"
+              [class.btn-outline-secondary]="respuestas[p.id] !== 'si'" (click)="responder(p.id, 'si')">Sí</button>
+            <button type="button" class="btn" [class.btn-dark]="respuestas[p.id] === 'no'"
+              [class.btn-outline-secondary]="respuestas[p.id] !== 'no'" (click)="responder(p.id, 'no')">No</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Resultado: solo el valor final, cuando están todas las respuestas (no se muestran los descuentos) -->
+      <div class="small text-muted mt-2" *ngIf="!calculo.completa">
+        Respondé {{ calculo.faltan === 1 ? 'la pregunta que falta' : 'las ' + calculo.faltan + ' preguntas que faltan' }} para ver la tasación.
+      </div>
+      <div class="resultado" *ngIf="mostrarValor && calculo.completa && calculo.resultado as r">
+        <div class="d-flex justify-content-between align-items-baseline total">
+          <span>Valor tasado</span>
+          <span><strong>{{ textoUSD(r.totalUSD) }}</strong>
+            <small *ngIf="r.totalARS !== null" class="d-block text-end">{{ r.totalARS | currency:'ARS':'symbol-narrow':'1.0-0' }}
+              <span class="text-muted">(dólar {{ r.cotizacion | currency:'ARS':'symbol-narrow':'1.0-2' }})</span></small>
+          </span>
+        </div>
+      </div>
+    </ng-container>
+
+    <div class="d-flex justify-content-between align-items-center mt-3">
+      <button type="button" class="btn btn-link btn-sm p-0" *ngIf="capacidad && m.preguntas.length" (click)="reiniciar()">Volver a empezar</button>
+      <span class="flex-grow-1"></span>
+      <button type="button" class="btn btn-outline-secondary btn-sm me-2" (click)="cancelar.emit()">Cancelar</button>
+      <button type="button" class="btn btn-primary btn-sm" [disabled]="!calculo.resultado || !calculo.completa" (click)="confirmar()">
+        {{ textoBoton }}
+      </button>
+    </div>
+  </ng-container>
+
+  <div class="d-flex justify-content-end mt-2" *ngIf="!modelo">
+    <button type="button" class="btn btn-outline-secondary btn-sm" (click)="cancelar.emit()">Cancelar</button>
+  </div>
+</div>

@@ -94,6 +94,7 @@ export class InformeCierreService {
   <table>
     <tr><td>Cantidad de ventas</td><td class="der">${r.cantidadVentas ?? 0}</td></tr>
     ${r.cantidadAnuladas ? `<tr><td>Ventas anuladas (no suman)</td><td class="der">${r.cantidadAnuladas}</td></tr>` : ''}
+    ${r.devoluciones?.cantidad ? `<tr><td>Devoluciones de productos (${r.devoluciones.cantidad})<br><small>(ya descontadas de los medios de abajo)</small></td><td class="der">-${$(r.devoluciones.total)}</td></tr>` : ''}
     <tr><td>Efectivo</td><td class="der">${$(m.efectivo)}</td></tr>
     <tr><td>Tarjeta</td><td class="der">${$(m.tarjeta)}</td></tr>
     <tr><td>Transferencia / QR</td><td class="der">${$(m.transferencia)}</td></tr>

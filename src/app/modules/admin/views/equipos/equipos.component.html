@@ -8,8 +8,16 @@
   <mat-card *ngIf="mostrarForm" class="mb-4 tarjeta-form">
     <div class="form-encabezado">
       <div>
-        <div class="sobretitulo">{{ editando ? 'Editar equipo' : 'Nuevo equipo' }}</div>
+        <div class="sobretitulo">{{ editando ? (editando.estado === 'preparacion' ? 'Equipo en preparación' : 'Editar equipo') : 'Nuevo equipo' }}</div>
         <h2>{{ editando ? nombreEquipo(editando) : 'Alta de equipo para la venta' }}</h2>
+        <div *ngIf="editando?.canje as c" class="info-canje">
+          📲 Entró por plan canje el {{ c.fecha | date:'dd/MM/yyyy' }}: se le tomó en <strong>{{ montoCanje(editando!) }}</strong>
+          <ng-container *ngIf="c.cliente?.nombre"> a {{ c.cliente.nombre }}</ng-container>
+          <ng-container *ngIf="c.nroTicket"> · ticket {{ c.nroTicket.toString().padStart(8, '0') }}</ng-container>
+        </div>
+        <div *ngIf="editando?.estado === 'preparacion'" class="info-canje aviso">
+          Todavía no está a la venta. Cargá las fotos y los precios y tocá <strong>Guardar y publicar</strong>.
+        </div>
       </div>
       <button mat-icon-button type="button" (click)="cancelar()" [disabled]="guardando || subiendoFoto" title="Cerrar">
         <mat-icon>close</mat-icon>
@@ -154,10 +162,18 @@
         <button *ngIf="editando" mat-button color="warn" type="button" (click)="eliminar(editando)" [disabled]="guardando || subiendoFoto">
           <mat-icon>delete_outline</mat-icon> Dar de baja
         </button>
-        <button mat-raised-button color="primary" type="submit" [disabled]="guardando || subiendoFoto">
+        <button *ngIf="editando?.estado !== 'preparacion'" mat-raised-button color="primary" type="submit" [disabled]="guardando || subiendoFoto">
           <mat-icon>{{ editando ? 'save' : 'add' }}</mat-icon>
           {{ guardando ? 'Guardando…' : (editando ? 'Guardar cambios' : 'Dar de alta') }}
         </button>
+        <ng-container *ngIf="editando?.estado === 'preparacion'">
+          <button mat-stroked-button type="submit" [disabled]="guardando || subiendoFoto" title="Guarda sin publicar">
+            <mat-icon>save</mat-icon> Guardar
+          </button>
+          <button mat-raised-button color="primary" type="button" (click)="guardar(true)" [disabled]="guardando || subiendoFoto">
+            <mat-icon>storefront</mat-icon> {{ guardando ? 'Guardando…' : 'Guardar y publicar' }}
+          </button>
+        </ng-container>
       </div>
     </form>
   </mat-card>
@@ -194,6 +210,11 @@
           <span class="etiqueta">Vendidos</span>
           <strong>{{ cantidadVendidos }}</strong>
         </div>
+        <div class="indicador" *ngIf="cantidadEnPreparacion">
+          <span class="etiqueta">En preparación</span>
+          <strong class="texto-alerta">{{ cantidadEnPreparacion }}</strong>
+          <span class="sub">plan canje: falta foto y precio</span>
+        </div>
         <div class="indicador" *ngIf="sinFoto">
           <span class="etiqueta">Sin foto</span>
           <strong class="texto-alerta">{{ sinFoto }}</strong>
@@ -208,6 +229,7 @@
         </mat-form-field>
         <mat-button-toggle-group [(ngModel)]="filtroEstado" aria-label="Estado" class="toggle-estado">
           <mat-button-toggle value="disponible">Disponibles</mat-button-toggle>
+          <mat-button-toggle value="preparacion">En preparación<ng-container *ngIf="cantidadEnPreparacion"> ({{ cantidadEnPreparacion }})</ng-container></mat-button-toggle>
           <mat-button-toggle value="vendido">Vendidos</mat-button-toggle>
           <mat-button-toggle value="todos">Todos</mat-button-toggle>
         </mat-button-toggle-group>
@@ -234,12 +256,13 @@
 
       <div class="grilla-equipos" *ngIf="!cargando && visibles.length">
         <div class="equipo" *ngFor="let e of visibles" [class.vendido]="e.estado === 'vendido'"
-          [class.seleccionado]="editando?.id === e.id">
+          [class.preparacion]="e.estado === 'preparacion'" [class.seleccionado]="editando?.id === e.id">
           <div class="equipo-foto">
             <img *ngIf="fotosDe(e)[0] as principal" [src]="principal" [alt]="e.modelo" loading="lazy">
             <mat-icon *ngIf="!fotosDe(e).length">smartphone</mat-icon>
             <span *ngIf="fotosDe(e).length > 1" class="cantidad-fotos" [title]="fotosDe(e).length + ' fotos'">📷 {{ fotosDe(e).length }}</span>
             <span *ngIf="e.estado === 'vendido'" class="sello">VENDIDO</span>
+            <span *ngIf="e.estado === 'preparacion'" class="sello sello-preparacion">EN PREPARACIÓN</span>
           </div>
           <div class="equipo-cuerpo">
             <div class="equipo-modelo" [title]="e.modelo">{{ e.modelo }}</div>
@@ -257,13 +280,19 @@
               <span *ngIf="e.venta.nroTicket"> · Ticket {{ e.venta.nroTicket.toString().padStart(8, '0') }}</span>
               <span *ngIf="e.venta.cliente?.nombre"> · {{ e.venta.cliente.nombre }}</span>
             </div>
+            <div class="canje-info" *ngIf="e.canje">
+              📲 Plan canje · tomado en {{ montoCanje(e) }}<span *ngIf="e.canje.cliente?.nombre"> · {{ e.canje.cliente.nombre }}</span>
+            </div>
             <div class="precios">
-              <div><span class="etq">Minorista</span><strong>{{ precio(e, e.precioMinorista) }}</strong></div>
-              <div><span class="etq">Mayorista</span><strong>{{ precio(e, e.precioMayorista) }}</strong></div>
+              <div><span class="etq">Minorista</span><strong>{{ e.precioMinorista ? precio(e, e.precioMinorista) : 'Sin precio' }}</strong></div>
+              <div><span class="etq">Mayorista</span><strong>{{ e.precioMayorista ? precio(e, e.precioMayorista) : 'Sin precio' }}</strong></div>
             </div>
           </div>
-          <div class="equipo-acciones" *ngIf="e.estado === 'disponible'">
-            <button mat-stroked-button type="button" (click)="editar(e)"><mat-icon>edit</mat-icon> Editar</button>
+          <div class="equipo-acciones" *ngIf="esEditable(e)">
+            <button *ngIf="e.estado === 'preparacion'" mat-raised-button color="primary" type="button" (click)="editar(e)">
+              <mat-icon>storefront</mat-icon> Preparar y publicar
+            </button>
+            <button *ngIf="e.estado !== 'preparacion'" mat-stroked-button type="button" (click)="editar(e)"><mat-icon>edit</mat-icon> Editar</button>
             <button mat-icon-button type="button" color="warn" (click)="eliminar(e)" title="Dar de baja"><mat-icon>delete_outline</mat-icon></button>
           </div>
         </div>
@@ -271,8 +300,9 @@
 
       <div *ngIf="!cargando && !error && !visibles.length" class="vacio">
         <mat-icon>smartphone</mat-icon>
-        <div>{{ filtro ? 'No hay equipos que coincidan con la búsqueda.' : (filtroEstado === 'vendido' ? 'Todavía no se vendió ningún equipo.' : 'No hay equipos cargados.') }}</div>
-        <button *ngIf="!filtro && filtroEstado !== 'vendido'" mat-stroked-button color="primary" type="button" (click)="nuevo()">
+        <div>{{ filtro ? 'No hay equipos que coincidan con la búsqueda.' : (filtroEstado === 'vendido' ? 'Todavía no se vendió ningún equipo.'
+          : filtroEstado === 'preparacion' ? 'No hay equipos en preparación: los del plan canje ya están publicados.' : 'No hay equipos cargados.') }}</div>
+        <button *ngIf="!filtro && filtroEstado !== 'vendido' && filtroEstado !== 'preparacion'" mat-stroked-button color="primary" type="button" (click)="nuevo()">
           <mat-icon>add</mat-icon> Cargar el primero
         </button>
       </div>

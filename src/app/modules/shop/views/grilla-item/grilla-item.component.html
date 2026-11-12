@@ -37,7 +37,24 @@
             <!-- FILTROS -->
             <!-- ========================================= -->
 
-            <div class="col-lg-3 col-xl-2 mb-4">
+            <!-- 📱 Celular: botón para abrir/cerrar los filtros (en la compu se ven siempre) -->
+            <div class="col-12 d-lg-none mb-3">
+                <div class="barra-filtros-movil">
+                    <button type="button" class="btn btn-outline-dark btn-filtros"
+                        (click)="mostrarFiltros = !mostrarFiltros"
+                        [attr.aria-expanded]="mostrarFiltros" aria-controls="panel-filtros">
+                        <i class="bi bi-sliders"></i>
+                        Filtros
+                        <span class="badge rounded-pill bg-dark ms-1" *ngIf="filtrosActivos">{{ filtrosActivos }}</span>
+                        <i class="bi ms-1" [ngClass]="mostrarFiltros ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                    </button>
+                    <button type="button" class="btn btn-link btn-sm text-secondary" *ngIf="filtrosActivos" (click)="limpiarFiltros()">
+                        Limpiar
+                    </button>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-xl-2 mb-4 col-filtros" id="panel-filtros" [class.abierto]="mostrarFiltros">
 
                 <div class="card shadow-sm border-0 filtros-card">
 
@@ -185,6 +202,16 @@
 
                             </label>
 
+                        </div>
+
+                        <!-- 📱 Celular: cerrar y ver los resultados -->
+                        <div class="acciones-filtros-movil d-lg-none">
+                            <button type="button" class="btn btn-outline-secondary" (click)="limpiarFiltros()" [disabled]="!filtrosActivos">
+                                Limpiar
+                            </button>
+                            <button type="button" class="btn btn-dark" (click)="mostrarFiltros = false">
+                                Ver {{ productosFiltrados.length }} productos
+                            </button>
                         </div>
 
                     </div>

@@ -13,6 +13,14 @@
 
 const ID_MARCO = 'marco-impresion-jc';
 
+/** Hay un cuadro de impresión abierto (o preparándose): no se arranca otro encima */
+let imprimiendo = false;
+let ultimoInicio = 0;
+/** Protección contra el doble clic: mientras tanto, otra impresión no pisa la que se está armando */
+const GUARDA_MS = 15000;
+/** Si nunca llega el aviso de "terminó de imprimir", el marco se borra igual después de esto */
+const MAX_ESPERA_MS = 60000;
+
 /** Saca el "imprimir al cargar" de los HTML que se armaban para la ventana aparte */
 export function sinAutoImpresion(html: string): string {
   // Cualquier <script> que llame a window.print() solo (los botones "Imprimir" usan onclick y no se tocan)
@@ -39,16 +47,24 @@ function esperarImagenes(doc: Document, maxMs = 3000): Promise<void> {
  * Devuelve cuando se lanzó el cuadro de impresión.
  */
 export async function imprimirEnPagina(html: string): Promise<void> {
-  // Si quedó un marco de una impresión anterior, se descarta
+  // Si ya hay una impresión en curso (doble clic, o el cuadro todavía abierto), no se pisa:
+  // borrar el marco mientras Chrome arma la vista previa es lo que dejaba la página tildada.
+  if (imprimiendo && Date.now() - ultimoInicio < GUARDA_MS) return;
+  imprimiendo = true;
+  ultimoInicio = Date.now();
+
+  // Si quedó un marco de una impresión anterior (ya terminada), se descarta
   document.getElementById(ID_MARCO)?.remove();
 
   const marco = document.createElement('iframe');
   marco.id = ID_MARCO;
   marco.setAttribute('aria-hidden', 'true');
   marco.setAttribute('tabindex', '-1');
-  // Fuera de la vista pero "visible" para el navegador (con display:none algunos imprimen en blanco)
+  // Fuera de la pantalla pero con tamaño real: con tamaño 0 algunos Chrome se quedan
+  // "cargando la vista previa" (y con display:none imprimen en blanco)
   Object.assign(marco.style, {
-    position: 'fixed', right: '0', bottom: '0', width: '0', height: '0', border: '0', opacity: '0', pointerEvents: 'none'
+    position: 'fixed', left: '-10000px', top: '0', width: '800px', height: '1000px',
+    border: '0', opacity: '0', pointerEvents: 'none'
   });
   document.body.appendChild(marco);
 
@@ -56,6 +72,7 @@ export async function imprimirEnPagina(html: string): Promise<void> {
   const doc = marco.contentDocument || win?.document;
   if (!win || !doc) {
     marco.remove();
+    imprimiendo = false;
     throw new Error('No se pudo preparar la impresión.');
   }
 
@@ -66,21 +83,29 @@ export async function imprimirEnPagina(html: string): Promise<void> {
   await esperarImagenes(doc);
 
   let borrado = false;
-  const borrar = () => {
+  const terminar = () => {
     if (borrado) return;
     borrado = true;
+    imprimiendo = false;
+    // La página principal recupera el foco (así el lector de códigos y el teclado siguen andando)
+    window.focus();
     // Un instante después, para no cortar la impresión en curso
     setTimeout(() => marco.remove(), 1000);
   };
-  win.addEventListener('afterprint', borrar, { once: true });
+  win.addEventListener('afterprint', terminar, { once: true });
+
+  // Un respiro para que el navegador termine de armar la página antes de imprimir
+  await new Promise(r => setTimeout(r, 50));
 
   try {
     win.focus();
     win.print();          // Chrome/Edge: espera acá hasta que se cierra el cuadro de impresión
+  } catch (err) {
+    terminar();
+    throw err;
   } finally {
-    // Por si el navegador no avisa "afterprint": se borra igual más tarde
-    setTimeout(borrar, 60000);
-    // La página principal recupera el foco (así el lector de códigos y el teclado siguen andando)
+    // Por si el navegador no avisa "afterprint": se libera igual más tarde
+    setTimeout(terminar, MAX_ESPERA_MS);
     setTimeout(() => window.focus(), 0);
   }
 }

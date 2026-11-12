@@ -5,7 +5,7 @@ import * as XLSX from 'xlsx';
 import {
   EquiposService, Equipo, DatosEquipo, EquipoError, EstadoEquipo,
   CAPACIDADES, GRADOS, MONEDAS, CONDICIONES, CondicionEquipo, validarEquipo, normalizarImei, imeiValido, nombreEquipo,
-  condicionDe, nombreCondicion, fotosDe, MAX_FOTOS_EQUIPO
+  condicionDe, nombreCondicion, fotosDe, MAX_FOTOS_EQUIPO, esEditable
 } from '../../services/equipos.service';
 import { InfoEmpresaService } from 'src/app/shared/services/info-empresa.service';
 import { BuscadorClientesService } from 'src/app/shared/services/buscador-clientes.service';
@@ -29,6 +29,7 @@ export class EquiposComponent implements OnInit, OnDestroy {
   readonly condicionDe = condicionDe;
   readonly nombreCondicion = nombreCondicion;
   readonly nombreEquipo = nombreEquipo;
+  readonly esEditable = esEditable;
 
   // Listado
   cargando = false;
@@ -109,6 +110,16 @@ export class EquiposComponent implements OnInit, OnDestroy {
     return this.equipos.filter(e => e.estado === 'disponible');
   }
 
+  /** Equipos que entraron por plan canje y falta publicar (foto y precios) */
+  get cantidadEnPreparacion(): number {
+    return this.equipos.filter(e => e.estado === 'preparacion').length;
+  }
+
+  /** "$ 250.000" (lo que se le tomó al cliente) */
+  montoCanje(e: Equipo): string {
+    return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(Number(e.canje?.monto) || 0);
+  }
+
   get cantidadVendidos(): number {
     return this.equipos.filter(e => e.estado === 'vendido').length;
   }
@@ -167,7 +178,7 @@ export class EquiposComponent implements OnInit, OnDestroy {
   }
 
   editar(e: Equipo) {
-    if (e.estado !== 'disponible') return;
+    if (!esEditable(e)) return;
     this.editando = e;
     this.form = {
       condicion: condicionDe(e),
@@ -303,10 +314,24 @@ export class EquiposComponent implements OnInit, OnDestroy {
     this.fotoSeleccionada = j;
   }
 
-  async guardar() {
+  /** @param publicar equipo en preparación (plan canje): guarda y lo pone a la venta */
+  async guardar(publicar = false) {
     if (this.guardando || this.subiendoFoto) return;
-    this.erroresForm = validarEquipo(this.form);
+    const enPreparacion = this.editando?.estado === 'preparacion';
+    this.erroresForm = validarEquipo(this.form, { sinPrecios: enPreparacion && !publicar });
     if (this.erroresForm.length) return;
+
+    if (publicar && !this.fotos.length) {
+      const r = await Swal.fire({
+        title: '¿Publicar sin fotos?',
+        text: 'El equipo no tiene fotos: en la tienda se va a ver sin imagen.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Publicar igual',
+        cancelButtonText: 'Cargar fotos'
+      });
+      if (!r.isConfirmed) return;
+    }
 
     if (this.avisoImei) {
       const r = await Swal.fire({
@@ -322,7 +347,11 @@ export class EquiposComponent implements OnInit, OnDestroy {
 
     this.guardando = true;
     try {
-      if (this.editando) {
+      if (this.editando && publicar && enPreparacion) {
+        const publicado = await this.equiposService.publicar(this.editando, this.form);
+        this.equipos = this.equipos.map(e => e.id === publicado.id ? publicado : e);
+        this.toast('Equipo publicado: ya está a la venta');
+      } else if (this.editando) {
         const actualizado = await this.equiposService.actualizar(this.editando, this.form);
         this.equipos = this.equipos.map(e => e.id === actualizado.id ? actualizado : e);
         this.toast('Equipo actualizado');
@@ -347,7 +376,7 @@ export class EquiposComponent implements OnInit, OnDestroy {
   }
 
   async eliminar(e: Equipo) {
-    if (e.estado !== 'disponible') return;
+    if (!esEditable(e)) return;
     const r = await Swal.fire({
       title: '¿Dar de baja este equipo?',
       html: `<strong>${this.esc(nombreEquipo(e))}</strong><br>IMEI ${this.esc(e.imei)}<br>
@@ -394,7 +423,9 @@ export class EquiposComponent implements OnInit, OnDestroy {
       Moneda: e.moneda,
       'Precio minorista': e.precioMinorista,
       'Precio mayorista': e.precioMayorista,
-      Estado: e.estado === 'vendido' ? 'Vendido' : 'Disponible',
+      Estado: e.estado === 'vendido' ? 'Vendido' : e.estado === 'preparacion' ? 'En preparación' : 'Disponible',
+      'Plan canje: tomado en': e.canje ? Number(e.canje.monto) || 0 : '',
+      'Plan canje: cliente': e.canje?.cliente?.nombre || '',
       'Fecha de alta': e.creado?.fecha ? new Date(e.creado.fecha).toLocaleDateString('es-AR') : ''
     }));
     const wb = XLSX.utils.book_new();

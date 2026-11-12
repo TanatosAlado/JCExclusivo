@@ -556,3 +556,14 @@ a{
     margin-left: 8px;
     white-space: nowrap;
 }
+
+
+/* Pedidos con el total guardado en dólares */
+.aviso-total-dolares {
+  padding: 8px 12px;
+  border: 1px solid #f3dc9c;
+  border-radius: 8px;
+  background: #fff8e1;
+  color: #6b4a00;
+  font-size: 0.92rem;
+}

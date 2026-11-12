@@ -1,0 +1,15 @@
+.cotiza { max-width: 760px; }
+.encabezado h1 { font-size: 1.8rem; font-weight: 700; }
+.tarjeta {
+  background: #fff;
+  border: 1px solid #e6e8ec;
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 6px 24px rgba(15, 23, 42, 0.06);
+}
+.resultado .valor { font-size: 2.6rem; font-weight: 800; line-height: 1.1; margin: 6px 0; }
+.aclaracion { font-size: 0.78rem; color: #8a8f98; margin: 14px 0 0; }
+@media (max-width: 576px) {
+  .encabezado h1 { font-size: 1.5rem; }
+  .tarjeta { padding: 14px; border-radius: 12px; }
+}

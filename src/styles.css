@@ -126,3 +126,11 @@ mat-paginator {
   border-color: transparent !important;
 }
 
+
+
+/* 🎨 Fondo de prueba de la paleta de colores (solo en el navegador del admin que lo eligió) */
+body.fondo-prueba,
+body.fondo-prueba .app-container,
+body.fondo-prueba .main-content {
+  background-color: var(--color-fondo-prueba) !important;
+}

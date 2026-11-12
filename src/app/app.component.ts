@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { AnalyticsService } from './shared/services/analytics.service';
+import { aplicarPaletaGuardada } from './shared/utils/paleta-colores';
 
 @Component({
   selector: 'app-root',
@@ -12,5 +13,7 @@ export class AppComponent {
   constructor(analytics: AnalyticsService) {
     // Google Analytics: solo la tienda (ver AnalyticsService)
     analytics.iniciar();
+    // 🎨 Colores de prueba elegidos en este navegador (solo admins; ver PaletaColoresComponent)
+    aplicarPaletaGuardada();
   }
 }

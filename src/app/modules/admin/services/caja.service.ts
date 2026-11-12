@@ -149,12 +149,20 @@ getIngresosLocal(fechaInicio: Date, fechaFin: Date) {
         const cliente = data.cliente?.nombre || 'Consumidor final';
         const lista = data.tipoPrecio === 'mayorista' ? ' (mayorista)' : '';
         const esReparacion = data.tipoVenta === 'reparacion';
+        const esDevolucion = data.tipoVenta === 'devolucion';
         const esCobroCuenta = data.tipoVenta === 'cobrocuenta';
         const esCobroCuota = data.tipoVenta === 'cobrocuota';
+        const esRefinanciacion = data.tipoVenta === 'refinanciacion';
         const ticket = data.nroTicket ? ` · Ticket ${String(data.nroTicket).padStart(8, '0')}` : '';
         const aCuenta = aCuentaDeVenta(data);
-        const descripcion = (esReparacion
-          ? `Cobro reparación orden #${data.orden?.numeroOrden ?? '?'} - ${cliente}`
+        const descripcion = (esRefinanciacion
+          ? `Entrega refinanciación crédito de la casa - ${cliente}`
+          : esDevolucion
+          ? `Devolución de productos (ticket ${String(data.ventaOriginal?.nroTicket ?? '').padStart(8, '0')}) - ${cliente}`
+          : esReparacion
+          ? (Array.isArray(data.ordenes) && data.ordenes.length > 1
+            ? `Cobro reparación órdenes ${data.ordenes.map((o: any) => '#' + (o.numeroOrden ?? '?')).join(', ')} - ${cliente}`
+            : `Cobro reparación orden #${data.orden?.numeroOrden ?? '?'} - ${cliente}`)
           : esCobroCuenta
             ? `Cobro cuenta corriente - ${cliente}`
             : esCobroCuota
@@ -168,10 +176,10 @@ getIngresosLocal(fechaInicio: Date, fechaFin: Date) {
         return pagos.map((pago, i) => <Movimiento>{
           id: docSnap.id,
           ventaId: docSnap.id,
-          tipo: 'ingreso',
+          tipo: esDevolucion ? 'egreso' : 'ingreso',    // ↩ la devolución es plata que sale
           descripcion: (pagos.length > 1 ? `${descripcion} (pago ${i + 1} de ${pagos.length})` : descripcion) +
             (pago.detalle ? ` · ${pago.detalle}` : ''),   // tarjeta: nº de operación del posnet
-          monto: pago.monto,
+          monto: Math.abs(pago.monto),
           fecha: new Date(data.fecha),
           origen: 'local',
           metodoPago: pago.metodo === 'otros' ? (data.metodoPago || '').toLowerCase() : pago.metodo,

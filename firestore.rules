@@ -63,6 +63,12 @@ service cloud.firestore {
       return esSuperAdmin() || (esAdmin() && seccion in permisosActuales());
     }
 
+    // 🌐 "Cotizá tu usado" habilitado por el admin (Gestiones → Tasador)
+    function cotizadorPublico() {
+      return exists(/databases/$(database)/documents/ConfiguracionTasador/publico)
+        && get(/databases/$(database)/documents/ConfiguracionTasador/publico).data.get('habilitado', false) == true;
+    }
+
     // Campos que cambian en un update
     function cambios() {
       return request.resource.data.diff(resource.data).affectedKeys();
@@ -87,12 +93,12 @@ service cloud.firestore {
       allow create, update: if esAdmin() && !(coleccion in [
         'Auditoria', 'Cajas', 'MovimientosCaja', 'Ventas', 'Clientes',
         'InfoEmpresa', 'infoEmpresa', 'configuracion', 'Marquesina', 'Cupones', 'Cajeros', 'Sucursales',
-        'CuentasCorrientes', 'Equipos', 'EquiposIMEI', 'EquiposEliminados', 'Creditos'
+        'CuentasCorrientes', 'Equipos', 'EquiposIMEI', 'EquiposEliminados', 'Creditos', 'ConfiguracionCreditos'
       ]);
       allow delete: if esAdmin() && !(coleccion in [
         'Auditoria', 'Ventas', 'gastos', 'Cajas', 'MovimientosCaja', 'Cajeros', 'Clientes',
         'InfoEmpresa', 'infoEmpresa', 'configuracion', 'Marquesina', 'Cupones', 'Sucursales',
-        'CuentasCorrientes', 'Equipos', 'EquiposIMEI', 'EquiposEliminados', 'CuentasInternas', 'Creditos'
+        'CuentasCorrientes', 'Equipos', 'EquiposIMEI', 'EquiposEliminados', 'CuentasInternas', 'Creditos', 'ConfiguracionCreditos'
       ]);
     }
 
@@ -171,7 +177,7 @@ service cloud.firestore {
     }
 
     // ---------- Ventas del local (tickets) ----------
-    // Se crean con la venta; después solo se pueden ANULAR, una sola vez.
+    // Se crean con la venta; después solo se pueden ANULAR, una sola vez (o agregarles devoluciones de productos).
     match /Ventas/{id} {
       // "Mi cuenta": cada cliente ve solo sus propios tickets del local
       allow read: if logueado() && resource.data.cliente.id == request.auth.uid;
@@ -180,6 +186,13 @@ service cloud.firestore {
         && resource.data.get('anulada', false) == false
         && request.resource.data.anulada == true
         && cambios().hasOnly(['anulada', 'motivoAnulacion', 'anuladaPor', 'anuladaEn']);
+      // ↩ Devolución parcial: al ticket original solo se le agrega / marca la lista de devoluciones
+      allow update: if esAdmin()
+        && resource.data.get('anulada', false) == false
+        && resource.data.get('tipoVenta', '') != 'devolucion'
+        && cambios().hasOnly(['devoluciones', 'totalDevuelto'])
+        && request.resource.data.devoluciones is list
+        && request.resource.data.devoluciones.size() <= 50;
     }
 
     // ---------- Cuentas corrientes de clientes ----------
@@ -191,11 +204,14 @@ service cloud.firestore {
     }
 
     match /CuentasCorrientes/{clienteId} {
+      // 📒 Cada cliente puede VER su propia cuenta (Mi cuenta → Cuenta corriente). Solo lectura.
+      allow read: if logueado() && request.auth.uid == clienteId;
       allow create, update: if puedeOperarCuentas()
         && request.resource.data.saldo is number
         && request.resource.data.saldo >= -0.01;
 
       match /Movimientos/{movId} {
+        allow read: if logueado() && request.auth.uid == clienteId;
         allow create: if puedeOperarCuentas()
           && request.resource.data.tipo in ['cargo', 'pago']
           && request.resource.data.importe > 0
@@ -213,9 +229,11 @@ service cloud.firestore {
 
     // ---------- 🏠 Crédito de la casa ----------
     // Los lee cualquier administrador. Se crean con la venta en Despacho (siempre 'vigente', sin pagos,
-    // de 1 a 6 cuotas). Después cambian al cobrar cuotas (Despacho) o al anular (Tickets / Cuentas):
+    // de 1 a 24 cuotas). Después cambian al cobrar cuotas (Despacho) o al anular (Tickets / Cuentas):
     // lo financiado, el cliente, la venta y las cuotas pactadas no cambian. Nunca se borran.
     match /Creditos/{ventaId} {
+      // 🏠 Cada cliente puede VER sus propios créditos (Mi cuenta → Estado de los créditos). Solo lectura.
+      allow read: if logueado() && resource.data.cliente.id == request.auth.uid;
       allow create: if tienePermiso('despacho')
         && request.resource.data.ventaId == ventaId
         && request.resource.data.estado == 'vigente'
@@ -225,12 +243,29 @@ service cloud.firestore {
         && request.resource.data.pagado == 0
         && request.resource.data.cantidadCuotas is int
         && request.resource.data.cantidadCuotas >= 1
-        && request.resource.data.cantidadCuotas <= 6
+        && request.resource.data.cantidadCuotas <= 24
         && request.resource.data.cuotas.size() == request.resource.data.cantidadCuotas
         && request.resource.data.cliente.id is string;
+      // Crédito dado antes del sistema, cargado a mano en Gestiones → Créditos (sin venta ni ticket)
+      allow create: if tienePermiso('cuentas')
+        && request.resource.data.get('origen', '') == 'manual'
+        && request.resource.data.ventaId == ventaId
+        && request.resource.data.nroTicket == null
+        && request.resource.data.estado == 'vigente'
+        && request.resource.data.importe is number
+        && request.resource.data.importe > 0
+        && request.resource.data.saldo == request.resource.data.importe
+        && request.resource.data.pagado == 0
+        && request.resource.data.cantidadCuotas is int
+        && request.resource.data.cantidadCuotas >= 1
+        && request.resource.data.cantidadCuotas <= 60
+        && request.resource.data.cuotas.size() == request.resource.data.cantidadCuotas
+        && request.resource.data.cliente.id is string
+        && request.resource.data.cliente.nombre is string
+        && request.resource.data.cliente.nombre.size() > 0;
       allow update: if (tienePermiso('despacho') || tienePermiso('tickets') || tienePermiso('cuentas'))
         && resource.data.estado != 'anulado'
-        && request.resource.data.estado in ['vigente', 'cancelado', 'anulado']
+        && request.resource.data.estado in ['vigente', 'cancelado', 'anulado', 'refinanciado']
         && sinCambio('importe', null)
         && sinCambio('ventaId', null)
         && sinCambio('cliente', null)
@@ -239,12 +274,35 @@ service cloud.firestore {
         && request.resource.data.saldo is number
         && request.resource.data.saldo >= -0.01
         && request.resource.data.saldo <= resource.data.importe + 0.01;
+      // ✏️ Corrección de un crédito cargado a mano: solo superadministradores
+      allow update: if esSuperAdmin()
+        && resource.data.get('origen', '') == 'manual'
+        && sinCambio('origen', '')
+        && sinCambio('ventaId', null)
+        && resource.data.estado in ['vigente', 'cancelado']
+        && request.resource.data.estado in ['vigente', 'cancelado']
+        && request.resource.data.cantidadCuotas is int
+        && request.resource.data.cantidadCuotas >= 1
+        && request.resource.data.cantidadCuotas <= 60
+        && request.resource.data.cuotas.size() == request.resource.data.cantidadCuotas
+        && request.resource.data.importe is number
+        && request.resource.data.importe > 0
+        && request.resource.data.saldo >= -0.01
+        && request.resource.data.saldo <= request.resource.data.importe + 0.01;
 
-      // Pagos de cuotas (se crean al cobrar en Despacho; después solo se pueden anular)
+      // Pagos de cuotas (se crean al cobrar en Despacho o, los viejos, a mano; después solo se pueden anular)
       match /Pagos/{pagoId} {
+        allow read: if logueado()
+          && get(/databases/$(database)/documents/Creditos/$(ventaId)).data.cliente.id == request.auth.uid;
         allow create: if tienePermiso('despacho')
           && request.resource.data.importe > 0
           && request.resource.data.anulado == false;
+        // Pagos viejos (de antes del sistema) de un crédito cargado a mano: sin ticket ni caja
+        allow create: if tienePermiso('cuentas')
+          && request.resource.data.get('anterior', false) == true
+          && request.resource.data.importe > 0
+          && request.resource.data.anulado == false
+          && get(/databases/$(database)/documents/Creditos/$(ventaId)).data.get('origen', '') == 'manual';
         allow update: if (tienePermiso('despacho') || tienePermiso('tickets') || tienePermiso('cuentas'))
           && sinCambio('importe', null)
           && sinCambio('fecha', null)
@@ -252,9 +310,59 @@ service cloud.firestore {
       }
     }
 
+    // 🧮 Tasador de equipos usados: lo lee cualquier administrador (Despacho tasa el plan canje),
+    // lo cambia quien tiene el permiso Tasador.
+    match /Tasador/{id} {
+      // Clientes ("Cotizá tu usado"): solo los modelos activos y solo si el admin lo habilitó
+      allow read: if esAdmin() || (resource.data.get('activo', false) == true && cotizadorPublico());
+      allow create, update: if tienePermiso('tasador')
+        && request.resource.data.nombre is string
+        && request.resource.data.nombre.size() > 1
+        && request.resource.data.capacidades is list
+        && request.resource.data.capacidades.size() >= 1
+        && request.resource.data.capacidades.size() <= 10
+        && request.resource.data.preguntas is list
+        && request.resource.data.preguntas.size() <= 60;
+      allow delete: if tienePermiso('tasador');
+    }
+    // Historial de tasaciones (no se modifican)
+    match /Tasaciones/{id} {
+      allow read: if esAdmin();
+      allow create: if esAdmin()
+        && request.resource.data.totalUSD is number
+        && request.resource.data.modelo is string;
+      // Cotización de un cliente en la web (solo si está habilitado; sin datos personales)
+      allow create: if cotizadorPublico()
+        && request.resource.data.origen == 'web'
+        && request.resource.data.usuario == null
+        && request.resource.data.totalUSD is number
+        && request.resource.data.modelo is string
+        && request.resource.data.modelo.size() <= 80
+        && request.resource.data.respuestas is list
+        && request.resource.data.respuestas.size() <= 60
+        && request.resource.data.keys().hasOnly(['modeloId', 'modelo', 'capacidad', 'precioBase', 'respuestas', 'descuentos',
+             'totalUSD', 'cotizacion', 'totalARS', 'fecha', 'origen', 'usuario', 'cajero']);
+    }
+    // Interruptor de "Cotizá tu usado" (lo lee cualquiera; lo cambia el permiso Tasador)
+    match /ConfiguracionTasador/{id} {
+      allow read: if true;
+      allow create, update: if tienePermiso('tasador') && id == 'publico' && request.resource.data.habilitado is bool;
+    }
+
+    // Planes de cuotas e interés del crédito de la casa (los lee cualquier administrador, p. ej. Despacho).
+    // Los cambia el permiso de Cuentas corrientes / Créditos. No se borran.
+    match /ConfiguracionCreditos/{id} {
+      allow create, update: if tienePermiso('cuentas')
+        && id == 'planes'
+        && request.resource.data.planes is list
+        && request.resource.data.planes.size() >= 1
+        && request.resource.data.planes.size() <= 24;
+    }
+
     // ---------- Equipos para la venta ----------
     // Los lee cualquier administrador. Alta, modificación y baja: permiso 'equipos'.
-    //   • Se crean siempre como 'disponible'.
+    //   • Se crean como 'disponible'. Por PLAN CANJE (Despacho) entran 'preparacion' (sin precios),
+    //     junto con su venta; se publican (→ 'disponible') desde Gestiones → Equipos.
     //   • Un equipo vendido no se modifica ni se borra (queda para la garantía).
     //   • La baja guarda una copia en EquiposEliminados (que no se modifica ni se borra).
     //   • EquiposIMEI: índice para que no se repita el IMEI entre equipos disponibles.
@@ -267,15 +375,30 @@ service cloud.firestore {
         && request.resource.data.precioMayorista > 0
         && request.resource.data.moneda in ['USD', 'ARS'];
       allow update: if tienePermiso('equipos')
-        && resource.data.estado == 'disponible'
-        && request.resource.data.estado == 'disponible'
-        && request.resource.data.precioMinorista > 0
-        && request.resource.data.precioMayorista > 0
+        && resource.data.estado in ['disponible', 'preparacion']
+        && request.resource.data.estado in ['disponible', 'preparacion']
+        && !(resource.data.estado == 'disponible' && request.resource.data.estado == 'preparacion')
+        && (request.resource.data.estado == 'preparacion'
+          || (request.resource.data.precioMinorista > 0 && request.resource.data.precioMayorista > 0))
         && request.resource.data.moneda in ['USD', 'ARS'];
-      allow delete: if tienePermiso('equipos') && resource.data.estado == 'disponible';
+      allow delete: if tienePermiso('equipos') && resource.data.estado in ['disponible', 'preparacion'];
+
+      // 📲 Plan canje: el equipo usado entra en preparación, en la misma operación que su venta
+      allow create: if tienePermiso('despacho')
+        && request.resource.data.estado == 'preparacion'
+        && request.resource.data.imei is string
+        && request.resource.data.imei.size() >= 5
+        && request.resource.data.canje.ventaId is string
+        && existsAfter(/databases/$(database)/documents/Ventas/$(request.resource.data.canje.ventaId));
+      // …y si se anula esa venta, se da de baja (se le devuelve al cliente), si no se vendió
+      allow delete: if (tienePermiso('tickets') || tienePermiso('despacho') || tienePermiso('cuentas'))
+        && resource.data.estado in ['disponible', 'preparacion']
+        && resource.data.canje.ventaId is string
+        && getAfter(/databases/$(database)/documents/Ventas/$(resource.data.canje.ventaId)).data.anulada == true;
 
       // Venta en Despacho (disponible → vendido), anulación del ticket o cancelación del pedido web (vendido → disponible)
-      allow update: if (tienePermiso('despacho') || tienePermiso('tickets') || tienePermiso('pedidos'))
+      // (cuentas: anular un crédito de la casa desde Gestiones → Créditos devuelve el equipo al stock)
+      allow update: if (tienePermiso('despacho') || tienePermiso('tickets') || tienePermiso('pedidos') || tienePermiso('cuentas'))
         && cambios().hasOnly(['estado', 'venta', 'ventasAnuladas'])
         && (
           (resource.data.estado == 'disponible' && request.resource.data.estado == 'vendido'
@@ -288,7 +411,7 @@ service cloud.firestore {
     match /EquiposIMEI/{imei} {
       allow create, update, delete: if tienePermiso('equipos');
       // Al vender se libera el IMEI; al anular la venta / cancelar el pedido se vuelve a ocupar
-      allow create, update, delete: if tienePermiso('despacho') || tienePermiso('tickets') || tienePermiso('pedidos');
+      allow create, update, delete: if tienePermiso('despacho') || tienePermiso('tickets') || tienePermiso('pedidos') || tienePermiso('cuentas');
       // Tienda: al comprar el equipo se libera su IMEI (solo si en la misma operación quedó vendido)
       allow delete: if getAfter(/databases/$(database)/documents/Equipos/$(resource.data.equipoId)).data.estado == 'vendido';
     }
@@ -307,6 +430,10 @@ service cloud.firestore {
 
     match /EquiposEliminados/{id} {
       allow create: if tienePermiso('equipos');
+      // Equipo del plan canje dado de baja al anular su venta
+      allow create: if (tienePermiso('tickets') || tienePermiso('despacho') || tienePermiso('cuentas'))
+        && request.resource.data.canje.ventaId is string
+        && getAfter(/databases/$(database)/documents/Ventas/$(request.resource.data.canje.ventaId)).data.anulada == true;
     }
 
     // ---------- Movimientos de caja ----------

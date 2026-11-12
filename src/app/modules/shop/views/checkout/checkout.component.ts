@@ -15,7 +15,7 @@ import { InfoEmpresa } from 'src/app/shared/models/infoEmpresa.model';
 import { InfoEmpresaService } from 'src/app/shared/services/info-empresa.service';
 import { SucursalesService } from 'src/app/modules/admin/services/sucursales.service';
 import Swal from 'sweetalert2';
-import { esItemEquipo, precioListaEquipo, totalCarritoWeb, detalleEquipo, cotizacionEquipos } from 'src/app/shared/utils/equipos-tienda';
+import { esItemEquipo, precioListaEquipo, totalCarritoWeb, subtotalesCarrito, detalleEquipo, cotizacionEquipos } from 'src/app/shared/utils/equipos-tienda';
 import { AnalyticsService } from 'src/app/shared/services/analytics.service';
 import { itemAnalytics } from 'src/app/shared/utils/analytics-tienda';
 import { disponibleParaRetiro } from 'src/app/modules/admin/models/sucursal.model';
@@ -146,7 +146,10 @@ export class CheckoutComponent {
   sucursales: any[] = []; // lista de sucursales disponibles
   sucursalSeleccionada: string = ''; // id de la sucursal seleccionada por el cliente
 
-   dolar: number = 1;
+   // 0 hasta que carga la cotización. (Antes arrancaba en 1: si el cliente confirmaba antes de que cargara,
+   // los productos en USD se guardaban "en pesos" sin convertir y el total del pedido quedaba en dólares)
+   dolar: number = 0;
+   private cotizacionCargada = false;
 
   constructor(private analytics: AnalyticsService, private infoEmpresaService: InfoEmpresaService, private firestore: Firestore, private fb: FormBuilder, private clienteService: ClientesService, public pedidoService: PedidosService, public generalService: GeneralService, private contadorService: ContadorService, private router: Router, private carritoService: CarritoService, private puntosService: VouchersPuntosService, private sucursalesService: SucursalesService) {
 
@@ -163,6 +166,7 @@ export class CheckoutComponent {
     this.infoEmpresaService.obtenerInfoGeneral().subscribe(info => {
       if (info?.dolar) {
         this.dolar = info.dolar;
+        this.cotizacionCargada = true;
       }
       this.dolarJC = cotizacionEquipos(info);   // equipos
     });
@@ -452,6 +456,14 @@ export class CheckoutComponent {
       return;
     }
 
+    // Sin la cotización del dólar no se puede calcular el total en pesos
+    try {
+      await this.asegurarCotizacion(cliente);
+    } catch (err: any) {
+      await Swal.fire('No se pudo confirmar', err?.message || 'No pudimos obtener la cotización del dólar.', 'warning');
+      return;
+    }
+
     // Monto mínimo mayorista (antes solo se controlaba en el carrito lateral)
     if (cliente.esMayorista) {
       const minimo = cliente.mayoristaActivado ? this.montoMinimoFuturasCompras : this.montoParaActivar;
@@ -529,6 +541,11 @@ export class CheckoutComponent {
       this.valorMonetarioPorPunto,
       this.cuponAplicado
     );
+
+    // Descuento (cupón + puntos, solo sobre productos): se guarda para recalcular bien si se edita el pedido
+    const descuentoCompra = Math.max(0, Math.round((
+      subtotalesCarrito(cliente.carrito || [], item => this.getPrecioProducto(item)).productos -
+      this.calcularTotales(cliente, this.usarPuntos, this.valorMonetarioPorPunto, this.cuponAplicado).productos) * 100) / 100);
 
     const puntosGastados = this.getPuntosAUsar();
     const puntosGanados = this.getPuntosASumar();
@@ -670,7 +687,11 @@ export class CheckoutComponent {
           sinStock.push(`${item.nombre} (disponible: ${resultado.disponible})`);
           return item;
         }
-        return { ...item, stockDescontado: resultado.stockDescontado };
+        return {
+          ...item,
+          stockDescontado: resultado.stockDescontado,
+          ...(item.moneda === 'USD' ? { cotizacionDolar: this.dolar } : {})
+        };
       });
 
       if (sinStock.length) {
@@ -710,6 +731,10 @@ export class CheckoutComponent {
         entrega: envio,
         pago: pago,
         total: total,
+        // Para que en Pedidos se vea y se recalcule siempre en pesos
+        cotizacionDolar: this.dolar || null,
+        cotizacionDolarJC: this.dolarJC || this.dolar || null,
+        descuento: descuentoCompra,
         estado: 'pendiente',
         nombreCliente: this.formCheckout.get('user')?.value ?? '',
         apellidoCliente: '',
@@ -1023,6 +1048,29 @@ export class CheckoutComponent {
   /** Carrito → ítems de Analytics (precios en pesos) */
   private itemsAnalytics(carrito: any[]) {
     return (carrito || []).map(i => itemAnalytics(i, this.getPrecioProducto(i), i.cantidad));
+  }
+
+  /**
+   * Si hay productos en dólares, la cotización tiene que estar cargada antes de confirmar.
+   * Si todavía no llegó, se lee en el momento; si no hay forma de obtenerla, no se confirma.
+   */
+  private async asegurarCotizacion(cliente: any) {
+    if (!(cliente?.carrito || []).some((i: any) => i?.moneda === 'USD')) return;
+    if (this.cotizacionCargada && this.dolar > 0) return;
+    try {
+      const snap = await getDoc(doc(this.firestore, 'InfoEmpresa/general'));
+      const info: any = snap.exists() ? snap.data() : null;
+      if (Number(info?.dolar) > 0) {
+        this.dolar = Number(info.dolar);
+        this.dolarJC = cotizacionEquipos(info);
+        this.cotizacionCargada = true;
+      }
+    } catch (err) {
+      console.error('No se pudo leer la cotización del dólar:', err);
+    }
+    if (!(this.dolar > 0)) {
+      throw new CheckoutError('No pudimos obtener la cotización del dólar. Recargá la página e intentá de nuevo.');
+    }
   }
 
   getPrecioProducto(producto: any): number {

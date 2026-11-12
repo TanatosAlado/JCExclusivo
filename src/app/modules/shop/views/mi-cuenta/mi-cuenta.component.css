@@ -391,3 +391,113 @@
   gap: 8px;
   margin-top: 10px;
 }
+
+
+/* ---------- 📒 Cuenta corriente ---------- */
+.pestanas button { position: relative; }
+.marca-deuda {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-left: 4px;
+  border-radius: 50%;
+  background: #dc3545;
+  vertical-align: middle;
+}
+.cc-resumen {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.cc-saldo, .cc-dato {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid #e6e8ec;
+  background: #fff;
+}
+.cc-saldo { background: #fff5f5; border-color: #f5c2c7; }
+.cc-saldo.al-dia { background: #f2fbf5; border-color: #b7e0c4; }
+.cc-etiqueta { font-size: 0.75rem; color: #6c757d; text-transform: uppercase; letter-spacing: 0.03em; }
+.cc-monto { font-size: 1.6rem; font-weight: 800; }
+.cc-dato span:not(.cc-etiqueta) { font-weight: 600; }
+.cc-dato small { color: #8a8f98; }
+.cc-subtitulo { font-size: 1rem; font-weight: 700; margin: 16px 0 8px; }
+.cc-anulados { font-size: 0.82rem; color: #6c757d; display: flex; align-items: center; gap: 4px; margin: 0; }
+.cc-lista { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.cc-lista li {
+  display: grid;
+  grid-template-columns: 36px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #eceef2;
+  border-radius: 10px;
+  background: #fff;
+}
+.cc-lista li.anulado { opacity: 0.55; }
+.cc-icono { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #f1f3f6; color: #555; }
+.cc-icono.pago { background: #e8f6ee; color: #198754; }
+.cc-icono.cargo { background: #fff3e6; color: #c25e00; }
+.cc-info { display: flex; flex-direction: column; min-width: 0; }
+.cc-info .titulo { font-weight: 600; }
+.cc-info .fecha { font-size: 0.8rem; color: #8a8f98; }
+.cc-importe { font-weight: 700; white-space: nowrap; }
+.cc-importe.pago { color: #198754; }
+.cc-importe.deuda { color: #b02a37; }
+/* 🏠 Créditos */
+.texto-vencido { color: #b02a37 !important; font-weight: 600; }
+.cr-tarjeta { border: 1px solid #e6e8ec; border-radius: 12px; background: #fff; margin-top: 10px; overflow: hidden; }
+.cr-tarjeta.cr-vencido { border-color: #f5c2c7; }
+.cr-cabecera {
+  width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  padding: 12px 14px; background: none; border: 0; text-align: left; cursor: pointer;
+}
+.cr-cabecera:hover { background: #fafbfc; }
+.cr-titulo { display: flex; flex-direction: column; min-width: 0; }
+.cr-titulo small { color: #8a8f98; font-size: 0.8rem; }
+.cr-estado { white-space: nowrap; display: flex; align-items: center; color: #8a8f98; }
+.cr-cuerpo { padding: 0 14px 14px; border-top: 1px solid #f0f1f4; }
+.cr-numeros { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+.cr-numeros > div { display: flex; flex-direction: column; }
+.cr-numeros > div span:not(.cc-etiqueta) { font-weight: 700; }
+.cr-barra { height: 6px; border-radius: 3px; background: #eceef2; margin-top: 10px; overflow: hidden; }
+.cr-barra span { display: block; height: 100%; background: #198754; border-radius: 3px; }
+.cr-proxima {
+  display: flex; gap: 8px; align-items: flex-start; margin-top: 12px; padding: 10px 12px;
+  border-radius: 10px; background: #eef5ff; color: #1f3b63; font-size: 0.9rem;
+}
+.cr-proxima i { margin-top: 3px; }
+.cr-proxima.vencida { background: #fff5f5; color: #842029; }
+.cr-cuotas { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; max-height: 360px; overflow-y: auto; }
+.cr-cuotas li {
+  display: grid; grid-template-columns: 30px 1fr auto; align-items: center; gap: 10px;
+  padding: 7px 10px; border-radius: 8px; background: #f8f9fb;
+}
+.cr-cuotas .q-num {
+  width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: #e3e6eb; font-size: 0.78rem; font-weight: 700;
+}
+.cr-cuotas .q-info { display: flex; flex-direction: column; min-width: 0; font-size: 0.88rem; }
+.cr-cuotas .q-info small { color: #8a8f98; }
+.cr-cuotas .q-importe { font-weight: 700; white-space: nowrap; font-size: 0.9rem; }
+.cr-cuotas li.q-pagada { opacity: 0.75; }
+.cr-cuotas li.q-pagada .q-num { background: #d1f0dc; color: #146c43; }
+.cr-cuotas li.q-vencida { background: #fff1f1; }
+.cr-cuotas li.q-vencida .q-num { background: #f5c2c7; color: #842029; }
+.cr-cuotas li.q-vencida small { color: #b02a37; }
+.cr-cuotas li.q-por-vencer { background: #fff8e6; }
+.cr-cuotas li.q-por-vencer .q-num { background: #ffe1a3; color: #7a5200; }
+@media (max-width: 576px) {
+  .cr-numeros { grid-template-columns: 1fr 1fr; }
+  .cr-cabecera { flex-wrap: wrap; }
+}
+@media (max-width: 576px) {
+  .cc-resumen { grid-template-columns: 1fr 1fr; }
+  .cc-saldo { grid-column: 1 / -1; }
+  .cc-lista li { grid-template-columns: 32px 1fr; }
+  .cc-importe { grid-column: 2; }
+}

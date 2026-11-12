@@ -1,14 +1,21 @@
 import { Injectable } from '@angular/core';
+import { ordenesDeVenta, textoOrdenes } from './desglose-reparacion';
 import {
   Firestore,
   collection,
   doc,
   query,
   where,
+  getDoc,
   getDocs,
+  limit,
   runTransaction,
   serverTimestamp
 } from '@angular/fire/firestore';
+import {
+  DevolucionDeVenta, SeleccionDevolucion, devolucionesVigentes, renglonesDevolvibles, validarSeleccion,
+  importeDevolucion, repartoDevolucion, totalDevuelto, METODOS_DEVOLUCION
+} from './devoluciones';
 import { AuditoriaService } from 'src/app/shared/services/auditoria.service';
 import { nombreMetodo, aCuentaDeVenta } from './pagos';
 import { CuentaCorrienteService, CuentaCorrienteError, LecturaAnulacionCuenta } from './cuenta-corriente.service';
@@ -33,6 +40,14 @@ export interface DatosPresupuesto {
   /** Medios con descuento (ej. efectivo 10%): se muestra cuánto queda abonando así */
   descuentos?: { medio: string; porcentaje: number }[];
   validez?: string;
+  /** 🏠 Crédito de la casa con el plan elegido (sin el interés: solo montos y cuotas) */
+  credito?: {
+    precioEquipo: number;
+    canje: number;
+    canjeDetalle?: string;
+    entrega: number;
+    cuotas: { numero: number; importe: number; desde: string; hasta: string }[];
+  } | null;
 }
 
 /** Error de negocio con mensaje para mostrar */
@@ -49,13 +64,17 @@ export interface ResultadoAnulacion {
   puntosRevertidos: boolean;
   cuponDevuelto: boolean;
   cajaCerrada: boolean;            // la caja del ticket ya estaba cerrada
-  ordenReparacion: number | null;  // si era un cobro de reparación: nº de orden a la que se le descontó el cobro
+  ordenReparacion: string | null;  // si era un cobro de reparación: nº de orden(es) a las que se les descontó el cobro ("1234" o "1234, 1240")
   /** Si tocaba la cuenta corriente: 'cargo' = se descontó la deuda; 'pago' = la deuda volvió a quedar pendiente */
   cuentaCorriente: { tipo: 'cargo' | 'pago'; cliente: string; importe: number } | null;
   /** Equipos que volvieron a estar a la venta */
   equiposDevueltos: string[];
   /** 🏠 Si era una venta con crédito de la casa: el crédito quedó anulado */
   creditoAnulado?: boolean;
+  /** 📲 Equipo del plan canje que se dio de baja (se le devuelve al cliente) */
+  canjeDevuelto?: string | null;
+  /** 🔁 Si era una refinanciación: el crédito nuevo se anuló y el viejo volvió a quedar vigente */
+  refinanciacionDeshecha?: boolean;
   /** 🏠 Si era un cobro de cuotas: qué cuotas volvieron a quedar pendientes (ej. "2, 3") */
   cuotasRevertidas?: string | null;
 }
@@ -128,6 +147,9 @@ export class TicketsService {
     if (!venta?.id) throw new TicketError('Ticket inválido.');
     if (!motivo || motivo.trim().length < 3) throw new TicketError('Ingresá el motivo de la anulación.');
 
+    // ↩ Nota de devolución: se anula aparte (el stock vuelve a salir y se repone la deuda / la plata)
+    if (venta.tipoVenta === 'devolucion') return this.anularDevolucion(venta, motivo.trim());
+
     const ventaRef = doc(this.firestore, 'Ventas', venta.id);
     const cajaRef = venta.cajaId ? doc(this.firestore, 'Cajas', venta.cajaId) : null;
     const clienteRef = venta.cliente?.id && (venta.puntosUsados > 0 || venta.puntosGanados > 0)
@@ -152,19 +174,25 @@ export class TicketsService {
     });
 
     const esReparacion = venta.tipoVenta === 'reparacion' && !!venta.orden?.id;
+    // Una o varias órdenes (un ticket puede cobrar varias del mismo cliente)
     const refsOrden = esReparacion
-      ? ['Ordenes Pendientes', 'Ordenes Finalizadas'].map(col => doc(this.firestore, col, venta.orden.id))
+      ? ordenesDeVenta(venta).flatMap(o => ['Ordenes Pendientes', 'Ordenes Finalizadas'].map(col => doc(this.firestore, col, o.id)))
       : [];
 
     const vacio = (): ResultadoAnulacion => ({
       stockDevuelto: [], stockNoDevuelto: [], puntosRevertidos: false, cuponDevuelto: false, cajaCerrada: false, ordenReparacion: null,
       cuentaCorriente: null,
       equiposDevueltos: [],
+      canjeDevuelto: null,
       creditoAnulado: false,
       cuotasRevertidas: null
     });
     // 🏠 Crédito de la casa: se anula junto con el ticket, solo si no tiene cuotas pagadas
-    const creditoRef = venta.credito?.creditoId ? doc(this.firestore, 'Creditos', venta.credito.creditoId) : null;
+    // 🔁 Refinanciación: se anula el crédito nuevo y el viejo vuelve a quedar vigente
+    const idCreditoTicket = venta.credito?.creditoId || (venta.tipoVenta === 'refinanciacion' ? venta.refinanciacion?.creditoNuevoId : null);
+    const creditoRef = idCreditoTicket ? doc(this.firestore, 'Creditos', idCreditoTicket) : null;
+    const creditoViejoRef = venta.tipoVenta === 'refinanciacion' && venta.refinanciacion?.creditoAnterior?.id
+      ? doc(this.firestore, 'Creditos', venta.refinanciacion.creditoAnterior.id) : null;
     let resultado: ResultadoAnulacion = vacio();
 
     await runTransaction(this.firestore, async (tx) => {
@@ -177,6 +205,12 @@ export class TicketsService {
       if (actual.anulada === true) {
         const quien = actual.anuladaPor?.nombre || actual.anuladaPor?.usuario || 'otro usuario';
         throw new TicketError(`Este ticket ya fue anulado por ${quien}.`);
+      }
+      const conDevolucion = devolucionesVigentes(actual);
+      if (conDevolucion.length) {
+        throw new TicketError(`Este ticket tiene ${conDevolucion.length > 1 ? 'devoluciones' : 'una devolución'} ` +
+          `(${conDevolucion.map(d => '#' + String(d.nroTicket ?? '').padStart(8, '0')).join(', ')}). ` +
+          'Para anularlo, primero anulá ' + (conDevolucion.length > 1 ? 'esas notas de devolución.' : 'esa nota de devolución.'));
       }
 
       const productos = new Map<string, { ref: any; data: any }>();
@@ -211,6 +245,18 @@ export class TicketsService {
         }
       }
 
+      // 📲 Plan canje: el equipo que entregó el cliente se da de baja (se le devuelve). Si ya se vendió, no se puede.
+      const canjeId: string | null = actual.canje?.equipoId || null;
+      const canjeRef = canjeId ? this.equipos.refEquipo(canjeId) : null;
+      const canjeSnap = canjeRef ? await tx.get(canjeRef) : null;
+      const equipoCanje: any = canjeSnap?.exists() ? canjeSnap.data() : null;
+      const imeiCanjeRef = equipoCanje?.imei ? this.equipos.refIndiceImei(equipoCanje.imei) : null;
+      const imeiCanjeSnap = imeiCanjeRef ? await tx.get(imeiCanjeRef) : null;
+      if (equipoCanje?.estado === 'vendido') {
+        throw new TicketError(`No se puede anular: el equipo que entregó en el plan canje (${equipoCanje.modelo || 'equipo'}, IMEI ${equipoCanje.imei}) ` +
+          'ya se vendió. Resolvelo a mano con el cliente.');
+      }
+
       // 🏠 Crédito de la casa
       const creditoSnap = creditoRef ? await tx.get(creditoRef) : null;
       const credito: any = creditoSnap?.exists() ? creditoSnap.data() : null;
@@ -218,6 +264,11 @@ export class TicketsService {
         throw new TicketError(`No se puede anular: el crédito de la casa ya tiene ${'$'}${(Number(credito.pagado) || 0).toFixed(2)} pagados. ` +
           'Primero hay que anular los pagos de las cuotas.');
       }
+      if (credito && credito.estado === 'refinanciado') {
+        throw new TicketError('No se puede anular: ese crédito se refinanció después. Primero anulá la refinanciación.');
+      }
+      const creditoViejoSnap = creditoViejoRef ? await tx.get(creditoViejoRef) : null;
+      const creditoViejo: any = creditoViejoSnap?.exists() ? creditoViejoSnap.data() : null;
 
       // 🏠 Cobro de cuotas: las cuotas que pagó vuelven a quedar pendientes
       let lecturaCuota: LecturaAnulacionCuota | null = null;
@@ -312,7 +363,8 @@ export class TicketsService {
         }
       }
 
-      // Cobro de reparación: se descuenta de la orden (el saldo vuelve a quedar pendiente)
+      // Cobro de reparación: se descuenta de la(s) orden(es) (el saldo vuelve a quedar pendiente)
+      const numerosRevertidos: string[] = [];
       for (const { ref, snap } of ordenesSnap) {
         if (!snap.exists()) continue;
         const orden: any = snap.data();
@@ -325,8 +377,9 @@ export class TicketsService {
           totalPagado,
           pagada: totalPagado >= (Number(orden.presupuesto) || 0) && totalPagado > 0
         });
-        resultado.ordenReparacion = orden.numeroOrden ?? venta.orden.numeroOrden ?? null;
+        numerosRevertidos.push(String(orden.numeroOrden ?? '?'));
       }
+      if (numerosRevertidos.length) resultado.ordenReparacion = numerosRevertidos.join(', #');
 
       // Equipos: vuelven a "disponible" (si siguen marcados como vendidos por ESTE ticket)
       for (const l of lecturasEquipos) {
@@ -346,12 +399,33 @@ export class TicketsService {
         resultado.equiposDevueltos.push(`${l.item.nombre} (IMEI ${l.data.imei})`);
       }
 
+      if (canjeRef && canjeId && equipoCanje) {
+        tx.set(this.equipos.refEliminado(canjeId), {
+          ...equipoCanje,
+          id: canjeId,
+          eliminado: {
+            fecha: new Date().toISOString(),
+            usuario,
+            motivo: `Anulación del ticket ${this.numeroFormateado(venta)}: se le devolvió al cliente. ${motivo.trim()}`
+          }
+        });
+        tx.delete(canjeRef);
+        if (imeiCanjeRef && imeiCanjeSnap?.exists() && (imeiCanjeSnap.data() as any)?.equipoId === canjeId) tx.delete(imeiCanjeRef);
+        resultado.canjeDevuelto = [equipoCanje.modelo, equipoCanje.capacidad].filter(Boolean).join(' ') + ` (IMEI ${equipoCanje.imei})`;
+      }
+
       if (creditoRef && credito && credito.estado !== 'anulado') {
         tx.update(creditoRef, {
           estado: 'anulado',
+          bloqueo: null,
           anulado: { fecha: new Date().toISOString(), usuario, motivo: motivo.trim(), por: 'ticket' }
         });
         resultado.creditoAnulado = true;
+      }
+      if (creditoViejoRef && creditoViejo && creditoViejo.estado === 'refinanciado' &&
+          creditoViejo.refinanciado?.creditoNuevoId === idCreditoTicket) {
+        tx.update(creditoViejoRef, { estado: 'vigente', refinanciado: null });
+        resultado.refinanciacionDeshecha = true;
       }
 
       if (lecturaCuota) {
@@ -368,6 +442,322 @@ export class TicketsService {
     });
 
     return resultado;
+  }
+
+  // =====================================================
+  // ↩ DEVOLUCIÓN PARCIAL DE PRODUCTOS
+  // =====================================================
+
+  /** Caja abierta de una sucursal (para devolver la plata). null si no hay ninguna. */
+  async cajaAbiertaDe(sucursalId: string): Promise<any | null> {
+    if (!sucursalId) return null;
+    const snap = await getDocs(query(collection(this.firestore, 'Cajas'),
+      where('sucursalId', '==', sucursalId), where('abierta', '==', true), limit(1)));
+    return snap.docs.length ? { id: snap.docs[0].id, ...snap.docs[0].data() } : null;
+  }
+
+  /** Lo que todavía debe de esa compra a cuenta corriente (0 si no compró a cuenta o ya lo pagó) */
+  async pendienteCuentaDe(venta: any): Promise<number> {
+    if (!venta?.cliente?.id || !(aCuentaDeVenta(venta) > 0)) return 0;
+    const snap = await getDoc(this.cuentas.refMovimiento(venta.cliente.id, venta.id));
+    const mov: any = snap.exists() ? snap.data() : null;
+    return mov && !mov.anulado ? Math.max(0, Number(mov.pendiente) || 0) : 0;
+  }
+
+  /**
+   * Devuelve productos de un ticket: crea la nota de devolución (ticket con importes negativos),
+   * repone el stock y descuenta de la cuenta corriente (si compró a cuenta) o registra la plata que se devuelve.
+   * @param caja caja donde sale la plata (la abierta en Despacho; si no se pasa, la abierta de la sucursal del ticket)
+   */
+  async devolver(
+    venta: any,
+    seleccion: SeleccionDevolucion[],
+    datos: { importe: number; metodo: string | null; motivo: string; cajero?: any | null },
+    caja: any | null = null
+  ): Promise<{ nota: any; aCuenta: number; dinero: number; stockDevuelto: string[] }> {
+    const usuario = this.auditoria.getUsuarioActual();
+    if (!usuario) throw new TicketError('No se pudo identificar al usuario. Volvé a iniciar sesión.');
+    if (!venta?.id) throw new TicketError('Ticket inválido.');
+    const motivo = String(datos?.motivo || '').trim();
+    if (motivo.length < 3) throw new TicketError('Ingresá el motivo de la devolución.');
+    const v0 = validarSeleccion(venta, seleccion);
+    if (!v0.items) throw new TicketError(v0.error || 'Revisá lo que devuelve.');
+    const importePedido = Math.round((Number(datos.importe) || 0) * 100) / 100;
+    if (!(importePedido > 0)) throw new TicketError('El importe a devolver tiene que ser mayor a 0.');
+
+    // Caja: la que se pasó o la abierta de la sucursal del ticket
+    const cajaUsada = caja?.id ? caja : await this.cajaAbiertaDe(venta.sucursalId);
+
+    const ventaRef = doc(this.firestore, 'Ventas', venta.id);
+    const notaRef = doc(collection(this.firestore, 'Ventas'));
+    const contadorRef = this.refContador();
+    const cajaRef = cajaUsada?.id ? doc(this.firestore, 'Cajas', cajaUsada.id) : null;
+    const clienteId: string | null = venta.cliente?.id || null;
+    const cuentaRef = clienteId && aCuentaDeVenta(venta) > 0 ? this.cuentas.refCuenta(clienteId) : null;
+    const movRef = clienteId && aCuentaDeVenta(venta) > 0 ? this.cuentas.refMovimiento(clienteId, venta.id) : null;
+    const idsProductos = [...new Set<string>(v0.items.map(s => venta.items[s.indice]?.productoId).filter(Boolean))];
+
+    let nota: any = null;
+    let aCuenta = 0;
+    let dinero = 0;
+    const stockDevuelto: string[] = [];
+
+    await runTransaction(this.firestore, async (tx) => {
+      // ---------- Lecturas ----------
+      const ventaSnap = await tx.get(ventaRef);
+      if (!ventaSnap.exists()) throw new TicketError('El ticket no existe.');
+      const actual: any = { id: venta.id, ...ventaSnap.data() };
+      const contadorSnap = await tx.get(contadorRef);
+      const cajaSnap = cajaRef ? await tx.get(cajaRef) : null;
+      const cuentaSnap = cuentaRef ? await tx.get(cuentaRef) : null;
+      const movSnap = movRef ? await tx.get(movRef) : null;
+      const productos = new Map<string, { ref: any; data: any }>();
+      for (const id of idsProductos) {
+        const ref = doc(this.firestore, 'productos', id);
+        const snap = await tx.get(ref);
+        if (snap.exists()) productos.set(id, { ref, data: snap.data() });
+      }
+
+      // ---------- Validaciones con los datos actuales ----------
+      const v = validarSeleccion(actual, seleccion);
+      if (!v.items) throw new TicketError(v.error || 'Revisá lo que devuelve.');
+      const maximo = importeDevolucion(actual, v.items);
+      if (importePedido > maximo + 0.009) {
+        throw new TicketError(`El importe supera lo que pagó por esos productos (${this.moneda(maximo)}).`);
+      }
+      const mov: any = movSnap?.exists() ? movSnap.data() : null;
+      const pendiente = mov && !mov.anulado ? Math.max(0, Number(mov.pendiente) || 0) : 0;
+      const reparto = repartoDevolucion(actual, importePedido, pendiente);
+      aCuenta = reparto.aCuenta;
+      dinero = reparto.dinero;
+
+      const metodo = dinero > 0 ? String(datos.metodo || '') : null;
+      if (dinero > 0 && !METODOS_DEVOLUCION.includes(metodo as any)) {
+        throw new TicketError('Elegí con qué medio se le devuelve la plata.');
+      }
+      const datosCaja: any = cajaSnap?.exists() ? cajaSnap.data() : null;
+      if (dinero > 0 && (!datosCaja || datosCaja.abierta === false)) {
+        throw new TicketError('Para devolver plata tiene que haber una caja abierta en la sucursal. Abrí la caja y volvé a intentar.');
+      }
+
+      // ---------- Renglones de la nota y stock ----------
+      const renglones = new Map(renglonesDevolvibles(actual).map(r => [r.indice, r]));
+      const cambiosStock = new Map<string, any>();
+      const itemsNota: any[] = [];
+      const itemsDevolucion: DevolucionDeVenta['items'] = [];
+      // El importe se reparte entre los renglones en proporción a su precio (el último se lleva el redondeo)
+      const bruto = v.items.reduce((a, s) => a + renglones.get(s.indice)!.precioNeto * s.cantidad, 0);
+      let repartido = 0;
+      v.items.forEach((s, i) => {
+        const item = actual.items[s.indice];
+        const r = renglones.get(s.indice)!;
+        const imp = i < v.items!.length - 1
+          ? Math.round(importePedido * (r.precioNeto * s.cantidad) / (bruto || 1) * 100) / 100
+          : Math.round((importePedido - repartido) * 100) / 100;
+        repartido = Math.round((repartido + imp) * 100) / 100;
+
+        // Stock: vuelve a donde se descontó (los cargados a mano no tienen stock)
+        let stockVuelto: any = null;
+        const sd = item.stockDescontado;
+        const prod = item.productoId ? productos.get(item.productoId) : null;
+        if (prod && sd && !item.manual) {
+          const data = prod.data;
+          if (sd.tipo === 'mayorista') {
+            data.stockMayorista = (Number(data.stockMayorista) || 0) + s.cantidad;
+            cambiosStock.set(item.productoId, { ...(cambiosStock.get(item.productoId) || {}), stockMayorista: data.stockMayorista });
+            stockVuelto = { tipo: 'mayorista', cantidad: s.cantidad };
+          } else {
+            const sucursalId = sd.sucursales?.[0]?.sucursalId || actual.sucursalId;
+            const sucursales = this.normalizarStockSucursales(data.stockSucursales);
+            const entrada = sucursales.find(x => x.sucursalId === sucursalId);
+            if (entrada) entrada.cantidad = (Number(entrada.cantidad) || 0) + s.cantidad;
+            else sucursales.push({ sucursalId, cantidad: s.cantidad });
+            data.stockSucursales = sucursales;
+            cambiosStock.set(item.productoId, { ...(cambiosStock.get(item.productoId) || {}), stockSucursales: sucursales });
+            stockVuelto = { tipo: 'minorista', sucursalId, cantidad: s.cantidad };
+          }
+          stockDevuelto.push(item.nombre);
+        }
+
+        itemsNota.push({
+          productoId: item.productoId || null,
+          manual: item.manual === true,
+          nombre: item.nombre,
+          color: item.color || null,
+          modelo: item.modelo || null,
+          tipo: 'devolucion',
+          indiceOriginal: s.indice,
+          cantidad: -s.cantidad,
+          precioUnitario: r.precioNeto,
+          subtotal: -imp,
+          stockDevuelto: stockVuelto
+        });
+        itemsDevolucion.push({ indice: s.indice, cantidad: s.cantidad, importe: imp });
+      });
+
+      // ---------- Nota de devolución (importes negativos: la caja y los reportes la descuentan) ----------
+      const pagos: any[] = [];
+      if (aCuenta > 0) pagos.push({ metodo: 'cuentacorriente', monto: -aCuenta });
+      if (dinero > 0) pagos.push({ metodo, monto: -dinero });
+      const ultimo = contadorSnap.exists() ? (Number((contadorSnap.data() as any).valor) || 0) : 0;
+      const fecha = new Date().toISOString();
+      nota = {
+        fecha,
+        tipoVenta: 'devolucion',
+        tipoPrecio: actual.tipoPrecio || 'minorista',
+        cliente: actual.cliente || null,
+        ventaOriginal: { id: venta.id, nroTicket: actual.nroTicket ?? null, fecha: actual.fecha || null },
+        items: itemsNota,
+        subtotal: -importePedido,
+        total: -importePedido,
+        metodoPago: pagos.length === 1 ? pagos[0].metodo : 'mixto',
+        pagos,
+        motivoDevolucion: motivo,
+        sucursalId: datosCaja?.sucursalId || cajaUsada?.sucursalId || actual.sucursalId || null,
+        cajaId: dinero > 0 || datosCaja ? (cajaUsada?.id || null) : null,
+        usuario,
+        cajero: datos.cajero || null,
+        nroTicket: ultimo + 1
+      };
+
+      // ---------- Escrituras ----------
+      tx.set(contadorRef, { valor: nota.nroTicket }, { merge: true });
+      tx.set(notaRef, nota);
+      const devolucion: DevolucionDeVenta = {
+        ventaId: notaRef.id, nroTicket: nota.nroTicket, fecha, items: itemsDevolucion, importe: importePedido, aCuenta
+      };
+      const devoluciones = [...(Array.isArray(actual.devoluciones) ? actual.devoluciones : []), devolucion];
+      tx.update(ventaRef, { devoluciones, totalDevuelto: totalDevuelto({ devoluciones }) });
+      for (const [id, cambios] of cambiosStock) tx.update(productos.get(id)!.ref, cambios);
+      if (aCuenta > 0 && movRef && cuentaRef) {
+        const cuenta: any = cuentaSnap?.exists() ? cuentaSnap.data() : {};
+        const nuevoPendiente = Math.round((pendiente - aCuenta) * 100) / 100;
+        tx.update(movRef, {
+          pendiente: nuevoPendiente,
+          saldada: nuevoPendiente <= 0.004,
+          devuelto: Math.round(((Number(mov.devuelto) || 0) + aCuenta) * 100) / 100
+        });
+        tx.update(cuentaRef, {
+          saldo: Math.round(Math.max(0, (Number(cuenta.saldo) || 0) - aCuenta) * 100) / 100,
+          totalCompras: Math.round(Math.max(0, (Number(cuenta.totalCompras) || 0) - aCuenta) * 100) / 100,
+          actualizada: serverTimestamp()
+        });
+      }
+      if (cajaRef && datosCaja && nota.cajaId) {
+        tx.update(cajaRef, { cantidadVentas: (Number(datosCaja.cantidadVentas) || 0) + 1 });
+      }
+    });
+
+    this.auditoria.registrar({
+      accion: 'modificar',
+      entidad: 'Ventas',
+      entidadId: venta.id,
+      descripcion: `Devolución de productos del ticket #${this.numeroFormateado(venta)}: ${this.moneda(importePedido)}` +
+        (aCuenta > 0 ? ` (${this.moneda(aCuenta)} descontado de la cuenta corriente)` : '') +
+        (dinero > 0 ? ` (${this.moneda(dinero)} devuelto en ${nombreMetodo(datos.metodo)})` : '') +
+        ` · nota #${String(nota.nroTicket).padStart(8, '0')} · Motivo: ${motivo}`
+    });
+
+    return { nota: { ...nota, id: notaRef.id }, aCuenta, dinero, stockDevuelto };
+  }
+
+  /** Anula una nota de devolución: el stock vuelve a salir, se repone la deuda y la devolución sale del ticket original */
+  private async anularDevolucion(nota: any, motivo: string): Promise<ResultadoAnulacion> {
+    const usuario = this.auditoria.getUsuarioActual();
+    const notaRef = doc(this.firestore, 'Ventas', nota.id);
+    const originalId: string | null = nota.ventaOriginal?.id || null;
+    const originalRef = originalId ? doc(this.firestore, 'Ventas', originalId) : null;
+    const cajaRef = nota.cajaId ? doc(this.firestore, 'Cajas', nota.cajaId) : null;
+    const aCuenta = Math.round(Math.max(0, -(nota.pagos || []).filter((p: any) => p.metodo === 'cuentacorriente')
+      .reduce((a: number, p: any) => a + (Number(p.monto) || 0), 0)) * 100) / 100;
+    const clienteId = nota.cliente?.id || null;
+    const cuentaRef = aCuenta > 0 && clienteId && originalId ? this.cuentas.refCuenta(clienteId) : null;
+    const movRef = aCuenta > 0 && clienteId && originalId ? this.cuentas.refMovimiento(clienteId, originalId) : null;
+    const idsProductos = [...new Set<string>((nota.items || []).map((i: any) => i.productoId).filter(Boolean))];
+
+    const resultado: ResultadoAnulacion = {
+      stockDevuelto: [], stockNoDevuelto: [], puntosRevertidos: false, cuponDevuelto: false, cajaCerrada: false,
+      ordenReparacion: null, cuentaCorriente: null, equiposDevueltos: [], canjeDevuelto: null, creditoAnulado: false, cuotasRevertidas: null
+    };
+
+    await runTransaction(this.firestore, async (tx) => {
+      const notaSnap = await tx.get(notaRef);
+      if (!notaSnap.exists()) throw new TicketError('La nota de devolución no existe.');
+      const actual: any = notaSnap.data();
+      if (actual.anulada === true) throw new TicketError('Esta nota de devolución ya está anulada.');
+      const originalSnap = originalRef ? await tx.get(originalRef) : null;
+      const cajaSnap = cajaRef ? await tx.get(cajaRef) : null;
+      const cuentaSnap = cuentaRef ? await tx.get(cuentaRef) : null;
+      const movSnap = movRef ? await tx.get(movRef) : null;
+      const productos = new Map<string, { ref: any; data: any }>();
+      for (const id of idsProductos) {
+        const ref = doc(this.firestore, 'productos', id);
+        const snap = await tx.get(ref);
+        if (snap.exists()) productos.set(id, { ref, data: snap.data() });
+      }
+
+      // Stock: vuelve a salir (lo que entró con la devolución)
+      const cambiosStock = new Map<string, any>();
+      for (const item of actual.items || []) {
+        const sv = item.stockDevuelto;
+        const prod = item.productoId ? productos.get(item.productoId) : null;
+        if (!sv || !prod) continue;
+        const cant = Number(sv.cantidad) || 0;
+        if (sv.tipo === 'mayorista') {
+          prod.data.stockMayorista = (Number(prod.data.stockMayorista) || 0) - cant;
+          cambiosStock.set(item.productoId, { ...(cambiosStock.get(item.productoId) || {}), stockMayorista: prod.data.stockMayorista });
+        } else {
+          const sucursales = this.normalizarStockSucursales(prod.data.stockSucursales);
+          const entrada = sucursales.find(x => x.sucursalId === sv.sucursalId);
+          if (entrada) entrada.cantidad = (Number(entrada.cantidad) || 0) - cant;
+          else sucursales.push({ sucursalId: sv.sucursalId, cantidad: -cant });
+          prod.data.stockSucursales = sucursales;
+          cambiosStock.set(item.productoId, { ...(cambiosStock.get(item.productoId) || {}), stockSucursales: sucursales });
+        }
+        resultado.stockDevuelto.push(item.nombre);
+      }
+
+      // ---------- Escrituras ----------
+      tx.update(notaRef, { anulada: true, motivoAnulacion: motivo, anuladaPor: usuario, anuladaEn: serverTimestamp() });
+      if (originalSnap?.exists()) {
+        const original: any = originalSnap.data();
+        const devoluciones = (original.devoluciones || []).map((d: any) => d.ventaId === nota.id ? { ...d, anulada: true } : d);
+        tx.update(originalRef!, { devoluciones, totalDevuelto: totalDevuelto({ devoluciones }) });
+      }
+      for (const [id, cambios] of cambiosStock) tx.update(productos.get(id)!.ref, cambios);
+      const mov: any = movSnap?.exists() ? movSnap.data() : null;
+      if (aCuenta > 0 && mov && !mov.anulado && cuentaSnap?.exists()) {
+        const cuenta: any = cuentaSnap.data();
+        const pendiente = Math.round(Math.min(Number(mov.importe) || 0, (Number(mov.pendiente) || 0) + aCuenta) * 100) / 100;
+        tx.update(movRef!, {
+          pendiente,
+          saldada: pendiente <= 0.004,
+          devuelto: Math.round(Math.max(0, (Number(mov.devuelto) || 0) - aCuenta) * 100) / 100
+        });
+        tx.update(cuentaRef!, {
+          saldo: Math.round(((Number(cuenta.saldo) || 0) + aCuenta) * 100) / 100,
+          totalCompras: Math.round(((Number(cuenta.totalCompras) || 0) + aCuenta) * 100) / 100,
+          actualizada: serverTimestamp()
+        });
+        resultado.cuentaCorriente = { tipo: 'pago', cliente: nota.cliente?.nombre || 'el cliente', importe: aCuenta };
+      }
+      if (cajaRef && cajaSnap?.exists()) {
+        const datosCaja: any = cajaSnap.data();
+        if (datosCaja.abierta === false) resultado.cajaCerrada = true;
+        else tx.update(cajaRef, { cantidadAnulaciones: (Number(datosCaja.cantidadAnulaciones) || 0) + 1 });
+      }
+    });
+
+    this.auditoria.registrar({
+      accion: 'anular', entidad: 'Ventas', entidadId: nota.id,
+      descripcion: `Anuló la nota de devolución #${this.numeroFormateado(nota)} (ticket #${String(nota.ventaOriginal?.nroTicket ?? '').padStart(8, '0')}) ` +
+        `por ${this.moneda(Math.abs(Number(nota.total) || 0))}. Motivo: ${motivo}`
+    });
+    return resultado;
+  }
+
+  private moneda(n: number): string {
+    return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(Number(n) || 0);
   }
 
   private normalizarStockSucursales(stock: any): { sucursalId: string; cantidad: number }[] {
@@ -409,6 +799,26 @@ export class TicketsService {
       console.error('No se pudo imprimir el presupuesto', err);
       alert('No se pudo imprimir el presupuesto. Probá de nuevo.');
     });
+  }
+
+  /** Bloque "Crédito de la casa" del presupuesto (solo si eligieron un plan; sin el interés) */
+  private htmlCreditoPresupuesto(c: DatosPresupuesto['credito'], $: (n: any) => string, esc: (t: any) => string): string {
+    if (!c || !c.cuotas?.length) return '';
+    const n = c.cuotas.length;
+    const primera = c.cuotas[0], ultima = c.cuotas[n - 1];
+    const iguales = c.cuotas.every(q => Math.abs(q.importe - primera.importe) < 0.01);
+    return `
+  <div style="border-top: 2px solid #000; margin-top: 10px; padding-top: 6px;">
+    <p style="text-align:center; font-weight:bold; margin: 0 0 4px;">CRÉDITO DE LA CASA</p>
+    ${c.canje ? `<div class="fila"><span>Precio del equipo</span><span class="monto">${$(c.precioEquipo)}</span></div>
+    <div class="fila"><span>Plan canje${c.canjeDetalle ? ` (${esc(c.canjeDetalle)})` : ''}</span><span class="monto">-${$(c.canje)}</span></div>` : ''}
+    ${c.entrega ? `<div class="fila"><span>Entrega</span><span class="monto">${$(c.entrega)}</span></div>` : ''}
+    <div class="fila" style="font-weight:bold; font-size: 14px; margin-top: 4px;">
+      <span>${n} cuota${n > 1 ? 's' : ''} de</span><span class="monto">${$(primera.importe)}</span>
+    </div>
+    ${!iguales ? `<div style="font-size: 11px; text-align: right;">(la última de ${$(ultima.importe)})</div>` : ''}
+    <p style="font-size: 11px; margin: 4px 0 0;">Las cuotas vencen del 1 al 10 de cada mes, desde ${esc(textoVencimiento(primera).replace(/^1 al 10 de /, ''))}.</p>
+  </div>`;
   }
 
   htmlPresupuesto(p: DatosPresupuesto): string {
@@ -489,6 +899,7 @@ export class TicketsService {
 
   <p class="total">TOTAL: ${$(total)}</p>
   ${conDescuento ? `<div style="margin-top: 4px;">${conDescuento}</div>` : ''}
+  ${this.htmlCreditoPresupuesto(p.credito, $, esc)}
 
   <p class="nota">${esc(p.validez || VALIDEZ_PRESUPUESTO)}</p>
   <p class="nota"><strong>NO VÁLIDO COMO FACTURA</strong></p>
@@ -507,9 +918,20 @@ export class TicketsService {
     const wspTexto = esMayorista ? '3426985223' : '3425209886';
     const tituloEmpresa = esMayorista ? 'JC MAYORISTA' : 'JC EXCLUSIVO';
 
-    const subtotal = Number(venta.subtotal ?? venta.total) || 0;
-    const totalFinal = Number(venta.total) || 0;
-    const descuentoTotal = subtotal - totalFinal;
+    // ↩ Nota de devolución: los importes se guardan negativos; en el papel van en positivo
+    const esDevolucion = venta.tipoVenta === 'devolucion';
+    const subtotal = esDevolucion ? Math.abs(Number(venta.subtotal) || 0) : Number(venta.subtotal ?? venta.total) || 0;
+    const totalFinal = esDevolucion ? Math.abs(Number(venta.total) || 0) : Number(venta.total) || 0;
+    const descuentoTotal = esDevolucion ? 0 : subtotal - totalFinal;
+    // Ticket con devoluciones: cuánto se devolvió de cada renglón
+    const devueltoRenglon = devolucionesVigentes(venta).reduce((m, d) => {
+      (d.items || []).forEach(it => m.set(Number(it.indice), (m.get(Number(it.indice)) || 0) + (Number(it.cantidad) || 0)));
+      return m;
+    }, new Map<number, number>());
+    const bloqueDevoluciones = esDevolucion
+      ? ''
+      : devolucionesVigentes(venta).map(d =>
+          `<p style="text-align:right">↩ Devolución ${new Date(d.fecha).toLocaleDateString('es-AR')} (nota ${String(d.nroTicket ?? '').padStart(8, '0')}): -${$(d.importe)}</p>`).join('');
 
     const lineasDescuento: string[] = [];
     if (venta.descuentoCupon > 0) {
@@ -522,7 +944,8 @@ export class TicketsService {
     if (venta.descuentoEquipos > 0) {
       lineasDescuento.push(`Descuento equipos (${venta.porcentajeDescuentoEquipos}%): -${$(venta.descuentoEquipos)}`);
     }
-    const pagos: any[] = Array.isArray(venta.pagos) && venta.pagos.length ? venta.pagos : [];
+    const pagos: any[] = (Array.isArray(venta.pagos) && venta.pagos.length ? venta.pagos : [])
+      .map((p: any) => esDevolucion ? { ...p, monto: Math.abs(Number(p.monto) || 0) } : p);
     if (pagos.length) {
       // Descuento de cada medio (si pagó con varios, cada parte lleva el suyo)
       pagos.filter(p => Number(p.descuento) > 0).forEach(p => lineasDescuento.push(
@@ -544,7 +967,27 @@ export class TicketsService {
 
     // Cuenta corriente: compra a cuenta (deuda) o cobro de deuda
     const esCobroCuenta = venta.tipoVenta === 'cobrocuenta';
-    const esPago = esCobroCuenta || venta.tipoVenta === 'cobrocuota';   // comprobante de pago, no de compra
+    const esRefinanciacion = venta.tipoVenta === 'refinanciacion';
+    const esPago = esCobroCuenta || venta.tipoVenta === 'cobrocuota' || esRefinanciacion;   // comprobante de pago, no de compra
+    // 🔁 Refinanciación: el plan nuevo para firmar (el interés no se imprime)
+    const rf = esRefinanciacion ? venta.refinanciacion || null : null;
+    const bloqueRefinanciacion = !rf ? '' : anulada
+      ? '<p><strong>Refinanciación: ANULADA</strong></p>'
+      : `<div class="titulo-bloque">REFINANCIACIÓN CRÉDITO DE LA CASA</div>
+        <p><small>${esc(rf.equipo || '')}${rf.creditoAnterior?.fecha ? ` · crédito del ${new Date(rf.creditoAnterior.fecha).toLocaleDateString('es-AR')}` : ''}</small></p>
+        <table class="pagos"><tbody>
+          <tr><td>Saldo adeudado</td><td class="der">${$(rf.saldoAnterior)}</td></tr>
+          ${Number(rf.recargo) > 0 ? `<tr><td>Recargo por atraso</td><td class="der">${$(rf.recargo)}</td></tr>` : ''}
+          ${Number(rf.entrega) > 0 ? `<tr><td>Entrega</td><td class="der">-${$(rf.entrega)}</td></tr>` : ''}
+          <tr><td>A refinanciar</td><td class="der">${$(rf.aRefinanciar)}</td></tr>
+          <tr><td><strong>Saldo financiado</strong></td><td class="der"><strong>${$(rf.financiado)}</strong></td></tr>
+        </tbody></table>
+        <p><strong>Nuevo plan de pagos (${rf.cantidadCuotas} cuota${rf.cantidadCuotas > 1 ? 's' : ''}):</strong></p>
+        <table class="pagos"><tbody>${(rf.cuotas || []).map((q: any) =>
+          `<tr><td>Cuota ${q.numero}<br><small>vence del ${esc(textoVencimiento(q))}</small></td><td class="der">${$(q.importe)}</td></tr>`).join('')}
+        </tbody></table>
+        <p style="font-size:11px">Las cuotas se abonan en el local del 1 al 10 de cada mes. Reemplaza el plan de pagos anterior.</p>
+        <p style="margin-top:28px;border-top:1px solid #000;text-align:center">Firma y aclaración del cliente</p>`;
     const aCuenta = aCuentaDeVenta(venta);
     const cc = venta.cuentaCorriente || null;
     const bloqueCuenta = anulada ? '' : esCobroCuenta && cc
@@ -568,10 +1011,15 @@ export class TicketsService {
       ? '<p><strong>Crédito de la casa: ANULADO</strong></p>'
       : `<div class="titulo-bloque">CRÉDITO DE LA CASA</div>
         <table class="pagos"><tbody>
-          <tr><td>Precio de contado</td><td class="der">${$(cr.precioContado)}</td></tr>
-          ${Number(cr.recargo) ? `<tr><td>Precio financiado</td><td class="der">${$(cr.precioFinanciado)}</td></tr>` : ''}
-          ${Number(cr.canje) ? `<tr><td>Plan canje</td><td class="der">-${$(cr.canje)}</td></tr>` : ''}
+          ${Number(cr.canje)
+            ? `<tr><td>Precio del equipo</td><td class="der">${$(cr.precioContado)}</td></tr>
+               <tr><td>Plan canje</td><td class="der">-${$(cr.canje)}</td></tr>
+               <tr><td>Precio de contado</td><td class="der">${$(Number(cr.precioContado) - Number(cr.canje))}</td></tr>`
+            : `<tr><td>Precio de contado</td><td class="der">${$(cr.precioContado)}</td></tr>`}
           ${Number(cr.entrega) ? `<tr><td>Entrega</td><td class="der">-${$(cr.entrega)}</td></tr>` : ''}
+          ${cr.interes !== undefined && cr.interes !== null
+            ? `<tr><td>A financiar</td><td class="der">${$(cr.aFinanciar)}</td></tr>`   /* el interés no se imprime */
+            : (Number(cr.recargo) ? `<tr><td>Precio financiado</td><td class="der">${$(cr.precioFinanciado)}</td></tr>` : '')}
           <tr><td><strong>Saldo financiado</strong></td><td class="der"><strong>${$(cr.saldo)}</strong></td></tr>
         </tbody></table>
         <p><strong>Plan de pagos (${cr.cantidadCuotas} cuota${cr.cantidadCuotas > 1 ? 's' : ''}):</strong></p>
@@ -637,7 +1085,7 @@ export class TicketsService {
   <h2>${tituloEmpresa}</h2>
   <h3>WhatsApp: ${wspTexto}</h3>
 
-  <h2>🧾 ${esPago ? 'Comprobante de pago' : 'Comprobante de compra'}</h2>
+  <h2>${esDevolucion ? '↩ Nota de devolución' : esRefinanciacion ? '🔁 Refinanciación' : `🧾 ${esPago ? 'Comprobante de pago' : 'Comprobante de compra'}`}</h2>
   <div class="nro">Ticket Nº ${this.numeroFormateado(venta)}</div>
 
   ${anulada ? `<div class="anulado">ANULADO</div>
@@ -645,22 +1093,25 @@ export class TicketsService {
     <p><strong>Anuló:</strong> ${esc(venta.anuladaPor?.nombre || venta.anuladaPor?.usuario || '')}</p>` : ''}
 
   <p><strong>Fecha:</strong> ${new Date(venta.fecha).toLocaleString('es-AR')}</p>
-  <p><strong>Método de pago:</strong> ${textoMetodo}</p>
+  ${esDevolucion ? `<p><strong>Devolución del ticket:</strong> Nº ${String(venta.ventaOriginal?.nroTicket ?? '').padStart(8, '0')}${venta.ventaOriginal?.fecha ? ` (${new Date(venta.ventaOriginal.fecha).toLocaleDateString('es-AR')})` : ''}</p>
+    <p><strong>Motivo:</strong> ${esc(venta.motivoDevolucion)}</p>` : ''}
+  <p><strong>${esDevolucion ? 'Se devuelve con' : 'Método de pago'}:</strong> ${textoMetodo}</p>
   ${venta.cajero
       ? `<p><strong>Atendió:</strong> ${esc([venta.cajero.nombre, venta.cajero.apellido].filter(Boolean).join(' '))}</p>`
       : (venta.usuario ? `<p><strong>Atendió:</strong> ${esc(venta.usuario.nombre || venta.usuario.usuario)}</p>` : '')}
   ${venta.cliente ? `<p><strong>Cliente:</strong> ${esc(venta.cliente.nombre)}${venta.cliente.dni ? ` (DNI: ${esc(venta.cliente.dni)})` : ''}</p>` : ''}
-  ${venta.tipoVenta === 'reparacion' ? `<p><strong>Orden de reparación:</strong> #${esc(venta.orden?.numeroOrden)} · ${esc(venta.orden?.equipo)}${venta.orden?.imei ? ` (IMEI ${esc(venta.orden.imei)})` : ''}</p>` : ''}
+  ${venta.tipoVenta === 'reparacion' && ordenesDeVenta(venta).length <= 1 ? `<p><strong>Orden de reparación:</strong> #${esc(venta.orden?.numeroOrden)} · ${esc(venta.orden?.equipo)}${venta.orden?.imei ? ` (IMEI ${esc(venta.orden.imei)})` : ''}</p>` : ''}
+  ${venta.tipoVenta === 'reparacion' && ordenesDeVenta(venta).length > 1 ? `<p><strong>Órdenes de reparación:</strong> ${esc(textoOrdenes(venta))}</p>` : ''}
 
   <table>
     <thead><tr><th>Producto</th><th>Cant.</th><th>Precio</th><th>Subtotal</th></tr></thead>
     <tbody>
-      ${(venta.items || []).map((item: any) => `
+      ${(venta.items || []).map((item: any, indice: number) => `
         <tr>
-          <td>${esc(item.nombre)}${item.modelo ? `<br><small>Modelo: ${esc(item.modelo)}</small>` : ''}${nombreColor(item.color) ? `<br><small>Color: ${esc(nombreColor(item.color))}</small>` : ''}${item.tipo === 'equipo' && item.equipo ? `<br><small>IMEI: ${esc(item.equipo.imei)}</small><br><small>${esc([item.equipo.condicion === 'nuevo' ? 'Nuevo' : 'Usado', item.equipo.color, item.equipo.grado ? 'Grado ' + item.equipo.grado : '', 'Batería ' + item.equipo.bateria + '%'].filter(Boolean).join(' · '))}</small>` : ''}</td>
-          <td>${item.cantidad}</td>
+          <td>${esc(item.nombre)}${devueltoRenglon.get(indice) ? `<br><small><strong>Devuelto: ${devueltoRenglon.get(indice)}</strong></small>` : ''}${item.modelo ? `<br><small>Modelo: ${esc(item.modelo)}</small>` : ''}${nombreColor(item.color) ? `<br><small>Color: ${esc(nombreColor(item.color))}</small>` : ''}${item.tipo === 'equipo' && item.equipo ? `<br><small>IMEI: ${esc(item.equipo.imei)}</small><br><small>${esc([item.equipo.condicion === 'nuevo' ? 'Nuevo' : 'Usado', item.equipo.color, item.equipo.grado ? 'Grado ' + item.equipo.grado : '', 'Batería ' + item.equipo.bateria + '%'].filter(Boolean).join(' · '))}</small>` : ''}</td>
+          <td>${esDevolucion ? Math.abs(Number(item.cantidad) || 0) : item.cantidad}</td>
           <td class="der">${$(item.precioUnitario)}</td>
-          <td class="der">${$(item.subtotal)}</td>
+          <td class="der">${$(esDevolucion ? Math.abs(Number(item.subtotal) || 0) : item.subtotal)}</td>
         </tr>`).join('')}
     </tbody>
   </table>
@@ -671,23 +1122,28 @@ export class TicketsService {
     <p>Descuento total: ${$(descuentoTotal)}</p>
   ` : ''}
 
-  <p class="total">${venta.tipoVenta === 'reparacion' || esPago ? 'TOTAL COBRADO' : cr ? 'TOTAL FINANCIADO' : 'TOTAL FINAL'}: ${$(totalFinal)}</p>
+  <p class="total">${esRefinanciacion ? 'ENTREGA' : esDevolucion ? 'TOTAL DEVUELTO' : venta.tipoVenta === 'reparacion' || esPago ? 'TOTAL COBRADO' : cr ? 'TOTAL FINANCIADO' : 'TOTAL FINAL'}: ${$(totalFinal)}</p>
+  ${bloqueDevoluciones}
   ${detallePagos ? `<p><strong>Forma de pago:</strong></p>${detallePagos}` : ''}
   ${Number(venta.efectivoRecibido) > 0 && !anulada ? `
     <p style="text-align:right">Efectivo recibido: ${$(venta.efectivoRecibido)}</p>
     <p style="text-align:right"><strong>Su vuelto: ${$(venta.vuelto)}</strong></p>` : ''}
   ${venta.tipoVenta === 'reparacion' && !anulada
     ? (Number(venta.saldoRestante) > 0
-        ? `<p style="text-align:right"><strong>Saldo pendiente: ${$(venta.saldoRestante)}</strong></p>`
-        : `<p style="text-align:right"><strong>Reparación totalmente paga</strong></p>`)
+        ? (ordenesDeVenta(venta).length > 1
+          ? (venta.ordenes || []).filter((o: any) => Number(o.saldoRestante) > 0)
+              .map((o: any) => `<p style="text-align:right"><strong>Saldo pendiente orden #${esc(o.numeroOrden)}: ${$(o.saldoRestante)}</strong></p>`).join('')
+          : `<p style="text-align:right"><strong>Saldo pendiente: ${$(venta.saldoRestante)}</strong></p>`)
+        : `<p style="text-align:right"><strong>${ordenesDeVenta(venta).length > 1 ? 'Reparaciones totalmente pagas' : 'Reparación totalmente paga'}</strong></p>`)
     : ''}
   ${bloqueCuenta}
   ${bloqueCanje}
   ${bloqueCredito}
+  ${bloqueRefinanciacion}
   ${bloqueCuota}
   ${venta.puntosGanados > 0 && !anulada ? `<p>Puntos sumados en esta compra: ${venta.puntosGanados}</p>` : ''}
 
-  <h2>${esPago ? '¡Gracias por su pago! 🙌' : '¡Gracias por su compra! 🙌'}</h2>
+  <h2>${esDevolucion ? 'Devolución registrada' : esPago ? '¡Gracias por su pago! 🙌' : '¡Gracias por su compra! 🙌'}</h2>
   <h3>https://jcexclusivo.com.ar/</h3>
 
   ${modo === 'imprimir' ? '<script>window.onload = function () { window.print(); };</script>' : ''}

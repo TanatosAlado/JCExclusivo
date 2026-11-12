@@ -19,6 +19,7 @@ export const SECCIONES: Seccion[] = [
   { clave: 'dashboard', titulo: 'Dashboard', ruta: '/gestiones/dashboard', descripcion: 'Indicadores y reporte Excel' },
   { clave: 'clientes', titulo: 'Clientes', ruta: '/gestiones/clientes', descripcion: 'Gestión de clientes' },
   { clave: 'equipos', titulo: 'Equipos', ruta: '/gestiones/equipos', descripcion: 'Alta, baja y modificación de equipos para la venta' },
+  { clave: 'tasador', titulo: 'Tasador', ruta: '/gestiones/tasador', descripcion: 'Modelos, precios y preguntas para tasar equipos usados' },
   { clave: 'productos', titulo: 'Productos', ruta: '/gestiones/productos', descripcion: 'Gestión de productos y stock' },
   { clave: 'pedidos', titulo: 'Pedidos', ruta: '/gestiones/pedidos', descripcion: 'Pedidos de la tienda online' },
   { clave: 'taller', titulo: 'Taller', ruta: '/gestiones/taller', descripcion: 'Órdenes de reparación' },
@@ -35,7 +36,7 @@ export const SECCIONES: Seccion[] = [
 ];
 
 /** Exclusivas: un admin sin permisos cargados NO las ve (antes eran solo del superadmin) */
-export const SECCIONES_EXCLUSIVAS = ['dashboard', 'gifts', 'empresa', 'banner', 'auditoria', 'marquesina', 'cuentas', 'equipos'];
+export const SECCIONES_EXCLUSIVAS = ['dashboard', 'gifts', 'empresa', 'banner', 'auditoria', 'marquesina', 'cuentas', 'equipos', 'tasador'];
 
 /** Lo que ve un admin que todavía no tiene permisos cargados (= lo que veía antes de este cambio) */
 export const PERMISOS_POR_DEFECTO = SECCIONES

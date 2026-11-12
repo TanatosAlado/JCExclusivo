@@ -20,10 +20,27 @@ import { AuditoriaService, UsuarioRegistro } from 'src/app/shared/services/audit
  *   EquiposEliminados/{id}  → equipos dados de baja (se pueden recuperar)
  *
  * Estados: 'disponible' → 'vendido' (la venta se hace en Despacho / tienda, etapas siguientes).
+ *          'preparacion': entró por PLAN CANJE en Despacho. No se ve en la tienda ni se puede vender
+ *          hasta que en Gestiones → Equipos se le cargan foto y precios y se publica (→ 'disponible').
  * Un equipo vendido NO se borra: queda para consultar la garantía por IMEI.
  */
 
-export type EstadoEquipo = 'disponible' | 'vendido';
+export type EstadoEquipo = 'disponible' | 'vendido' | 'preparacion';
+
+/** Se puede modificar / dar de baja (no se vendió) */
+export function esEditable(e: { estado?: any } | null | undefined): boolean {
+  return e?.estado === 'disponible' || e?.estado === 'preparacion';
+}
+
+/** Datos del plan canje con el que entró el equipo */
+export interface CanjeEquipo {
+  ventaId: string;
+  nroTicket: number | null;
+  monto: number;                 // en cuánto se lo tomó (pesos)
+  fecha: string;
+  cliente: { id: string | null; nombre: string };
+  sucursalId: string | null;
+}
 export type MonedaEquipo = 'USD' | 'ARS';
 export type CondicionEquipo = 'nuevo' | 'usado';
 
@@ -77,6 +94,7 @@ export interface Equipo {
   creado?: { fecha: string; usuario: UsuarioRegistro | null };
   actualizado?: { fecha: string; usuario: UsuarioRegistro | null } | null;
   venta?: any;                  // datos de la venta (etapa 2)
+  canje?: CanjeEquipo | null;   // si entró por plan canje en Despacho
 }
 
 /** Lo que se carga en el formulario */
@@ -118,7 +136,7 @@ export function imeiValido(imei: string): boolean {
  * Valida la ficha. Devuelve la lista de errores (vacía si está todo bien).
  * El IMEI puede ser un IMEI de 15 dígitos o un nº de serie (letras y números, 5 a 20).
  */
-export function validarEquipo(d: Partial<DatosEquipo>): string[] {
+export function validarEquipo(d: Partial<DatosEquipo>, opciones: { sinPrecios?: boolean } = {}): string[] {
   const errores: string[] = [];
   const texto = (v: any) => String(v ?? '').trim();
   if (d.condicion !== 'nuevo' && d.condicion !== 'usado') errores.push('Elegí si el equipo es nuevo o usado.');
@@ -134,8 +152,11 @@ export function validarEquipo(d: Partial<DatosEquipo>): string[] {
   }
   // El grado es solo para los usados
   if (d.condicion !== 'nuevo' && !texto(d.grado)) errores.push('Elegí el grado.');
-  if (!(Number(d.precioMinorista) > 0)) errores.push('Ingresá el precio minorista.');
-  if (!(Number(d.precioMayorista) > 0)) errores.push('Ingresá el precio mayorista.');
+  // En preparación (plan canje) los precios se cargan después
+  if (!opciones.sinPrecios) {
+    if (!(Number(d.precioMinorista) > 0)) errores.push('Ingresá el precio minorista.');
+    if (!(Number(d.precioMayorista) > 0)) errores.push('Ingresá el precio mayorista.');
+  }
   if (!MONEDAS.includes(d.moneda as MonedaEquipo)) errores.push('Elegí la moneda.');
   return errores;
 }
@@ -159,6 +180,29 @@ export function limpiarDatos(d: DatosEquipo): DatosEquipo {
     // La primera foto es la principal (la que se usa en el carrito, despacho, etc.)
     imagen: fotosDe(d)[0] || '',
     imagenes: fotosDe(d)
+  };
+}
+
+/** Lo que se carga en Despacho del equipo que entrega el cliente (sin precios ni fotos) */
+export type DatosEquipoCanje = Pick<DatosEquipo, 'modelo' | 'color' | 'capacidad' | 'imei' | 'bateria' | 'grado' | 'observaciones'>;
+
+export function validarEquipoCanje(d: Partial<DatosEquipoCanje>): string[] {
+  return validarEquipo({ ...d, condicion: 'usado', moneda: 'USD' }, { sinPrecios: true });
+}
+
+/** Ficha del equipo que entra por plan canje: usado, en preparación, sin precios ni fotos */
+export function fichaEquipoCanje(d: DatosEquipoCanje, canje: CanjeEquipo, usuario: UsuarioRegistro | null): Omit<Equipo, 'id'> {
+  const limpio = limpiarDatos({
+    ...d, condicion: 'usado', moneda: 'USD', precioMinorista: 0, precioMayorista: 0, imagen: '', imagenes: []
+  });
+  return {
+    ...limpio,
+    rubro: RUBRO_EQUIPOS,
+    estado: 'preparacion',
+    creado: { fecha: canje.fecha, usuario },
+    actualizado: null,
+    venta: null,
+    canje
   };
 }
 
@@ -284,7 +328,7 @@ export class EquiposService {
   // =====================================================
 
   async actualizar(equipo: Equipo, datos: DatosEquipo): Promise<Equipo> {
-    const errores = validarEquipo(datos);
+    const errores = validarEquipo(datos, { sinPrecios: equipo.estado === 'preparacion' });
     if (errores.length) throw new EquipoError(errores.join(' '));
     const d = limpiarDatos(datos);
     const usuario = this.auditoria.getUsuarioActual();
@@ -311,7 +355,7 @@ export class EquiposService {
       const imeiNuevoSnap = cambia ? await tx.get(imeiNuevoRef) : null;
       if (!snap.exists()) throw new EquipoError('El equipo ya no existe. Actualizá el listado.');
       const actual: any = snap.data();
-      if (actual.estado !== 'disponible') throw new EquipoError('El equipo ya se vendió: no se puede modificar.');
+      if (!esEditable(actual)) throw new EquipoError('El equipo ya se vendió: no se puede modificar.');
       if (cambia && imeiNuevoSnap?.exists() && (imeiNuevoSnap.data() as any)?.equipoId !== equipo.id) {
         throw new EquipoError(`Ya hay un equipo disponible con el IMEI ${d.imei}.`);
       }
@@ -324,6 +368,59 @@ export class EquiposService {
     });
 
     return { ...equipo, ...d, actualizado };
+  }
+
+  // =====================================================
+  // PUBLICAR (equipo del plan canje: en preparación → disponible)
+  // =====================================================
+
+  /** Guarda los datos y lo pone a la venta. Pide los precios (la foto no es obligatoria). */
+  async publicar(equipo: Equipo, datos: DatosEquipo): Promise<Equipo> {
+    const errores = validarEquipo(datos);
+    if (errores.length) throw new EquipoError(errores.join(' '));
+    if (equipo.estado !== 'preparacion') throw new EquipoError('El equipo ya está publicado.');
+    const d = limpiarDatos(datos);
+    const usuario = this.auditoria.getUsuarioActual();
+    if (!usuario) throw new EquipoError('No se pudo identificar al usuario. Volvé a iniciar sesión.');
+
+    const equipoRef = doc(this.firestore, EquiposService.COLECCION, equipo.id);
+    const cambia = d.imei !== equipo.imei;
+    const imeiNuevoRef = this.refImei(d.imei);
+    const imeiViejoRef = this.refImei(equipo.imei);
+    const actualizado = { fecha: new Date().toISOString(), usuario };
+    const registro = await this.auditoria.armarRegistro({
+      accion: 'modificar',
+      entidad: EquiposService.COLECCION,
+      entidadId: equipo.id,
+      descripcion: `Publicó a la venta el equipo del plan canje ${nombreEquipo(d)} (IMEI ${d.imei}) · ${d.moneda} ${d.precioMinorista} / ${d.precioMayorista}`,
+      antes: equipo,
+      despues: { ...d, estado: 'disponible' }
+    });
+
+    await runTransaction(this.firestore, async tx => {
+      const snap = await tx.get(equipoRef);
+      const imeiNuevoSnap = cambia ? await tx.get(imeiNuevoRef) : null;
+      if (!snap.exists()) throw new EquipoError('El equipo ya no existe. Actualizá el listado.');
+      if ((snap.data() as any).estado !== 'preparacion') throw new EquipoError('El equipo ya está publicado o se vendió. Actualizá el listado.');
+      if (cambia && imeiNuevoSnap?.exists() && (imeiNuevoSnap.data() as any)?.equipoId !== equipo.id) {
+        throw new EquipoError(`Ya hay un equipo disponible con el IMEI ${d.imei}.`);
+      }
+      tx.update(equipoRef, { ...d, estado: 'disponible', actualizado });
+      if (cambia) {
+        tx.delete(imeiViejoRef);
+        tx.set(imeiNuevoRef, { equipoId: equipo.id, modelo: d.modelo });
+      }
+      this.auditoria.registrarEnTransaccion(tx, registro);
+    });
+    return { ...equipo, ...d, estado: 'disponible', actualizado };
+  }
+
+  // =====================================================
+  // PLAN CANJE: baja al anular la venta (la usa TicketsService.anular dentro de su transacción)
+  // =====================================================
+
+  refEliminado(id: string) {
+    return doc(this.firestore, EquiposService.ELIMINADOS, id);
   }
 
   // =====================================================
@@ -352,7 +449,7 @@ export class EquiposService {
       const imeiSnap = await tx.get(imeiRef);
       if (!snap.exists()) throw new EquipoError('El equipo ya no existe. Actualizá el listado.');
       const actual: any = snap.data();
-      if (actual.estado !== 'disponible') throw new EquipoError('Un equipo vendido no se puede dar de baja (queda para la garantía).');
+      if (!esEditable(actual)) throw new EquipoError('Un equipo vendido no se puede dar de baja (queda para la garantía).');
       tx.set(archivoRef, {
         ...actual,
         id: equipo.id,

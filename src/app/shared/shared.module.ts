@@ -35,6 +35,9 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatListModule } from '@angular/material/list';
 import { EstiloMarquesinaComponent } from './components/estilo-marquesina/estilo-marquesina.component';
 import { CardCategoriasComponent } from './components/card-categorias/card-categorias.component';
+import { TasarEquipoComponent } from './components/tasar-equipo/tasar-equipo.component';
+import { CotizaUsadoComponent } from './components/cotiza-usado/cotiza-usado.component';
+import { PaletaColoresComponent } from './components/paleta-colores/paleta-colores.component';
 
 
 
@@ -48,7 +51,10 @@ import { CardCategoriasComponent } from './components/card-categorias/card-categ
     ConfirmDialogComponent,
     WhatsappComponent,
     EstiloMarquesinaComponent,
-    CardCategoriasComponent
+    CardCategoriasComponent,
+    TasarEquipoComponent,
+    CotizaUsadoComponent,
+    PaletaColoresComponent
   ],
   imports: [
     CommonModule,
@@ -116,7 +122,9 @@ import { CardCategoriasComponent } from './components/card-categorias/card-categ
     MatSelectModule,
     MatListModule,
     EstiloMarquesinaComponent,
-    CardCategoriasComponent
+    CardCategoriasComponent,
+    TasarEquipoComponent,
+    PaletaColoresComponent
     
  ],
   providers: [

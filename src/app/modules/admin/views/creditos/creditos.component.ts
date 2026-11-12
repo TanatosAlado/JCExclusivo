@@ -1,23 +1,40 @@
 import { Component, OnInit } from '@angular/core';
 import * as XLSX from 'xlsx';
 import Swal from 'sweetalert2';
-import { Credito, CreditosService, PagoCredito } from 'src/app/modules/despacho/services/creditos.service';
+import { ConfigPlanes, Credito, CreditoError, CreditosService, PagoCredito } from 'src/app/modules/despacho/services/creditos.service';
 import {
-  CuotaCredito, ResumenCartera, SituacionCredito, estadoCuota, faltaCuota, resumenCartera, situacionCredito, textoVencimiento
+  CuotaCredito, ResumenCartera, SituacionCredito, estadoCuota, faltaCuota, resumenCartera, situacionCredito, textoVencimiento,
+  MAX_CUOTAS, PLANES_INICIALES, conInteres, validarPlanes, RECARGO_DIARIO,
+  DatosCreditoManual, MAX_CUOTAS_MANUAL, validarCreditoManual, primerMesSugerido, estaBloqueado, ultimaCarta, fechaCorta, mesCuota,
+  CUOTAS_PARA_CONFIRMAR, reimputarPagos
 } from 'src/app/modules/despacho/services/credito-casa';
 import { TicketsService, TicketError } from 'src/app/modules/despacho/services/tickets.service';
 import { textoPagos, efectivoDeVenta } from 'src/app/modules/despacho/services/pagos';
-import { BuscadorClientesService } from 'src/app/shared/services/buscador-clientes.service';
+import { BuscadorClientesService, ClienteEncontrado } from 'src/app/shared/services/buscador-clientes.service';
+import { PermisosService } from 'src/app/core/permisos.service';
 import { SucursalesService } from '../../services/sucursales.service';
 import { take } from 'rxjs/operators';
 
-type FiltroEstado = 'vencidos' | 'vigentes' | 'al-dia' | 'cancelados' | 'anulados' | 'todos';
+type FiltroEstado = 'vencidos' | 'vigentes' | 'al-dia' | 'bloqueados' | 'cancelados' | 'refinanciados' | 'anulados' | 'todos';
+
+/** 'YYYY-MM-DD' de hoy (hora local) */
+function hoyTexto(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function altaVacia(): DatosCreditoManual {
+  return {
+    nombre: '', dni: '', telefono: '', direccion: '', equipo: '', imei: '', detalle: '',
+    fechaEntrega: '', entrega: null, cantidadCuotas: null, importeCuota: null, primerMes: ''
+  };
+}
 
 /** Crédito con su situación calculada (para la lista) */
 interface FilaCredito {
   c: Credito;
   s: SituacionCredito;
-  estado: 'vencido' | 'por-vencer' | 'al-dia' | 'cancelado' | 'anulado';
+  estado: 'vencido' | 'por-vencer' | 'al-dia' | 'cancelado' | 'anulado' | 'refinanciado';
 }
 
 /**
@@ -52,25 +69,70 @@ export class CreditosComponent implements OnInit {
     { valor: 'vencidos', nombre: '🔴 Con cuotas vencidas' },
     { valor: 'vigentes', nombre: 'Vigentes' },
     { valor: 'al-dia', nombre: '🟢 Al día' },
+    { valor: 'bloqueados', nombre: '🔒 Bloqueados' },
     { valor: 'cancelados', nombre: '✅ Terminados' },
+    { valor: 'refinanciados', nombre: '🔁 Refinanciados' },
     { valor: 'anulados', nombre: 'Anulados' },
     { valor: 'todos', nombre: 'Todos' }
   ];
+  // ⚙️ Planes de cuotas e interés
+  mostrarPlanes = false;
+  cargandoPlanes = false;
+  guardandoPlanes = false;
+  planesInfo: ConfigPlanes | null = null;
+  planesEdit: { cuotas: number | null; interes: number | null }[] = [];
+  errorPlanes = '';
+  montoEjemplo = 100000;
+  readonly maxCuotas = MAX_CUOTAS;
+  readonly recargoDiario = RECARGO_DIARIO;
+
+
+  // ➕ Cargar crédito existente (dado antes del sistema)
+  mostrarAlta = false;
+  alta: DatosCreditoManual = altaVacia();
+  altaClienteId = '';
+  altaSucursalId: string | null = null;
+  altaError = '';
+  guardandoAlta = false;
+  buscarCliente = '';
+  sugerencias: ClienteEncontrado[] = [];
+  sucursales: { id: string; nombre: string }[] = [];
+  readonly maxCuotasManual = MAX_CUOTAS_MANUAL;
+  readonly hoy = hoyTexto();
+
+  // ✏️ Edición de un crédito cargado a mano (solo superadministradores)
+  esSuperAdmin = false;
+  editandoId: string | null = null;
+  private pagosEdicion: PagoCredito[] = [];
+
+  // 🧾 Pago anterior (de la planilla) en un crédito cargado a mano
+  pagoAnt: { fecha: string; importe: number | null; recargo: number | null; nota: string } = { fecha: '', importe: null, recargo: null, nota: '' };
+  guardandoPagoAnt = false;
+  errorPagoAnt = '';
+  procesando = false;
+
   readonly estadoCuota = estadoCuota;
   readonly faltaCuota = faltaCuota;
   readonly textoVencimiento = textoVencimiento;
+  readonly estaBloqueado = estaBloqueado;
+  readonly ultimaCarta = ultimaCarta;
+  readonly fechaCorta = fechaCorta;
 
   constructor(
     private creditos: CreditosService,
     private tickets: TicketsService,
-    private sucursalesService: SucursalesService
+    private sucursalesService: SucursalesService,
+    private buscador: BuscadorClientesService,
+    private permisos: PermisosService
   ) { }
 
   ngOnInit() {
     this.sucursalesService.obtenerSucursales().pipe(take(1)).subscribe(lista => {
       (lista || []).forEach((s: any) => this.nombresSucursales[s.id] = s.nombre || s.id);
+      this.sucursales = (lista || []).map((s: any) => ({ id: s.id, nombre: s.nombre || s.id }));
     });
     this.cargar();
+    this.permisos.esSuperAdmin().then(v => this.esSuperAdmin = v === true).catch(() => this.esSuperAdmin = false);
   }
 
   async cargar() {
@@ -83,18 +145,85 @@ export class CreditosComponent implements OnInit {
       this.filas = lista.map(c => {
         const s = situacionCredito(c, hoy);
         const estado: FilaCredito['estado'] = c.estado === 'anulado' ? 'anulado'
+          : c.estado === 'refinanciado' ? 'refinanciado'
           : (c.estado === 'cancelado' || s.estado === 'cancelado') ? 'cancelado' : s.estado as any;
         return { c, s, estado };
       });
       if (this.credito) {
         const actual = this.filas.find(f => f.c.id === this.credito!.id);
-        if (actual) await this.abrir(actual.c);
+        if (actual) await this.abrir(actual.c, false);
       }
     } catch (e: any) {
       console.error('Error cargando créditos', e);
       this.error = 'No se pudieron cargar los créditos. ' + (e?.message || '');
     } finally {
       this.cargando = false;
+    }
+  }
+
+  // =====================================================
+  // ⚙️ PLANES DE CUOTAS E INTERÉS
+  // =====================================================
+
+  async abrirPlanes() {
+    if (this.mostrarPlanes) { this.mostrarPlanes = false; return; }
+    this.mostrarPlanes = true;
+    this.cargandoPlanes = true;
+    this.errorPlanes = '';
+    try {
+      this.planesInfo = await this.creditos.planes();
+      this.planesEdit = this.planesInfo.planes.map(p => ({ ...p }));
+    } finally {
+      this.cargandoPlanes = false;
+    }
+  }
+
+  agregarPlan() {
+    const usadas = new Set(this.planesEdit.map(p => Number(p.cuotas)));
+    let libre: number | null = null;
+    for (let n = 1; n <= MAX_CUOTAS; n++) if (!usadas.has(n)) { libre = n; break; }
+    this.planesEdit.push({ cuotas: libre, interes: null });
+    this.errorPlanes = '';
+  }
+
+  quitarPlan(i: number) {
+    this.planesEdit.splice(i, 1);
+    this.errorPlanes = '';
+  }
+
+  restablecerIniciales() {
+    this.planesEdit = PLANES_INICIALES.map(p => ({ ...p }));
+    this.errorPlanes = '';
+  }
+
+  /** Ejemplo: con $montoEjemplo financiados, cuánto se paga en total y por cuota */
+  ejemplo(p: { cuotas: number | null; interes: number | null }): { total: number; cuota: number } | null {
+    const n = Number(p.cuotas), i = Number(p.interes);
+    if (!(n >= 1) || p.interes === null || String(p.interes) === '' || !(i >= 0)) return null;
+    const total = conInteres(Number(this.montoEjemplo) || 0, i);
+    return { total, cuota: Math.round(total / n) };
+  }
+
+  get errorValidacionPlanes(): string | null {
+    return validarPlanes(this.planesEdit).error;
+  }
+
+  async guardarPlanes() {
+    if (this.guardandoPlanes) return;
+    const error = this.errorValidacionPlanes;
+    if (error) { this.errorPlanes = error; return; }
+    this.guardandoPlanes = true;
+    try {
+      const planes = await this.creditos.guardarPlanes(this.planesEdit);
+      this.planesInfo = await this.creditos.planes();
+      this.planesEdit = planes.map(p => ({ ...p }));
+      this.errorPlanes = '';
+      Swal.fire({ title: 'Planes guardados', text: 'Despacho ya ofrece estos planes en las próximas ventas.', icon: 'success', timer: 2200, showConfirmButton: false });
+    } catch (e: any) {
+      this.errorPlanes = e instanceof CreditoError ? e.message : 'No se pudieron guardar los planes. ' + (e?.message || '');
+      if (!(e instanceof CreditoError)) console.error('Error guardando planes', e);
+    } finally {
+      this.guardandoPlanes = false;
     }
   }
 
@@ -111,6 +240,8 @@ export class CreditosComponent implements OnInit {
       case 'vencidos': return x.estado === 'vencido';
       case 'vigentes': return x.estado === 'vencido' || x.estado === 'por-vencer' || x.estado === 'al-dia';
       case 'al-dia': return x.estado === 'por-vencer' || x.estado === 'al-dia';
+      case 'bloqueados': return estaBloqueado(x.c) && x.estado !== 'cancelado' && x.estado !== 'refinanciado';
+      case 'refinanciados': return x.estado === 'refinanciado';
       case 'cancelados': return x.estado === 'cancelado';
       case 'anulados': return x.estado === 'anulado';
       default: return true;
@@ -125,7 +256,7 @@ export class CreditosComponent implements OnInit {
         if (!palabras.length) return true;
         const c = x.c;
         const texto = BuscadorClientesService.normalizar(
-          `${c.cliente?.nombre} ${c.cliente?.dni ?? ''} ${c.cliente?.telefono ?? ''} ${c.detalle ?? ''} ` +
+          `${c.cliente?.nombre} ${c.cliente?.dni ?? ''} ${c.cliente?.telefono ?? ''} ${c.detalle ?? ''} ${estaBloqueado(c) ? 'bloqueado carta documento' : ''} ` +
           `${(c.equipos || []).map(e => `${e.nombre} ${e.imei}`).join(' ')} ${c.nroTicket ?? ''}`);
         return palabras.every(p => texto.includes(p));
       });
@@ -155,7 +286,20 @@ export class CreditosComponent implements OnInit {
   // DETALLE
   // =====================================================
 
-  async abrir(c: Credito) {
+  /** 🔁 Abre el crédito vinculado (el nuevo de una refinanciación o el anterior) */
+  async abrirVinculado(id: string | null | undefined) {
+    if (!id) return;
+    let fila = this.filas.find(f => f.c.id === id);
+    if (!fila) {
+      this.filtroEstado = 'todos';
+      fila = this.filas.find(f => f.c.id === id);
+    }
+    if (fila) await this.abrir(fila.c);
+    else Swal.fire('No se encontró', 'No se encontró el crédito vinculado.', 'info');
+  }
+
+  async abrir(c: Credito, subir = true) {
+    const otro = this.credito?.id !== c.id;
     this.credito = c;
     this.pagos = [];
     this.cargandoDetalle = true;
@@ -163,13 +307,14 @@ export class CreditosComponent implements OnInit {
       const [actual, pagos] = await Promise.all([this.creditos.obtener(c.id), this.creditos.pagosDe(c.id)]);
       if (actual) this.credito = actual;
       this.pagos = pagos;
+      if (otro) { this.pagoAnt.fecha = ''; this.prepararPagoAnt(); }
     } catch (e: any) {
       console.error('Error leyendo el crédito', e);
       Swal.fire('Error', 'No se pudo leer el crédito. ' + (e?.message || ''), 'error');
     } finally {
       this.cargandoDetalle = false;
     }
-    window.scrollTo({ top: 0 });
+    if (subir) window.scrollTo({ top: 0 });
   }
 
   cerrarDetalle() {
@@ -227,7 +372,42 @@ export class CreditosComponent implements OnInit {
   /** Se puede anular solo si no tiene nada pagado (anula el ticket de la venta y el equipo vuelve al stock) */
   get puedeAnular(): boolean {
     const c = this.credito;
-    return !!c && c.estado !== 'anulado' && (Number(c.pagado) || 0) <= 0.004 && !this.pagos.some(p => !p.anulado);
+    return !!c && c.origen !== 'manual' && c.estado !== 'anulado' && (Number(c.pagado) || 0) <= 0.004 && !this.pagos.some(p => !p.anulado);
+  }
+
+  /** Crédito cargado a mano: se anula si no tiene cobros hechos en Despacho (los pagos anteriores no importan) */
+  get puedeAnularManual(): boolean {
+    const c = this.credito;
+    return !!c && c.origen === 'manual' && c.estado !== 'anulado' && c.estado !== 'refinanciado' && !this.pagos.some(p => !p.anulado && !p.anterior);
+  }
+
+  async anularManual() {
+    const c = this.credito;
+    if (!c || !this.puedeAnularManual || this.anulando) return;
+    const r = await Swal.fire({
+      title: '¿Anular el crédito cargado a mano?',
+      html: `Crédito de <strong>${this.esc(c.cliente?.nombre)}</strong> por ${this.moneda(c.importe)}.<br>
+             <small>Usalo si se cargó mal: después lo podés volver a cargar.</small>`,
+      icon: 'warning',
+      input: 'text',
+      inputLabel: 'Motivo',
+      inputPlaceholder: 'Ej: me equivoqué en las cuotas',
+      inputValidator: (v: string) => (!v || v.trim().length < 3) ? 'Ingresá un motivo' : null,
+      showCancelButton: true,
+      confirmButtonText: 'Anular crédito',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#d33'
+    });
+    if (!r.isConfirmed) return;
+    this.anulando = true;
+    try {
+      await this.creditos.anularManual(c.id, r.value);
+      await this.cargar();
+    } catch (e: any) {
+      Swal.fire('No se pudo anular', e instanceof CreditoError ? e.message : (e?.message || ''), 'warning');
+    } finally {
+      this.anulando = false;
+    }
   }
 
   async anular() {
@@ -259,6 +439,7 @@ export class CreditosComponent implements OnInit {
       const res = await this.tickets.anular(venta, r.value);
       const avisos: string[] = ['✔ Crédito anulado'];
       if (res.equiposDevueltos?.length) avisos.push(`✔ Volvieron a estar a la venta: ${res.equiposDevueltos.join(', ')}`);
+      if (res.canjeDevuelto) avisos.push(`✔ El equipo del plan canje (${res.canjeDevuelto}) se dio de baja: hay que devolvérselo al cliente`);
       if (res.stockDevuelto.length) avisos.push(`✔ Stock devuelto: ${res.stockDevuelto.join(', ')}`);
       const efectivo = efectivoDeVenta(venta);
       if (res.cajaCerrada && efectivo > 0) {
@@ -277,6 +458,348 @@ export class CreditosComponent implements OnInit {
   }
 
   // =====================================================
+  // ➕ CARGAR CRÉDITO EXISTENTE
+  // =====================================================
+
+  abrirAlta() {
+    if (this.editandoId) { this.cancelarEdicion(); return; }
+    this.mostrarAlta = !this.mostrarAlta;
+    if (this.mostrarAlta) this.mostrarPlanes = false;
+  }
+
+  /** ✏️ Abre el formulario con los datos del crédito (cargado a mano) para corregirlo */
+  editar() {
+    const c = this.credito;
+    if (!c || !this.puedeEditar) return;
+    const f = new Date(c.fecha);
+    const dosDig = (n: number) => String(n).padStart(2, '0');
+    this.alta = {
+      nombre: c.cliente?.nombre || '',
+      dni: c.cliente?.dni ?? '',
+      telefono: c.cliente?.telefono || '',
+      direccion: c.cliente?.direccion || '',
+      equipo: c.equipos?.[0]?.nombre || '',
+      imei: c.equipos?.[0]?.imei || '',
+      detalle: c.detalle || '',
+      fechaEntrega: `${f.getFullYear()}-${dosDig(f.getMonth() + 1)}-${dosDig(f.getDate())}`,
+      entrega: Number(c.entrega) || null,
+      cantidadCuotas: c.cantidadCuotas,
+      importeCuota: c.cuotas?.[0]?.importe ?? null,
+      primerMes: String(c.cuotas?.[0]?.desde || '').slice(0, 7)
+    };
+    this.altaClienteId = c.cliente?.id || '';
+    this.altaSucursalId = c.sucursalId || null;
+    this.altaError = '';
+    this.pagosEdicion = [...this.pagos];
+    this.editandoId = c.id;
+    this.credito = null;
+    this.mostrarPlanes = false;
+    this.mostrarAlta = true;
+    window.scrollTo({ top: 0 });
+  }
+
+  async cancelarEdicion() {
+    const id = this.editandoId;
+    this.editandoId = null;
+    this.mostrarAlta = false;
+    this.limpiarAlta();
+    const fila = id ? this.filas.find(f => f.c.id === id) : null;
+    if (fila) await this.abrir(fila.c);
+  }
+
+  get puedeEditar(): boolean {
+    const c = this.credito;
+    return this.esSuperAdmin && !!c && c.origen === 'manual' && (c.estado === 'vigente' || c.estado === 'cancelado');
+  }
+
+  /** En la edición: cómo quedan los pagos que ya hizo sobre las cuotas corregidas */
+  get previaPagosEdicion(): { pagos: number; pagado: number; cuotasPagadas: number; saldo: number; error: string | null } | null {
+    if (!this.editandoId) return null;
+    const vigentes = this.pagosEdicion.filter(p => !p.anulado);
+    if (!vigentes.length) return null;
+    const v = validarCreditoManual(this.alta);
+    if (!v.cuotas) return null;
+    const r = reimputarPagos(v.cuotas, vigentes as any);
+    return {
+      pagos: vigentes.length,
+      pagado: r.pagado,
+      cuotasPagadas: r.cuotas.filter(q => q.importe - q.pagado <= 0.004).length,
+      saldo: r.cuotas.reduce((a, q) => a + Math.max(0, q.importe - q.pagado), 0),
+      error: r.error
+    };
+  }
+
+  /** Antes de guardar: si son muchas cuotas, que lo confirmen (un 6 tipeado como 60) */
+  private async confirmarCantidadCuotas(): Promise<boolean> {
+    const n = Number(this.alta.cantidadCuotas) || 0;
+    if (n <= CUOTAS_PARA_CONFIRMAR) return true;
+    const r = await Swal.fire({
+      title: `¿Seguro que son ${n} cuotas?`,
+      html: `${n} cuotas de ${this.moneda(Number(this.alta.importeCuota) || 0)} = <strong>${this.moneda(n * (Number(this.alta.importeCuota) || 0))}</strong>`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: `Sí, son ${n}`,
+      cancelButtonText: 'Corregir'
+    });
+    return r.isConfirmed;
+  }
+
+  limpiarAlta() {
+    this.alta = altaVacia();
+    this.altaClienteId = '';
+    this.buscarCliente = '';
+    this.sugerencias = [];
+    this.altaError = '';
+  }
+
+  async alBuscarCliente(texto: string) {
+    const valor = (texto || '').trim();
+    if (valor.length < 3) { this.sugerencias = []; return; }
+    try {
+      const lista = await this.buscador.buscar(valor, 8);
+      if (this.buscarCliente.trim() === valor) this.sugerencias = lista;
+    } catch (e) {
+      console.error('Error buscando clientes', e);
+    }
+  }
+
+  etiquetaCliente(c: ClienteEncontrado): string {
+    return BuscadorClientesService.etiqueta(c);
+  }
+
+  /** Completa los datos del cliente con uno del sistema (queda vinculado) */
+  elegirCliente(c: ClienteEncontrado) {
+    this.altaClienteId = c.id;
+    this.alta.nombre = [c.nombre, c.apellido].filter(Boolean).join(' ') || c.razonSocial || '';
+    this.alta.dni = c.dni || '';
+    this.alta.telefono = c.telefono || '';
+    this.alta.direccion = c.data?.direccion || '';
+    this.sugerencias = [];
+    this.buscarCliente = '';
+    this.altaError = '';
+  }
+
+  desvincularCliente() {
+    this.altaClienteId = '';
+  }
+
+  /** Al cambiar la fecha de entrega se propone el mes de la primera cuota (si todavía no se eligió) */
+  cambioFechaEntrega() {
+    if (this.alta.fechaEntrega && !this.alta.primerMes) this.alta.primerMes = primerMesSugerido(this.alta.fechaEntrega);
+    this.altaError = '';
+  }
+
+  /** Vista previa de las cuotas (o null si faltan datos) */
+  get previaAlta(): { cuotas: number; importe: number; desde: string; hasta: string } | null {
+    const v = validarCreditoManual(this.alta);
+    if (!v.cuotas) return null;
+    const l = v.cuotas;
+    return {
+      cuotas: l.length,
+      importe: l.reduce((a, q) => a + q.importe, 0),
+      desde: mesCuota(l[0]),
+      hasta: mesCuota(l[l.length - 1])
+    };
+  }
+
+  async guardarAlta() {
+    if (this.guardandoAlta) return;
+    const v = validarCreditoManual(this.alta);
+    if (v.error) { this.altaError = v.error; return; }
+    if (this.editandoId && this.previaPagosEdicion?.error) { this.altaError = this.previaPagosEdicion.error; return; }
+    if (!(await this.confirmarCantidadCuotas())) return;
+    if (this.editandoId) { await this.guardarEdicion(); return; }
+    this.guardandoAlta = true;
+    try {
+      const id = await this.creditos.crearManual(this.alta, this.altaClienteId, this.altaSucursalId);
+      const nombre = this.alta.nombre;
+      this.limpiarAlta();
+      this.mostrarAlta = false;
+      await this.cargar();
+      const r = await Swal.fire({
+        title: 'Crédito cargado',
+        html: `Se cargó el crédito de <strong>${this.esc(nombre)}</strong>.<br><small>Ahora podés cargarle los pagos que ya hizo.</small>`,
+        icon: 'success',
+        showCancelButton: true,
+        confirmButtonText: 'Cargar pagos',
+        cancelButtonText: 'Seguir'
+      });
+      if (r.isConfirmed) {
+        const fila = this.filas.find(f => f.c.id === id);
+        if (fila) await this.abrir(fila.c);
+      }
+    } catch (e: any) {
+      this.altaError = e instanceof CreditoError ? e.message : 'No se pudo guardar. ' + (e?.message || '');
+      if (!(e instanceof CreditoError)) console.error('Error cargando crédito', e);
+    } finally {
+      this.guardandoAlta = false;
+    }
+  }
+
+  private async guardarEdicion() {
+    const id = this.editandoId!;
+    this.guardandoAlta = true;
+    try {
+      const r = await this.creditos.editarManual(id, this.alta, this.altaClienteId, this.altaSucursalId);
+      this.editandoId = null;
+      this.mostrarAlta = false;
+      this.limpiarAlta();
+      await this.cargar();
+      const fila = this.filas.find(f => f.c.id === id);
+      if (fila) await this.abrir(fila.c);
+      Swal.fire({
+        title: 'Crédito corregido',
+        text: `${r.cuotasPagadas} cuota(s) pagada(s) · saldo ${this.moneda(r.saldo)}`,
+        icon: 'success', timer: 2200, showConfirmButton: false
+      });
+    } catch (e: any) {
+      this.altaError = e instanceof CreditoError ? e.message : 'No se pudo guardar. ' + (e?.message || '');
+      if (!(e instanceof CreditoError)) console.error('Error editando crédito', e);
+    } finally {
+      this.guardandoAlta = false;
+    }
+  }
+
+  // =====================================================
+  // 🧾 PAGOS ANTERIORES (créditos cargados a mano)
+  // =====================================================
+
+  get esManual(): boolean {
+    return this.credito?.origen === 'manual';
+  }
+
+  /** Propone el importe de la próxima cuota que falta */
+  private prepararPagoAnt() {
+    const s = this.situacion;
+    this.pagoAnt = { fecha: this.pagoAnt.fecha || '', importe: s?.proxima ? faltaCuota(s.proxima) : null, recargo: null, nota: '' };
+    this.errorPagoAnt = '';
+  }
+
+  async guardarPagoAnterior() {
+    const c = this.credito;
+    if (!c || this.guardandoPagoAnt) return;
+    this.guardandoPagoAnt = true;
+    this.errorPagoAnt = '';
+    try {
+      const r = await this.creditos.registrarPagoAnterior(c.id, this.pagoAnt);
+      const fecha = this.pagoAnt.fecha;
+      await this.abrir(c, false);
+      this.pagoAnt.fecha = fecha;          // para cargar varios seguidos: se cambia solo el mes
+      this.prepararPagoAnt();
+      Swal.fire({
+        title: 'Pago cargado',
+        text: `Cuota(s) ${r.aplicaciones.map(a => a.numero).join(', ')} · saldo ${this.moneda(r.saldo)}`,
+        icon: 'success', timer: 1500, showConfirmButton: false
+      });
+    } catch (e: any) {
+      this.errorPagoAnt = e instanceof CreditoError ? e.message : 'No se pudo guardar. ' + (e?.message || '');
+      if (!(e instanceof CreditoError)) console.error('Error cargando pago anterior', e);
+    } finally {
+      this.guardandoPagoAnt = false;
+    }
+  }
+
+  async anularPagoAnterior(p: PagoCredito) {
+    const c = this.credito;
+    if (!c || !p.anterior || p.anulado || this.procesando) return;
+    const r = await Swal.fire({
+      title: '¿Anular este pago?',
+      html: `${this.moneda(p.importe)} del ${new Date(p.fecha).toLocaleDateString('es-AR')} (cuota(s) ${this.cuotasDePago(p)}).<br>
+             <small>Las cuotas vuelven a quedar pendientes.</small>`,
+      icon: 'warning',
+      input: 'text',
+      inputLabel: 'Motivo',
+      inputPlaceholder: 'Ej: lo cargué dos veces',
+      inputValidator: (v: string) => (!v || v.trim().length < 3) ? 'Ingresá un motivo' : null,
+      showCancelButton: true,
+      confirmButtonText: 'Anular pago',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#d33'
+    });
+    if (!r.isConfirmed) return;
+    this.procesando = true;
+    try {
+      await this.creditos.anularPagoAnterior(c.id, p.id, r.value);
+      await this.abrir(c, false);
+      this.prepararPagoAnt();
+    } catch (e: any) {
+      Swal.fire('No se pudo anular', e instanceof CreditoError ? e.message : (e?.message || ''), 'warning');
+    } finally {
+      this.procesando = false;
+    }
+  }
+
+  // =====================================================
+  // ✉️ CARTA DOCUMENTO Y BLOQUEO
+  // =====================================================
+
+  async registrarCarta() {
+    const c = this.credito;
+    if (!c || this.procesando) return;
+    const r = await Swal.fire({
+      title: 'Carta documento',
+      html: `<div class="text-start small mb-2">Se registra la intimación a <strong>${this.esc(c.cliente?.nombre)}</strong> y el crédito queda
+               <strong>bloqueado</strong>. Las cuotas se le pueden seguir cobrando en Despacho.</div>
+             <label class="form-label small mb-1 d-block text-start" for="swal-fecha-carta">Fecha de envío</label>
+             <input id="swal-fecha-carta" type="date" class="form-control mb-2" value="${this.hoy}" max="${this.hoy}">
+             <label class="form-label small mb-1 d-block text-start" for="swal-obs-carta">Observación (opcional)</label>
+             <input id="swal-obs-carta" type="text" class="form-control" maxlength="300" placeholder="Ej: por 2 cuotas impagas, la envió el abogado">`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Registrar y bloquear',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#d33',
+      focusConfirm: false,
+      preConfirm: () => {
+        const fecha = (document.getElementById('swal-fecha-carta') as HTMLInputElement)?.value || '';
+        const observacion = (document.getElementById('swal-obs-carta') as HTMLInputElement)?.value || '';
+        if (!fecha) { Swal.showValidationMessage('Ingresá la fecha'); return false; }
+        if (fecha > this.hoy) { Swal.showValidationMessage('La fecha no puede ser posterior a hoy'); return false; }
+        return { fecha, observacion };
+      }
+    });
+    if (!r.isConfirmed || !r.value) return;
+    this.procesando = true;
+    try {
+      await this.creditos.registrarCartaDocumento(c.id, r.value as any);
+      await this.cargar();
+    } catch (e: any) {
+      Swal.fire('No se pudo registrar', e instanceof CreditoError ? e.message : (e?.message || ''), 'warning');
+    } finally {
+      this.procesando = false;
+    }
+  }
+
+  async desbloquear() {
+    const c = this.credito;
+    if (!c || this.procesando) return;
+    const r = await Swal.fire({
+      title: '¿Desbloquear el crédito?',
+      input: 'text',
+      inputLabel: 'Motivo',
+      inputPlaceholder: 'Ej: se puso al día',
+      inputValidator: (v: string) => (!v || v.trim().length < 3) ? 'Ingresá un motivo' : null,
+      showCancelButton: true,
+      confirmButtonText: 'Desbloquear',
+      cancelButtonText: 'Cancelar'
+    });
+    if (!r.isConfirmed) return;
+    this.procesando = true;
+    try {
+      await this.creditos.desbloquear(c.id, r.value);
+      await this.cargar();
+    } catch (e: any) {
+      Swal.fire('No se pudo desbloquear', e instanceof CreditoError ? e.message : (e?.message || ''), 'warning');
+    } finally {
+      this.procesando = false;
+    }
+  }
+
+  get cartasOrdenadas() {
+    return [...(this.credito?.cartasDocumento || [])].sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
+  }
+
+  // =====================================================
   // EXCEL
   // =====================================================
 
@@ -285,7 +808,7 @@ export class CreditosComponent implements OnInit {
     if (!filas.length) return;
     const fecha = (iso: any) => iso ? new Date(iso).toLocaleDateString('es-AR') : '';
     const venc = (q: CuotaCredito | null) => q ? q.hasta.split('-').reverse().join('/') : '';
-    const nombreEstado = { vencido: 'Con cuotas vencidas', 'por-vencer': 'Vence este mes', 'al-dia': 'Al día', cancelado: 'Terminado', anulado: 'Anulado' };
+    const nombreEstado = { vencido: 'Con cuotas vencidas', 'por-vencer': 'Vence este mes', 'al-dia': 'Al día', cancelado: 'Terminado', anulado: 'Anulado', refinanciado: 'Refinanciado' };
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(filas.map(({ c, s, estado }) => ({
@@ -296,10 +819,11 @@ export class CreditosComponent implements OnInit {
       Equipo: (c.equipos || []).map(e => e.nombre).join(', ') || c.detalle,
       IMEI: (c.equipos || []).map(e => e.imei).join(', '),
       'Fecha de compra': fecha(c.fecha),
-      'Ticket': this.nro(c.nroTicket),
+      'Ticket': c.origen === 'manual' ? 'Cargado a mano' : this.nro(c.nroTicket),
       Sucursal: this.nombreSucursal(c.sucursalId),
       'Precio contado': Number(c.precioContado) || 0,
       'Precio financiado': Number(c.precioFinanciado) || 0,
+      'Interés %': c.interes ?? '',
       'Plan canje': Number(c.canje?.monto) || 0,
       Entrega: Number(c.entrega) || 0,
       Financiado: Number(c.importe) || 0,
@@ -310,7 +834,10 @@ export class CreditosComponent implements OnInit {
       Vencido: estado === 'anulado' ? 0 : s.montoVencido,
       'Días de atraso': estado === 'anulado' ? '' : (s.diasAtraso || ''),
       'Próxima cuota': estado === 'anulado' ? '' : venc(s.proxima),
-      Estado: nombreEstado[estado]
+      Estado: nombreEstado[estado],
+      Bloqueado: estaBloqueado(c) ? 'Sí' : '',
+      'Carta documento': ultimaCarta(c) ? fechaCorta(ultimaCarta(c)!.fecha) : '',
+      Detalle: c.detalle || ''
     }))), 'Créditos');
 
     const cuotas: any[] = [];

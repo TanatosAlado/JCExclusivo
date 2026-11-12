@@ -2,6 +2,7 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AuthService } from 'src/app/modules/auth/services/auth.service';
+import { RUBRO_EQUIPOS } from 'src/app/modules/admin/services/equipos.service';
 
 @Component({
   selector: 'app-card-categorias',
@@ -36,6 +37,7 @@ export class CardCategoriasComponent implements OnInit, OnDestroy {
   cargarImagenesCategorias() {
     if (this.esMayorista) {
       this.imagenesCategorias = [
+        'assets/imagenes/categorías/equipos.jpg',
         'assets/imagenes/categorías/may_01.jpg',
         'assets/imagenes/categorías/may_02.jpg',
         'assets/imagenes/categorías/may_03.jpg',
@@ -44,6 +46,7 @@ export class CardCategoriasComponent implements OnInit, OnDestroy {
       ];
     } else {
       this.imagenesCategorias = [
+        'assets/imagenes/categorías/equipos.jpg',
         'assets/imagenes/categorías/min_01.jpg',
         'assets/imagenes/categorías/min_02.jpg',
         'assets/imagenes/categorías/min_03.jpg',
@@ -57,6 +60,11 @@ export class CardCategoriasComponent implements OnInit, OnDestroy {
   seleccionarCategoria(imagen: string) {
 
     let rubro = '';
+
+    // 📱 Equipos (celulares): igual para mayoristas y minoristas
+    if (imagen.includes('equipos.jpg')) {
+      rubro = RUBRO_EQUIPOS;
+    }
 
     if (this.esMayorista) {
 

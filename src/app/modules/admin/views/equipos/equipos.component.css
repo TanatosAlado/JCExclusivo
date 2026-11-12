@@ -581,3 +581,22 @@
   background: rgba(31, 36, 48, 0.75);
   color: #fff;
 }
+
+
+/* ===== Plan canje: equipos en preparación ===== */
+.equipo.preparacion { border-color: #f3dc9c; }
+.sello.sello-preparacion { background: #f5b301; color: #3b2a00; }
+.canje-info {
+  font-size: 0.8rem;
+  color: #6b4a00;
+  background: #fff8e1;
+  border-radius: 6px;
+  padding: 2px 8px;
+  margin: 4px 0;
+}
+.info-canje {
+  font-size: 0.85rem;
+  color: #5b6170;
+  margin-top: 2px;
+}
+.info-canje.aviso { color: #6b4a00; }

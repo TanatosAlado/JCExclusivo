@@ -43,6 +43,26 @@ export class GrillaItemComponent {
   public esMayorista: boolean = false;
 
   scrollActual: number = 0;
+
+  /** 📱 En el celular los filtros arrancan cerrados (se abren con el botón "Filtros") */
+  mostrarFiltros = false;
+
+  /** Cuántos filtros hay aplicados (sin contar el buscador) */
+  get filtrosActivos(): number {
+    return [this.filtroRubro, this.filtroSubrubro, this.filtroMarca, this.soloDestacados,
+      this.precioMin != null && (this.precioMin as any) !== '', this.precioMax != null && (this.precioMax as any) !== '']
+      .filter(Boolean).length;
+  }
+
+  limpiarFiltros() {
+    this.filtroRubro = '';
+    this.filtroSubrubro = '';
+    this.filtroMarca = '';
+    this.precioMin = null;
+    this.precioMax = null;
+    this.soloDestacados = false;
+    this.filtrarProductos();
+  }
   //public productos: Producto[] = [];
 
   /** 📱 Equipos disponibles (se muestran como un rubro más: "Equipos") */
