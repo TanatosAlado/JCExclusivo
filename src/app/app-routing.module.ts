@@ -35,6 +35,9 @@ import { CreditosComponent } from './modules/admin/views/creditos/creditos.compo
 import { EquiposComponent } from './modules/admin/views/equipos/equipos.component';
 import { TasadorComponent } from './modules/admin/views/tasador/tasador.component';
 import { CotizaUsadoComponent } from './shared/components/cotiza-usado/cotiza-usado.component';
+import { CotizaReparacionComponent } from './shared/components/cotiza-reparacion/cotiza-reparacion.component';
+import { PedidoPagoComponent } from './shared/components/pedido-pago/pedido-pago.component';
+import { CotizadorReparacionesComponent } from './modules/admin/views/cotizador-reparaciones/cotizador-reparaciones.component';
 import { TicketsComponent } from './modules/admin/views/tickets/tickets.component';
 
 const routes: Routes = [
@@ -71,6 +74,7 @@ const routes: Routes = [
       { path: 'creditos', component: CreditosComponent, canActivate: [PermisoGuard], data: { seccion: 'cuentas' } },
       { path: 'equipos', component: EquiposComponent, canActivate: [PermisoGuard], data: { seccion: 'equipos' } },
       { path: 'tasador', component: TasadorComponent, canActivate: [PermisoGuard], data: { seccion: 'tasador' } },
+      { path: 'cotizador-reparaciones', component: CotizadorReparacionesComponent, canActivate: [PermisoGuard], data: { seccion: 'cotizador' } },
       // Solo superadministrador
       { path: 'permisos', component: PermisosUsuariosComponent, canActivate: [SuperAdminGuard] },
     ]
@@ -81,7 +85,9 @@ const routes: Routes = [
   {path: 'mi-cuenta',component: MiCuentaComponent},
   {path: 'despacho',component: LayoutDespachoComponent, canActivate: [AdminGuard, PermisoGuard], data: { seccion: 'despacho' }},
   {path: 'consulta/:id',component: ConsultaOrdenComponent},
+  {path: 'pedido/:id', component: PedidoPagoComponent},   // 💳 link del pedido web: estado y comprobante de la transferencia
   {path: 'cotiza-tu-usado', component: CotizaUsadoComponent},   // 🌐 solo si está habilitado (o para admins)
+  {path: 'cotiza-tu-reparacion', component: CotizaReparacionComponent},   // 🌐 ídem (Gestiones → Cotizador de reparaciones)
 ];
 
 @NgModule({

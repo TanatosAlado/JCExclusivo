@@ -1,0 +1,95 @@
+<div class="cotizar">
+  <!-- 1. Modelo -->
+  <ng-container *ngIf="!modelo">
+    <label class="form-label small mb-1" for="repFiltro">¿Qué equipo es?</label>
+    <input id="repFiltro" type="text" class="form-control form-control-sm mb-2" [(ngModel)]="filtro"
+      placeholder="Buscar modelo (ej: 13 pro)" autocomplete="off">
+    <div class="lista-modelos">
+      <button *ngFor="let m of modelosFiltrados" type="button" class="modelo" (click)="elegirModelo(m)">
+        <strong>{{ m.nombre }}</strong>
+      </button>
+      <div *ngIf="!modelosFiltrados.length" class="small text-muted p-2">
+        {{ modelos.length ? 'No hay modelos con ese nombre.' : 'Todavía no hay modelos con repuestos cargados.' }}
+      </div>
+    </div>
+  </ng-container>
+
+  <ng-container *ngIf="modelo as m">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h5 class="m-0">📱 {{ m.nombre }}</h5>
+      <button type="button" class="btn btn-link btn-sm p-0" (click)="cambiarModelo()">Cambiar equipo</button>
+    </div>
+
+    <div *ngIf="cargandoProductos" class="small text-muted mb-2"><span class="spinner-border spinner-border-sm"></span> Buscando repuestos…</div>
+    <div *ngIf="errorProductos" class="text-danger small mb-2">{{ errorProductos }}</div>
+
+    <ng-container *ngIf="!cargandoProductos && !errorProductos">
+      <!-- 2. Qué hay que reparar · un repuesto por rubro -->
+      <div class="small text-muted mb-2" *ngIf="rubros.length">Tildá lo que hay que reparar y elegí el repuesto.</div>
+      <div *ngIf="!rubros.length" class="small text-muted mb-2">Por ahora no hay repuestos disponibles para este equipo.</div>
+      <div class="rubros">
+        <div *ngFor="let r of rubros; trackBy: trackRubro" class="rubro" [class.tildado]="tildado(r.rubro.id)" [class.agotado]="!hayStock(r)">
+          <!-- Toda la fila tilda / destilda (el check es solo visual) -->
+          <div class="cabecera" role="checkbox" [attr.aria-checked]="tildado(r.rubro.id)" [attr.aria-disabled]="!hayStock(r)"
+            [attr.tabindex]="hayStock(r) ? 0 : -1" (click)="alternarRubro(r)"
+            (keydown.enter)="alternarRubro(r)" (keydown.space)="$event.preventDefault(); alternarRubro(r)">
+            <input type="checkbox" class="form-check-input m-0" tabindex="-1" aria-hidden="true" [checked]="tildado(r.rubro.id)" [disabled]="!hayStock(r)">
+            <strong>{{ r.rubro.nombre }}</strong>
+            <small *ngIf="!tildado(r.rubro.id) && hayStock(r)" class="text-muted ms-auto">desde {{ textoPesos(desde(r)) }}</small>
+            <span *ngIf="!hayStock(r)" class="badge bg-danger ms-auto">Sin stock</span>
+          </div>
+          <div *ngIf="tildado(r.rubro.id) || (!hayStock(r) && mostrarSinStock)" class="calidades" role="radiogroup" [attr.aria-label]="'Repuesto de ' + r.rubro.nombre">
+            <button *ngFor="let o of r.opciones; trackBy: trackOpcion" type="button" class="calidad" role="radio" [disabled]="!o.conStock"
+              [class.elegida]="seleccion[r.rubro.id] === o.productoId" [class.sin-stock]="!o.conStock"
+              [attr.aria-checked]="seleccion[r.rubro.id] === o.productoId" [title]="o.producto"
+              (click)="elegirRepuesto(r, o.productoId)">
+              <span>{{ o.etiqueta }}</span>
+              <strong>{{ textoPesos(o.precio) }}</strong>
+              <small *ngIf="!o.conStock" class="aviso-stock">⛔ Sin stock</small>
+              <small *ngIf="o.conStock && mostrarSinStock" class="text-muted">stock {{ o.stock }}</small>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Total -->
+      <div *ngIf="calculo.resultado as res" class="resultado">
+        <div *ngFor="let i of res.items" class="d-flex justify-content-between small">
+          <span>{{ i.rubro }} · {{ i.etiqueta }}</span><span>{{ textoPesos(i.precio) }}</span>
+        </div>
+
+        <div *ngIf="permitirDescuento && cantidadElegida >= 2" class="descuento d-flex justify-content-between align-items-center gap-2 mt-1">
+          <label for="repDescuento" class="small mb-0">Descuento por {{ cantidadElegida }} repuestos</label>
+          <div class="input-group input-group-sm">
+            <span class="input-group-text">$</span>
+            <input id="repDescuento" type="number" min="0" step="1" class="form-control" [(ngModel)]="descuento" placeholder="0">
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-baseline total">
+          <span>Total repuestos</span>
+          <span><strong>{{ textoPesos(res.total) }}</strong>
+            <small *ngIf="res.descuento > 0" class="d-block text-end text-muted"><s>{{ textoPesos(res.subtotal) }}</s></small>
+          </span>
+        </div>
+      </div>
+      <div *ngIf="rubros.length" class="aviso-mano small mt-2">🛠️ {{ avisoManoDeObra }}</div>
+      <div *ngIf="calculo.error" class="text-danger small mt-1">{{ calculo.error }}</div>
+      <div *ngIf="sinElegir.length" class="text-warning-emphasis small mt-1">Elegí el repuesto de: {{ sinElegir.join(', ') }}.</div>
+    </ng-container>
+
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
+      <button type="button" class="btn btn-link btn-sm p-0" *ngIf="cantidadElegida" (click)="reiniciar()">Volver a empezar</button>
+      <span class="flex-grow-1"></span>
+      <button type="button" class="btn btn-outline-secondary btn-sm" (click)="cancelar.emit()">Cancelar</button>
+      <button *ngIf="textoBotonSecundario" type="button" class="btn btn-outline-primary btn-sm" [disabled]="!lista" (click)="confirmar(true)">
+        {{ textoBotonSecundario }}
+      </button>
+      <button type="button" class="btn btn-primary btn-sm" [disabled]="!lista" (click)="confirmar()">{{ textoBoton }}</button>
+    </div>
+  </ng-container>
+
+  <div class="d-flex justify-content-end mt-2" *ngIf="!modelo">
+    <button type="button" class="btn btn-outline-secondary btn-sm" (click)="cancelar.emit()">Cancelar</button>
+  </div>
+</div>

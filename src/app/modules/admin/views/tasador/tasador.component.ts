@@ -3,7 +3,7 @@ import Swal from 'sweetalert2';
 import { TasadorService, TasadorError, Tasacion } from '../../services/tasador.service';
 import { CAPACIDADES } from '../../services/equipos.service';
 import {
-  ModeloTasador, PreguntaTasador, ResultadoTasacion, idPregunta, modeloVacio, textoUSD, validarModelo,
+  ModeloTasador, PreguntaTasador, ResultadoTasacion, idPregunta, modeloVacio, textoUSD, validarModelo, bateriaDe,
   MAX_PREGUNTAS_TASADOR, MAX_CAPACIDADES_TASADOR
 } from 'src/app/shared/utils/tasador';
 import { InfoEmpresaService } from 'src/app/shared/services/info-empresa.service';
@@ -46,6 +46,7 @@ export class TasadorComponent implements OnInit {
 
   readonly capacidades = CAPACIDADES;
   readonly textoUSD = textoUSD;
+  readonly bateriaDe = bateriaDe;
   readonly maxPreguntas = MAX_PREGUNTAS_TASADOR;
   readonly maxCapacidades = MAX_CAPACIDADES_TASADOR;
 
@@ -100,6 +101,7 @@ export class TasadorComponent implements OnInit {
   editar(m: ModeloTasador) {
     this.probando = false;
     this.editando = JSON.parse(JSON.stringify({ ...m, actualizado: null }));
+    this.editando!.bateria = bateriaDe(m);      // los modelos viejos no la tenían: arranca en 0
     if (!this.editando!.capacidades.length) this.editando!.capacidades.push({ capacidad: '', precio: null as any });
     this.errorEdicion = '';
     window.scrollTo({ top: 0 });
@@ -244,6 +246,7 @@ export class TasadorComponent implements OnInit {
     Swal.fire({
       title: textoUSD(r.totalUSD),
       html: `${r.modelo} ${r.capacidad}` + (r.totalARS !== null ? `<br>${new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(r.totalARS)}` : '') +
+        (r.bateria ? `<br><small>🔋 Batería: ${r.bateria.texto}${r.bateria.descuento > 0 ? ` (−${textoUSD(r.bateria.descuento)})` : ''}</small>` : '') +
         (r.respuestas.filter(x => x.descuento > 0).length
           ? `<br><small>${r.respuestas.filter(x => x.descuento > 0).map(x => `${x.pregunta}: ${x.respuesta === 'si' ? 'Sí' : 'No'} (−${textoUSD(x.descuento)})`).join('<br>')}</small>`
           : ''),
@@ -267,6 +270,8 @@ export class TasadorComponent implements OnInit {
   }
 
   descuentosDe(t: Tasacion): string {
-    return (t.respuestas || []).filter(r => r.descuento > 0).map(r => `${r.pregunta} (−${textoUSD(r.descuento)})`).join(' · ') || 'Sin descuentos';
+    const lista = (t.respuestas || []).filter(r => r.descuento > 0).map(r => `${r.pregunta} (−${textoUSD(r.descuento)})`);
+    if (t.bateria?.descuento > 0) lista.unshift(`Batería ${t.bateria.texto} (−${textoUSD(t.bateria.descuento)})`);
+    return lista.join(' · ') || 'Sin descuentos';
   }
 }

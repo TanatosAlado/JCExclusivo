@@ -1,0 +1,48 @@
+.cotizar { font-size: 0.92rem; }
+.lista-modelos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 6px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.modelo {
+  padding: 8px 10px;
+  border: 1px solid #d6dbe3;
+  border-radius: 10px;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+.modelo:hover { border-color: #0d6efd; }
+.rubros { display: flex; flex-direction: column; gap: 6px; }
+.rubro { border: 1px solid #e3e6eb; border-radius: 10px; background: #f8f9fb; }
+.rubro.tildado { background: #fff; border-color: #9ec5fe; }
+.rubro .cabecera { display: flex; align-items: center; gap: 8px; padding: 8px 10px; margin: 0; cursor: pointer; }
+.calidades { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 10px 10px; }
+.calidad {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
+  min-width: 108px; padding: 6px 10px; border: 1px solid #d6dbe3; border-radius: 8px; background: #fff; cursor: pointer;
+}
+.calidad:hover { border-color: #0d6efd; }
+.calidad.elegida { background: #0d6efd; border-color: #0d6efd; color: #fff; }
+.resultado {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #eef5ff;
+}
+.resultado .total { margin-top: 6px; padding-top: 6px; border-top: 1px solid #cfe0fb; font-size: 1.05rem; }
+.descuento .input-group { max-width: 150px; }
+@media (max-width: 480px) {
+  .calidad { flex: 1 1 calc(50% - 6px); min-width: 0; }
+}
+.rubro.agotado { opacity: 0.8; }
+.rubro.agotado .cabecera { cursor: default; }
+.calidad.sin-stock { background: #f3f4f6; border-style: dashed; color: #6b7280; cursor: not-allowed; }
+.calidad.sin-stock strong { text-decoration: line-through; font-weight: 500; }
+.calidad .aviso-stock { color: #b02a37; font-weight: 600; }
+.calidad.elegida small { color: #fff !important; }
+.aviso-mano { padding: 6px 10px; border-radius: 8px; background: #fff8e6; color: #7a5200; }
+.rubro .cabecera input { pointer-events: none; }
+.rubro .cabecera:focus-visible { outline: 2px solid #0d6efd; outline-offset: -2px; border-radius: 10px; }

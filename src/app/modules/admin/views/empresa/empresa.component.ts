@@ -25,8 +25,16 @@ export class EmpresaComponent {
   ) {
     this.infoForm = this.fb.group({
       whatsapp: ['', [Validators.required]],
-      cvu: ['', [Validators.required]],
-      alias: ['', [Validators.required]],
+      // 💳 Cuenta minorista (checkout de minoristas e invitados)
+      aliasMinorista: ['', [Validators.required]],
+      cvuMinorista: [''],
+      titularMinorista: ['', [Validators.required]],
+      dniMinorista: ['', [Validators.pattern(/^[\d.\s]{6,12}$/)]],
+      // Cuenta mayorista
+      aliasMayorista: ['', [Validators.required]],
+      cvuMayorista: [''],
+      titularMayorista: ['', [Validators.required]],
+      dniMayorista: ['', [Validators.pattern(/^[\d.\s]{6,12}$/)]],
       email: ['', [Validators.required, Validators.email]],
       dolar: [0, [Validators.required, Validators.min(1)]],
       dolarJC: [null, [Validators.min(0)]],   // equipos (si queda vacío, se usa el dólar común)
@@ -39,6 +47,14 @@ export class EmpresaComponent {
     this.infoService.obtenerInfoGeneral().subscribe((data) => {
       if (data) {
         this.infoForm.patchValue(data);
+        // Antes había un solo alias: queda como el mayorista hasta que lo cambien
+        if (!(data as any).aliasMayorista && (data as any).alias && this.infoForm.get('aliasMayorista')?.pristine) {
+          this.infoForm.get('aliasMayorista')?.setValue((data as any).alias);
+        }
+        // Antes había un solo CVU (el de la cuenta mayorista)
+        if (!(data as any).cvuMayorista && (data as any).cvu && this.infoForm.get('cvuMayorista')?.pristine) {
+          this.infoForm.get('cvuMayorista')?.setValue((data as any).cvu);
+        }
         // Si todavía no se cargó el dólar JC, se propone el dólar común
         if (!(Number((data as any).dolarJC) > 0) && this.infoForm.get('dolarJC')?.pristine) {
           this.infoForm.get('dolarJC')?.setValue((data as any).dolar ?? null);
@@ -51,8 +67,22 @@ export class EmpresaComponent {
   async guardar() {
     if (this.infoForm.invalid) return;
 
+    const v = this.infoForm.value;
+    const texto = (x: any) => String(x ?? '').trim();
+    const aliasMayorista = texto(v.aliasMayorista);
+    const cvuMayorista = texto(v.cvuMayorista);
     const data: InfoEmpresa = {
-      ...this.infoForm.value,
+      ...v,
+      aliasMinorista: texto(v.aliasMinorista),
+      cvuMinorista: texto(v.cvuMinorista),
+      titularMinorista: texto(v.titularMinorista),
+      dniMinorista: texto(v.dniMinorista),
+      aliasMayorista,
+      cvuMayorista,
+      titularMayorista: texto(v.titularMayorista),
+      dniMayorista: texto(v.dniMayorista),
+      alias: aliasMayorista,   // los campos viejos quedan iguales a los de la cuenta mayorista
+      cvu: cvuMayorista,
       dolarJC: Number(this.infoForm.value.dolarJC) > 0 ? Number(this.infoForm.value.dolarJC) : null,
       dolarActualizado: new Date()
     };

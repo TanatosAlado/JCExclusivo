@@ -23,6 +23,8 @@ export class LoginComponent {
   public loginMayorista: boolean = false;
   emailRecuperacion: string = '';
   mostrarRecuperacion: boolean = false;
+  /** Mientras ingresa, entra como invitado o envía el correo: se bloquea todo el login (sin dobles clics) */
+  ocupado: 'ingresar' | 'invitado' | 'recuperar' | null = null;
 
   constructor(private analytics: AnalyticsService,
               private authService: AuthService, 
@@ -37,13 +39,27 @@ export class LoginComponent {
     this.loginMayorista = this.data?.esMayorista ?? false;
   }          
 
+  /** Bloquea el login (y que se cierre el cuadro) mientras hay algo en curso */
+  private bloquear(que: 'ingresar' | 'invitado' | 'recuperar') {
+    this.ocupado = que;
+    this.dialogRef.disableClose = true;
+  }
+
+  private desbloquear() {
+    this.ocupado = null;
+    this.dialogRef.disableClose = false;
+  }
+
   abrirRegistro() {
+    if (this.ocupado) return;
     this.cerrar()
     this.authService.openRegistroModal();
    }
 
    
   async login() {
+    if (this.ocupado || !this.usuario.trim() || !this.contrasena) return;
+    this.bloquear('ingresar');
     try {
       // El usuario no distingue mayúsculas (el servicio prueba todas las variantes)
       const loginRequest = new LoginRequest(
@@ -72,11 +88,19 @@ export class LoginComponent {
       this.loginFail = true;
       this.mensajeError = error instanceof LoginError ? error.message : 'Datos de acceso incorrectos';
       console.error('Error en login:', error);
+    } finally {
+      this.desbloquear();
     }
   }
 
   cerrar() {
+    if (this.ocupado) return;
     this.dialogRef.close();
+  }
+
+  alternarRecuperacion() {
+    if (this.ocupado) return;
+    this.mostrarRecuperacion = !this.mostrarRecuperacion;
   }
 
   resetLoginFail(): void {
@@ -84,7 +108,15 @@ export class LoginComponent {
   }
 
   async continuarComoInvitado(): Promise<void> {
-    await signOut(this.authService['auth']);
+    if (this.ocupado) return;
+    this.bloquear('invitado');
+    try {
+      await signOut(this.authService['auth']);
+    } catch (e) {
+      console.error('Error al salir de la cuenta anterior', e);
+    } finally {
+      this.desbloquear();
+    }
     const clienteInvitado = new Cliente(
       false,             // administrador
       '',                // apellido
@@ -112,6 +144,7 @@ export class LoginComponent {
 
 
   async recuperarContrasena(): Promise<void> {
+    if (this.ocupado) return;
 
     if (!this.emailRecuperacion || this.emailRecuperacion.trim() === '') {
 
@@ -123,6 +156,7 @@ export class LoginComponent {
       return;
     }
 
+    this.bloquear('recuperar');
     try {
 
       await this.authService.recuperarPassword(this.emailRecuperacion);
@@ -161,6 +195,8 @@ export class LoginComponent {
         duration: 4000,
         panelClass: ['snackbar-error']
       });
+    } finally {
+      this.desbloquear();
     }
   }
 

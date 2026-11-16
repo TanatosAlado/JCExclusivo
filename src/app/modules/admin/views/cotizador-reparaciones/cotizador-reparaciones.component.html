@@ -1,0 +1,212 @@
+<app-encabezado>
+  Cotizador de reparaciones
+</app-encabezado>
+
+<div class="container mt-4 mb-5">
+  <mat-card>
+    <mat-card-subtitle class="mt-2">
+      La <strong>plantilla</strong> define los rubros (Pantalla, Batería…), iguales para todos los modelos.
+      En cada modelo vinculás, por rubro, los <strong>repuestos de tu stock</strong> que le sirven. El precio sale del producto
+      (minorista o mayorista según el cliente, en pesos) y solo se ofrecen los que tienen <strong>stock mayorista</strong>.
+      La mano de obra se suma aparte. En Despacho, con "🧮 Cotizar reparación", se cotiza y se arma la orden del taller.
+    </mat-card-subtitle>
+
+    <mat-card-content>
+      <!-- 🌐 Web -->
+      <div class="publico" [class.activo]="publico">
+        <div>
+          <strong>🌐 "Cotizá tu reparación" en la web:</strong>
+          <span class="badge ms-1" [class.bg-success]="publico" [class.bg-secondary]="!publico">{{ publico ? 'Visible para los clientes' : 'Oculto' }}</span>
+          <div class="small text-muted">
+            {{ publico ? 'Aparece en el menú de la tienda y los clientes cotizan con los modelos activos.'
+                       : 'Está listo pero los clientes no lo ven. Podés mirarlo como vista previa antes de mostrarlo.' }}
+          </div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+          <a mat-stroked-button routerLink="/cotiza-tu-reparacion" target="_blank"><mat-icon>open_in_new</mat-icon> {{ publico ? 'Ver la página' : 'Vista previa' }}</a>
+          <button mat-raised-button [color]="publico ? 'warn' : 'primary'" type="button" (click)="alternarPublico()" [disabled]="cambiandoPublico">
+            <mat-icon>{{ publico ? 'visibility_off' : 'public' }}</mat-icon> {{ publico ? 'Ocultar de la web' : 'Mostrar a los clientes' }}
+          </button>
+        </div>
+      </div>
+
+      <div class="barra">
+        <input type="text" class="form-control form-control-sm buscar" [(ngModel)]="filtro" placeholder="Buscar modelo…" aria-label="Buscar modelo">
+        <span class="espacio"></span>
+        <button mat-stroked-button type="button" (click)="abrirPlantilla()" [attr.aria-expanded]="!!editandoPlantilla">
+          <mat-icon>account_tree</mat-icon> Plantilla
+        </button>
+        <button mat-stroked-button type="button" (click)="verHistorial()" [attr.aria-expanded]="mostrarHistorial">
+          <mat-icon>history</mat-icon> Cotizaciones
+        </button>
+        <button mat-stroked-button type="button" (click)="probar()" [disabled]="!activos.length" [attr.aria-expanded]="probando">
+          <mat-icon>calculate</mat-icon> Probar
+        </button>
+        <button mat-stroked-button type="button" (click)="importar()" [disabled]="importando" title="Traer los nombres de los modelos del tasador">
+          <mat-icon>download</mat-icon> Traer del tasador
+        </button>
+        <button mat-raised-button color="primary" type="button" (click)="nuevo()" [disabled]="!plantilla">
+          <mat-icon>add</mat-icon> Nuevo modelo
+        </button>
+      </div>
+
+      <!-- 🧪 Probar -->
+      <div class="panel" *ngIf="probando">
+        <div class="d-flex align-items-center gap-2 mb-2 small">
+          <span>Precios:</span>
+          <div class="btn-group btn-group-sm" role="group" aria-label="Lista de precios">
+            <button type="button" class="btn" [class.btn-dark]="tipoPrecio === 'minorista'" [class.btn-outline-dark]="tipoPrecio !== 'minorista'" (click)="tipoPrecio = 'minorista'">Minorista</button>
+            <button type="button" class="btn" [class.btn-dark]="tipoPrecio === 'mayorista'" [class.btn-outline-dark]="tipoPrecio !== 'mayorista'" (click)="tipoPrecio = 'mayorista'">Mayorista</button>
+          </div>
+        </div>
+        <app-cotizar-reparacion [modelos]="activos" [plantilla]="plantilla" [tipoPrecio]="tipoPrecio" [dolar]="dolar"
+          [mostrarSinStock]="true" [permitirDescuento]="true"
+          textoBoton="Listo" (usar)="alProbar($event)" (cancelar)="probando = false"></app-cotizar-reparacion>
+      </div>
+
+      <!-- 🌳 Plantilla -->
+      <div class="panel" *ngIf="editandoPlantilla as p">
+        <h3 class="subtitulo">Plantilla: rubros</h3>
+        <p class="small text-muted">Al cotizar se pueden elegir varios rubros, pero en cada uno un solo repuesto.</p>
+        <div class="rubro-edicion" *ngFor="let r of p.rubros; let i = index; let primero = first; let ultimo = last; trackBy: trackId">
+          <div class="d-flex align-items-center gap-2">
+            <input type="text" class="form-control form-control-sm nombre-rubro" [(ngModel)]="r.nombre" maxlength="60"
+              placeholder="Rubro (ej: Pantalla)" [attr.aria-label]="'Rubro ' + (i + 1)" (ngModelChange)="errorPlantilla = ''">
+            <span class="espacio"></span>
+            <button type="button" class="btn btn-sm btn-light" (click)="moverRubro(i, -1)" [disabled]="primero" title="Subir"><i class="fas fa-arrow-up"></i></button>
+            <button type="button" class="btn btn-sm btn-light" (click)="moverRubro(i, 1)" [disabled]="ultimo" title="Bajar"><i class="fas fa-arrow-down"></i></button>
+            <button type="button" class="btn btn-sm btn-outline-danger" (click)="quitarRubro(i)" title="Quitar rubro"><i class="fas fa-times"></i></button>
+          </div>
+        </div>
+        <button type="button" class="btn btn-link btn-sm p-0" (click)="agregarRubro()" *ngIf="p.rubros.length < maxRubros">
+          <i class="fas fa-plus"></i> Agregar rubro
+        </button>
+        <div *ngIf="errorPlantilla" class="alert alert-danger py-2 small mt-2 mb-0">{{ errorPlantilla }}</div>
+        <div class="d-flex justify-content-end gap-2 mt-3">
+          <button mat-button type="button" (click)="editandoPlantilla = null">Cancelar</button>
+          <button mat-raised-button color="primary" type="button" (click)="guardarPlantilla()" [disabled]="guardandoPlantilla">
+            <mat-icon>save</mat-icon> {{ guardandoPlantilla ? 'Guardando…' : 'Guardar plantilla' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- ✏️ Modelo -->
+      <div class="panel" *ngIf="editando as m">
+        <h3 class="subtitulo">{{ m.id ? 'Editar modelo' : 'Nuevo modelo' }}</h3>
+        <div class="fila">
+          <label class="flex-grow-1">Modelo
+            <input type="text" class="form-control form-control-sm" [(ngModel)]="m.nombre" maxlength="80" placeholder="Ej: iPhone 13 Pro"
+              (ngModelChange)="errorEdicion = ''">
+          </label>
+          <div class="form-check form-switch mb-1">
+            <input class="form-check-input" type="checkbox" id="repActivo" [(ngModel)]="m.activo">
+            <label class="form-check-label small" for="repActivo">Activo (aparece para cotizar)</label>
+          </div>
+        </div>
+
+        <div class="titulo-bloque mt-3">Repuestos del stock
+          <span class="text-muted fw-normal">(buscá el producto y vinculalo; la etiqueta es lo que ve el cliente, ej. "OLED")</span>
+          <span *ngIf="cargandoStock" class="spinner-border spinner-border-sm ms-1"></span>
+        </div>
+        <div class="precios">
+          <div class="precio-rubro" *ngFor="let r of plantilla?.rubros || []">
+            <strong class="small">{{ r.nombre }}</strong>
+            <div class="vinculados">
+              <div class="vinculado" *ngFor="let v of repuestos[r.id]; let i = index; let primero = first; let ultimo = last"
+                [class.sin-stock]="stockRepuesto(stockPorId[v.productoId]) <= 0" [class.inexistente]="!stockPorId[v.productoId] && !cargandoStock">
+                <div class="info">
+                  <span class="small">{{ stockPorId[v.productoId] ? nombreProducto(stockPorId[v.productoId]) : (cargandoStock ? 'Cargando…' : '⚠️ Producto borrado del stock') }}</span>
+                  <span class="small text-muted" *ngIf="stockPorId[v.productoId]">
+                    Min. {{ textoPesos(precioDe(v.productoId, 'minorista')) }} · May. {{ textoPesos(precioDe(v.productoId, 'mayorista')) }} ·
+                    <span [class.text-danger]="stockRepuesto(stockPorId[v.productoId]) <= 0">stock mayorista {{ stockRepuesto(stockPorId[v.productoId]) }}</span>
+                  </span>
+                </div>
+                <input type="text" class="form-control form-control-sm etiqueta" [(ngModel)]="v.etiqueta" maxlength="40"
+                  placeholder="Etiqueta (opcional)" [attr.aria-label]="'Etiqueta del repuesto ' + (i + 1) + ' de ' + r.nombre">
+                <div class="d-flex gap-1">
+                  <button type="button" class="btn btn-sm btn-light" (click)="moverRepuesto(r.id, i, -1)" [disabled]="primero" title="Subir"><i class="fas fa-arrow-up"></i></button>
+                  <button type="button" class="btn btn-sm btn-light" (click)="moverRepuesto(r.id, i, 1)" [disabled]="ultimo" title="Bajar"><i class="fas fa-arrow-down"></i></button>
+                  <button type="button" class="btn btn-sm btn-outline-danger" (click)="desvincular(r.id, i)" title="Desvincular"><i class="fas fa-times"></i></button>
+                </div>
+              </div>
+            </div>
+            <div class="buscador-repuesto" *ngIf="(repuestos[r.id]?.length || 0) < maxRepuestos">
+              <input type="text" class="form-control form-control-sm" [(ngModel)]="buscarRepuesto[r.id]"
+                placeholder="Buscar en el stock para vincular (nombre, modelo o código)…" [attr.aria-label]="'Buscar repuesto para ' + r.nombre" autocomplete="off">
+              <div class="resultados" *ngIf="resultadosBusqueda(r.id) as res">
+                <button *ngFor="let p of res" type="button" class="resultado" (click)="vincular(r.id, p)">
+                  <span>{{ nombreProducto(p) }}</span>
+                  <small class="text-muted">{{ textoPesos(precioDe(p.id, 'minorista')) }} · stock {{ stockRepuesto(p) }}</small>
+                </button>
+                <div *ngIf="!res.length && (buscarRepuesto[r.id] || '').length >= 2" class="small text-muted p-1">No hay productos con ese nombre.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="errorEdicion" class="alert alert-danger py-2 small mt-2 mb-0">{{ errorEdicion }}</div>
+        <div class="d-flex justify-content-end gap-2 mt-3">
+          <button mat-button type="button" (click)="cancelarEdicion()">Cancelar</button>
+          <button mat-raised-button color="primary" type="button" (click)="guardar()" [disabled]="guardando">
+            <mat-icon>save</mat-icon> {{ guardando ? 'Guardando…' : 'Guardar modelo' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- 📜 Historial -->
+      <div class="panel" *ngIf="mostrarHistorial">
+        <h3 class="subtitulo">Últimas cotizaciones</h3>
+        <div *ngIf="cargandoHistorial" class="small text-muted"><span class="spinner-border spinner-border-sm"></span> Cargando…</div>
+        <div *ngIf="!cargandoHistorial && !historial.length" class="small text-muted">Todavía no hay cotizaciones.</div>
+        <div class="table-responsive" *ngIf="historial.length">
+          <table class="table table-sm align-middle">
+            <thead><tr><th>Fecha</th><th>Equipo</th><th>Reparaciones</th><th class="text-end">Total</th><th>Dónde</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let t of historial">
+                <td class="text-nowrap">{{ t.fecha | date:'dd/MM/yy HH:mm' }}</td>
+                <td>{{ t.modelo }}</td>
+                <td class="small">{{ textoReparaciones(t) }}<span *ngIf="t.descuento > 0" class="d-block text-muted">descuento −{{ textoPesos(t.descuento) }}</span></td>
+                <td class="text-end text-nowrap"><strong>{{ textoPesos(t.total) }}</strong>
+                  <small class="d-block text-muted">{{ t.tipoPrecio === 'mayorista' ? 'mayorista' : 'minorista' }}</small></td>
+                <td class="small">{{ t.origen === 'despacho' ? 'Despacho' : t.origen === 'web' ? '🌐 Web (cliente)' : 'Prueba' }}
+                  <span *ngIf="t.ordenGenerada" class="badge bg-success ms-1">orden</span>
+                  <span class="d-block text-muted">{{ t.cajero?.nombre || t.usuario?.nombre || '' }}</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Listado -->
+      <div *ngIf="error" class="alert alert-danger py-2 small">{{ error }}</div>
+      <div *ngIf="cargando" class="small text-muted"><span class="spinner-border spinner-border-sm"></span> Cargando…</div>
+      <div *ngIf="!cargando && !modelos.length" class="vacio">
+        Todavía no hay modelos. Revisá la <strong>Plantilla</strong> y tocá <strong>Nuevo modelo</strong>, o traé los nombres del tasador.
+      </div>
+      <div class="modelos">
+        <div class="tarjeta" *ngFor="let m of visibles" [class.inactivo]="m.activo === false">
+          <div>
+            <strong>{{ m.nombre }}</strong>
+            <span *ngIf="m.activo === false" class="badge bg-secondary ms-1">Inactivo</span>
+            <div class="small text-muted">{{ resumen(m) }}</div>
+          </div>
+          <ul class="lista-reparaciones" *ngIf="rubrosDe(m) as rs">
+            <li *ngFor="let r of rs.slice(0, 4)">{{ r.nombre }}:
+              <span *ngFor="let x of r.repuestos; let ultimo = last" [class.text-danger]="x.stock <= 0" [class.text-muted]="x.stock > 0">
+                {{ x.texto }}{{ x.stock <= 0 ? ' (sin stock)' : '' }}{{ ultimo ? '' : ' · ' }}</span>
+            </li>
+            <li *ngIf="rs.length > 4" class="text-muted">y {{ rs.length - 4 }} más…</li>
+          </ul>
+          <div class="acciones-tarjeta">
+            <button mat-button type="button" (click)="editar(m)"><mat-icon>edit</mat-icon> Editar</button>
+            <button mat-button type="button" (click)="duplicar(m)" title="Copiar los precios para cargar uno parecido"><mat-icon>content_copy</mat-icon> Duplicar</button>
+            <button mat-button type="button" (click)="alternarActivo(m)">
+              <mat-icon>{{ m.activo === false ? 'visibility' : 'visibility_off' }}</mat-icon> {{ m.activo === false ? 'Activar' : 'Desactivar' }}
+            </button>
+            <button mat-button color="warn" type="button" (click)="eliminar(m)"><mat-icon>delete</mat-icon></button>
+          </div>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

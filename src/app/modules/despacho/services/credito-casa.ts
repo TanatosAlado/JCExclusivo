@@ -265,6 +265,139 @@ export function imputarCuotas(cuotas: CuotaCredito[], importe: number): { cuotas
   return { cuotas: nuevas, aplicaciones, sobrante: Math.max(0, resta) };
 }
 
+// =====================================================
+// ☑️ COBRO ELIGIENDO CUOTAS (checks) · descuento · lo que sobra va a la última
+// =====================================================
+
+/**
+ * Cuotas que se pagan sí o sí: las vencidas y la del mes (del 1 al 10).
+ * Si está al día y fuera del 1 al 10, la próxima cuota.
+ */
+export function cuotasObligatorias(cuotas: CuotaCredito[], hoy = new Date()): number[] {
+  const pendientes = [...(cuotas || [])].sort((a, b) => a.numero - b.numero).filter(c => faltaCuota(c) > 0.004);
+  const deHoy = pendientes.filter(c => {
+    const e = estadoCuota(c, hoy).estado;
+    return e === 'vencida' || e === 'por-vencer';
+  }).map(c => c.numero);
+  if (deHoy.length) return deHoy;
+  return pendientes.length ? [pendientes[0].numero] : [];
+}
+
+/** Cuotas pendientes que se pueden sumar al pago, de la ÚLTIMA hacia atrás */
+export function cuotasOpcionales(cuotas: CuotaCredito[], hoy = new Date()): number[] {
+  const obligatorias = new Set(cuotasObligatorias(cuotas, hoy));
+  return (cuotas || []).filter(c => faltaCuota(c) > 0.004 && !obligatorias.has(c.numero))
+    .map(c => c.numero).sort((a, b) => b - a);
+}
+
+/** ¿Se puede tildar esta cuota? Las de más se suman desde la última: la 11 recién cuando está tildada la 12. */
+export function puedeTildarCuota(cuotas: CuotaCredito[], seleccion: number[], numero: number, hoy = new Date()): boolean {
+  const opcionales = cuotasOpcionales(cuotas, hoy);
+  if (!opcionales.includes(numero)) return false;
+  const sel = new Set(seleccion || []);
+  return opcionales.filter(n => n > numero).every(n => sel.has(n));
+}
+
+/** ¿Se puede destildar? Solo la de más adelante de las que se sumaron (las obligatorias, nunca). */
+export function puedeDestildarCuota(cuotas: CuotaCredito[], seleccion: number[], numero: number, hoy = new Date()): boolean {
+  const opcionales = cuotasOpcionales(cuotas, hoy);
+  const sel = new Set(seleccion || []);
+  if (!opcionales.includes(numero) || !sel.has(numero)) return false;
+  return !opcionales.some(n => n < numero && sel.has(n));
+}
+
+/** Tilda o destilda respetando el orden (devuelve la selección nueva, ordenada) */
+export function alternarCuota(cuotas: CuotaCredito[], seleccion: number[], numero: number, hoy = new Date()): number[] {
+  const sel = new Set(seleccion || []);
+  if (sel.has(numero)) {
+    if (puedeDestildarCuota(cuotas, seleccion, numero, hoy)) sel.delete(numero);
+  } else if (puedeTildarCuota(cuotas, seleccion, numero, hoy)) {
+    sel.add(numero);
+  }
+  return [...sel].sort((a, b) => a - b);
+}
+
+export interface CobroCuotas {
+  cuotas: CuotaCredito[];          // cuotas actualizadas (copia)
+  aplicaciones: AplicacionCuota[]; // a cuáles se aplicó (por número), incluido el descuento
+  seleccion: number[];             // cuotas tildadas
+  totalSeleccion: number;          // lo que falta de las tildadas
+  aplicado: number;                // lo que baja la deuda: importe + descuento
+  descuento: number;
+  excedente: number;               // lo que pagó de más y se descontó desde la última cuota
+  sobrante: number;                // lo que no se pudo aplicar (supera la deuda)
+  error: string | null;
+}
+
+/**
+ * Cobro de cuotas:
+ *  - las tildadas (las obligatorias siempre) se pagan completas: si paga menos, se aplica la más vieja primero (pago parcial, sin descuento);
+ *  - con 2 o más tildadas se puede hacer un descuento en $ (las tildadas quedan pagas enteras);
+ *  - si paga de más, lo que sobra se descuenta de la ÚLTIMA cuota sin tildar, y sigue hacia atrás.
+ * @param seleccion cuotas tildadas (null = solo las obligatorias)
+ * @param importe lo que paga el cliente por las cuotas (sin el recargo)
+ */
+export function imputarCobroCuotas(
+  cuotas: CuotaCredito[], seleccion: number[] | null, importe: number, descuento: number = 0, hoy = new Date()
+): CobroCuotas {
+  const nuevas = (cuotas || []).map(c => ({ ...c })).sort((a, b) => a.numero - b.numero);
+  const obligatorias = cuotasObligatorias(nuevas, hoy);
+  const opcionales = cuotasOpcionales(nuevas, hoy);
+  const sel = [...new Set<number>([...obligatorias, ...(seleccion || [])].map(Number))].sort((a, b) => a - b);
+  const imp = r2(Math.max(0, Number(importe) || 0));
+  const desc = r2(Number(descuento) || 0);
+  const totalSeleccion = r2(sel.reduce((a, n) => a + faltaCuota(nuevas.find(c => c.numero === n)), 0));
+  const base: CobroCuotas = {
+    cuotas: nuevas, aplicaciones: [], seleccion: sel, totalSeleccion, aplicado: r2(imp + Math.max(0, desc)),
+    descuento: Math.max(0, desc), excedente: 0, sobrante: 0, error: null
+  };
+  const err = (e: string): CobroCuotas => ({ ...base, cuotas: nuevas.map(c => ({ ...c })), error: e });
+
+  // Las tildadas de más tienen que ser las últimas (de atrás para adelante, sin saltear)
+  const extras = sel.filter(n => !obligatorias.includes(n));
+  if (extras.some(n => !opcionales.includes(n))) return err('Hay una cuota elegida que no se puede pagar (ya está paga o no existe).');
+  if (extras.length && !opcionales.slice(0, extras.length).every(n => extras.includes(n))) {
+    return err('Las cuotas de más se eligen desde la última para atrás, sin saltear.');
+  }
+  if (desc < 0) return err('El descuento no puede ser negativo.');
+  if (desc > 0) {
+    if (sel.length < 2) return err('El descuento se puede hacer pagando 2 cuotas o más.');
+    if (desc >= totalSeleccion - 0.004) return err('El descuento no puede ser igual o mayor al total de las cuotas.');
+    if (imp + desc < totalSeleccion - 0.009) return err('Con descuento, las cuotas elegidas se pagan completas.');
+  }
+
+  const aplicadoA = new Map<number, number>();
+  const aplicar = (c: CuotaCredito, monto: number) => {
+    const a = r2(Math.min(faltaCuota(c), monto));
+    if (a <= 0.004) return 0;
+    c.pagado = r2((Number(c.pagado) || 0) + a);
+    aplicadoA.set(c.numero, r2((aplicadoA.get(c.numero) || 0) + a));
+    return a;
+  };
+
+  let resta = base.aplicado;
+  // 1) Las tildadas, la más vieja primero
+  for (const n of sel) {
+    if (resta <= 0.004) break;
+    resta = r2(resta - aplicar(nuevas.find(c => c.numero === n)!, resta));
+  }
+  // 2) Lo que sobra: desde la última cuota sin tildar, hacia atrás
+  let excedente = 0;
+  if (resta > 0.004) {
+    for (const c of [...nuevas].reverse()) {
+      if (resta <= 0.004) break;
+      if (sel.includes(c.numero)) continue;
+      const a = aplicar(c, resta);
+      excedente = r2(excedente + a);
+      resta = r2(resta - a);
+    }
+  }
+
+  const aplicaciones: AplicacionCuota[] = [...aplicadoA.entries()].sort((a, b) => a[0] - b[0])
+    .map(([numero, importe]) => ({ numero, importe, pendienteNuevo: faltaCuota(nuevas.find(c => c.numero === numero)) }));
+  return { ...base, cuotas: nuevas, aplicaciones, excedente, sobrante: Math.max(0, r2(resta)) };
+}
+
 /** Deshace un pago (anulación del ticket del cobro): a cada cuota se le resta lo que se le había aplicado */
 export function revertirCuotas(cuotas: CuotaCredito[], aplicaciones: { numero: number; importe: number }[]): CuotaCredito[] {
   return (cuotas || []).map(c => {

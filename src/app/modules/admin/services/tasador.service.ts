@@ -49,7 +49,8 @@ export class TasadorService {
       entidad: 'Tasador',
       entidadId: ref.id,
       descripcion: `${nuevo ? 'Agregó' : 'Modificó'} el modelo "${datos.nombre}" del tasador ` +
-        `(${datos.capacidades.map((c: any) => `${c.capacidad} USD ${c.precio}`).join(', ')} · ${datos.preguntas.length} pregunta(s))` +
+        `(${datos.capacidades.map((c: any) => `${c.capacidad} USD ${c.precio}`).join(', ')} · ` +
+        `batería 85-90% −USD ${datos.bateria?.entre85y90 || 0}, <85% −USD ${datos.bateria?.menos85 || 0} · ${datos.preguntas.length} pregunta(s))` +
         (datos.activo ? '' : ' · inactivo')
     });
     return ref.id;
@@ -122,7 +123,7 @@ export class TasadorService {
     try {
       await setDoc(doc(collection(this.firestore, 'Tasaciones')), {
         modeloId: r.modeloId, modelo: r.modelo, capacidad: r.capacidad, precioBase: r.precioBase,
-        respuestas: r.respuestas, descuentos: r.descuentos, totalUSD: r.totalUSD,
+        respuestas: r.respuestas, bateria: r.bateria || null, descuentos: r.descuentos, totalUSD: r.totalUSD,
         cotizacion: null, totalARS: null,
         fecha: new Date().toISOString(), origen: 'web', usuario: null, cajero: null
       });

@@ -216,3 +216,20 @@ app-item {
         padding: 1.1rem;
     }
 }
+
+/* 📱 Buscador en celulares: letra más chica (16px en el texto para que iPhone no haga zoom) */
+@media (max-width: 576px) {
+    .search-wrapper input {
+        font-size: 1rem;
+        padding-top: 0.6rem;
+        padding-bottom: 0.6rem;
+        padding-left: 44px;
+    }
+    .search-wrapper input::placeholder {
+        font-size: 0.9rem;
+        text-overflow: ellipsis;
+    }
+    .search-wrapper i {
+        left: 16px;
+    }
+}

@@ -9,6 +9,8 @@ rules_version = '2';
 //   • Imágenes de productos (productos/): las ve cualquiera.
 //     Suben/borran quienes tienen el permiso 'productos'.
 //   • Fotos de equipos (equipos/): las ve cualquiera. Suben/borran quienes tienen el permiso 'equipos'.
+//   • Comprobantes de transferencia (comprobantes/): los sube el cliente/invitado a su pedido;
+//     solo los ven y borran quienes tienen el permiso 'pedidos'.
 //   • Cualquier otra carpeta: la ve un usuario logueado y la modifica un administrador.
 //
 // Los permisos se leen del documento Clientes/{uid} de Firestore, igual que en
@@ -75,11 +77,21 @@ service firebase.storage {
       allow delete: if tienePermiso('equipos');
     }
 
+    // ---------- 💳 Comprobantes de transferencia de los pedidos web ----------
+    // Los sube el cliente o el invitado (sin cuenta) al pedido que existe; solo foto o PDF de hasta 5 MB.
+    // Nadie más que un administrador con permiso de Pedidos los puede ver o borrar.
+    match /comprobantes/{pedidoId}/{archivo} {
+      allow create: if request.resource.size < 5 * 1024 * 1024
+        && (request.resource.contentType.matches('image/.*') || request.resource.contentType == 'application/pdf')
+        && firestore.exists(/databases/(default)/documents/$('Pedidos Pendientes')/$(pedidoId));
+      allow read, delete: if tienePermiso('pedidos');
+    }
+
     // ---------- Todo lo demás ----------
     // (sin incluir banners ni productos, que tienen sus reglas arriba)
     match /{ruta=**} {
-      allow read: if request.auth != null;
-      allow write: if esAdmin() && !ruta.matches('^(uploads|productos|equipos)/.*');
+      allow read: if request.auth != null && !ruta.matches('^comprobantes/.*');
+      allow write: if esAdmin() && !ruta.matches('^(uploads|productos|equipos|comprobantes)/.*');
     }
   }
 }

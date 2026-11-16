@@ -2,6 +2,7 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { take } from 'rxjs/operators';
 import { TasadorService } from 'src/app/modules/admin/services/tasador.service';
+import { RUBRO_EQUIPOS } from 'src/app/modules/admin/services/equipos.service';
 import { AuthService } from 'src/app/modules/auth/services/auth.service';
 import { WhatsappService } from '../../services/whatsapp.service';
 import { ModeloTasador, ResultadoTasacion, textoUSD } from '../../utils/tasador';
@@ -27,6 +28,7 @@ export class CotizaUsadoComponent implements OnInit, OnDestroy {
   /** Se reinicia el componente de preguntas para "Cotizar otro" */
   vuelta = 0;
   readonly textoUSD = textoUSD;
+  readonly rubroEquipos = RUBRO_EQUIPOS;   // "Ver equipos" abre Productos con el filtro de equipos
   private subs: Subscription[] = [];
 
   constructor(private tasador: TasadorService, private auth: AuthService, private whatsapp: WhatsappService) { }
@@ -72,8 +74,9 @@ export class CotizaUsadoComponent implements OnInit, OnDestroy {
     const r = this.resultado;
     if (!r) return '';
     const malas = r.respuestas.filter(x => x.descuento > 0).map(x => `• ${x.pregunta} ${x.respuesta === 'si' ? 'Sí' : 'No'}`);
-    return `Hola! Coticé mi equipo en la web: ${r.modelo} ${r.capacidad}. Me dio ${textoUSD(r.totalUSD)}.` +
-      (malas.length ? `\n${malas.join('\n')}` : '\nEstá en perfectas condiciones.') +
+    const bateria = r.bateria ? `\n• Batería: ${r.bateria.texto}` : '';
+    return `Hola! Coticé mi equipo en la web: ${r.modelo} ${r.capacidad}. Me dio ${textoUSD(r.totalUSD)}.` + bateria +
+      (malas.length ? `\n${malas.join('\n')}` : '\nEl resto, en perfectas condiciones.') +
       `\nQuiero usarlo en plan canje.`;
   }
 

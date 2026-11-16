@@ -5,6 +5,7 @@ import { AuthService } from 'src/app/modules/auth/services/auth.service';
 import { GeneralService } from 'src/app/shared/services/general.service';
 import { armarHistorial, COLECCIONES_PEDIDOS, CompraHistorial } from 'src/app/shared/utils/historial-cliente';
 import { armarCreditoCliente, CreditoCliente, ordenarCreditosCliente } from 'src/app/shared/utils/creditos-cliente';
+import { armarReparacionCliente, ReparacionCliente } from 'src/app/shared/utils/reparaciones-cliente';
 import { errorDatosSolicitud, nuevaSolicitud, puedePedirMayorista, SolicitudMayorista } from 'src/app/shared/utils/solicitud-mayorista';
 
 export class MiCuentaError extends Error {
@@ -138,6 +139,21 @@ export class MiCuentaService {
       return armarCreditoCliente(credito, pagos, hoy);
     }));
     return ordenarCreditosCliente(lista.filter((c): c is CreditoCliente => !!c));
+  }
+
+  /**
+   * 🔧 Reparaciones del cliente (las órdenes del taller asociadas a su cuenta). Solo para ver.
+   * Las órdenes viejas que se cargaron sin elegir al cliente no aparecen.
+   */
+  async obtenerReparaciones(): Promise<ReparacionCliente[]> {
+    const uid = await this.uidActual();
+    const hoy = new Date();
+    const [pendientes, finalizadas] = await Promise.all(['Ordenes Pendientes', 'Ordenes Finalizadas'].map(c =>
+      getDocs(query(collection(this.firestore, c), where('idCliente', '==', uid)))));
+    return [
+      ...pendientes.docs.map(d => armarReparacionCliente(d.id, d.data(), false, hoy)),
+      ...finalizadas.docs.map(d => armarReparacionCliente(d.id, d.data(), true, hoy))
+    ];
   }
 
   async obtenerCliente(): Promise<any> {

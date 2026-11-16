@@ -1,0 +1,17 @@
+.pedido { max-width: 720px; }
+.tarjeta { background: #fff; border: 1px solid #e6e8ec; border-radius: 14px; padding: 18px; margin-bottom: 14px; }
+h1 { font-size: 1.4rem; margin: 0; }
+h2 { font-size: 1.1rem; }
+.items { list-style: none; padding: 0; margin: 12px 0 0; font-size: 0.92rem; }
+.items li { padding: 4px 0; border-bottom: 1px solid #f3f4f6; }
+.items .cant { color: #8a8f98; margin-right: 4px; }
+.total { display: flex; justify-content: space-between; margin-top: 10px; font-size: 1.1rem; }
+.estado-pago { padding: 4px 10px; border-radius: 999px; font-size: 0.8rem; font-weight: 600; background: #eceef2; color: #444; }
+.estado-pago.esperando { background: #fff3cd; color: #7a5200; }
+.estado-pago.por-verificar { background: #cff4fc; color: #055160; }
+.estado-pago.aprobado { background: #d1e7dd; color: #0f5132; }
+.estado-pago.rechazado { background: #f8d7da; color: #842029; }
+.qr-bloque { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+.qr-bloque img { width: 130px; height: 130px; }
+.comprobantes { list-style: none; padding: 0; margin: 0; font-size: 0.88rem; }
+.archivo { max-width: 320px; }

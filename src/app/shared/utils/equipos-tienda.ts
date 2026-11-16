@@ -98,8 +98,8 @@ export function subtotalesCarrito(carrito: any[], precioEnPesos: (item: any) => 
 export function totalCarritoWeb(
   carrito: any[],
   precioEnPesos: (item: any) => number,
-  opciones: { cupon?: any; usarPuntos?: boolean; puntosCliente?: number; valorPunto?: number } = {}
-): { total: number; productos: number; equipos: number; puntosUsados: number } {
+  opciones: { cupon?: any; usarPuntos?: boolean; puntosCliente?: number; valorPunto?: number; descuentoTransferencia?: number } = {}
+): { total: number; productos: number; equipos: number; puntosUsados: number; descuentoTransferencia: number } {
   const { productos: subProductos, equipos } = subtotalesCarrito(carrito, precioEnPesos);
   let productos = subProductos;
 
@@ -117,5 +117,13 @@ export function totalCarritoWeb(
     productos = Math.max(productos - puntosUsados * valorPunto, 0);
   }
 
-  return { total: productos + equipos, productos, equipos, puntosUsados };
+  // 💳 Descuento por transferencia (%): al final, solo sobre productos (los equipos van a precio de lista)
+  let descuentoTransferencia = 0;
+  const pct = Number(opciones.descuentoTransferencia) || 0;
+  if (pct > 0 && productos > 0) {
+    descuentoTransferencia = Math.round(productos * Math.min(pct, 100) / 100 * 100) / 100;
+    productos = Math.max(productos - descuentoTransferencia, 0);
+  }
+
+  return { total: productos + equipos, productos, equipos, puntosUsados, descuentoTransferencia };
 }

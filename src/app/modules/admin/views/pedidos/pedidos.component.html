@@ -34,9 +34,16 @@
                         <div class="tab-content">
                             <div *ngIf="activeTab === 1" class="content">
                                 <div class="table-container">
-                                    <input class="search-input"
-                                        (keyup)="applyFilter($event,datasourcePedidosPendientes)"
-                                        placeholder="Búsqueda Pedidos Pendientes" #input>
+                                    <div class="d-flex gap-2 align-items-center flex-wrap">
+                                        <input class="search-input"
+                                            (keyup)="applyFilter($event,datasourcePedidosPendientes)"
+                                            placeholder="Búsqueda Pedidos Pendientes" #input>
+                                        <!-- 💳 Filtro: pagos por transferencia con comprobante para revisar -->
+                                        <button type="button" class="btn btn-sm" [class.btn-info]="soloPorVerificar" [class.btn-outline-info]="!soloPorVerificar"
+                                            (click)="alternarPorVerificar()">
+                                            💳 Pagos por verificar <span class="badge bg-dark ms-1" *ngIf="cantidadPorVerificar">{{ cantidadPorVerificar }}</span>
+                                        </button>
+                                    </div>
                                     <div class="tabla-scroll">
                                         <table mat-table [dataSource]="datasourcePedidosPendientes"
                                             class="mat-elevation-z8 responsive-table">
@@ -76,7 +83,9 @@
                                             <ng-container matColumnDef="pago">
                                                 <th mat-header-cell *matHeaderCellDef class="cabecera">Forma de Pago
                                                 </th>
-                                                <td mat-cell *matCellDef="let pedidos">{{ pedidos.pago }}</td>
+                                                <td mat-cell *matCellDef="let pedidos">{{ pedidos.pago }}
+                                                    <span *ngIf="pedidos.pagoTransferencia as pt" class="estado-pago d-block mt-1" [ngClass]="pt.estado">{{ textoEstadoPago[pt.estado] }}</span>
+                                                </td>
                                             </ng-container>
                                             <ng-container matColumnDef="total">
                                                 <th mat-header-cell *matHeaderCellDef class="cabecera">Total</th>
@@ -164,7 +173,9 @@
                                             <ng-container matColumnDef="pago">
                                                 <th mat-header-cell *matHeaderCellDef class="cabecera">Forma de Pago
                                                 </th>
-                                                <td mat-cell *matCellDef="let pedidos">{{ pedidos.pago }}</td>
+                                                <td mat-cell *matCellDef="let pedidos">{{ pedidos.pago }}
+                                                    <span *ngIf="pedidos.pagoTransferencia as pt" class="estado-pago d-block mt-1" [ngClass]="pt.estado">{{ textoEstadoPago[pt.estado] }}</span>
+                                                </td>
                                             </ng-container>
                                             <ng-container matColumnDef="total">
                                                 <th mat-header-cell *matHeaderCellDef class="cabecera">Total</th>
@@ -251,7 +262,9 @@
                                             <ng-container matColumnDef="pago">
                                                 <th mat-header-cell *matHeaderCellDef class="cabecera">Forma de Pago
                                                 </th>
-                                                <td mat-cell *matCellDef="let pedidos">{{ pedidos.pago }}</td>
+                                                <td mat-cell *matCellDef="let pedidos">{{ pedidos.pago }}
+                                                    <span *ngIf="pedidos.pagoTransferencia as pt" class="estado-pago d-block mt-1" [ngClass]="pt.estado">{{ textoEstadoPago[pt.estado] }}</span>
+                                                </td>
                                             </ng-container>
                                             <ng-container matColumnDef="total">
                                                 <th mat-header-cell *matHeaderCellDef class="cabecera">Total</th>
@@ -350,6 +363,33 @@
                             </div>
                         </div>
                         <div class="total">Total: {{ totalPedido(pedidoEncontrado) | currency:'ARS' }}</div>
+
+                        <!-- 💳 Pago por transferencia -->
+                        <div *ngIf="pedidoEncontrado.pagoTransferencia as pt" class="panel-pago">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <strong>💳 Pago por transferencia</strong>
+                                <span class="estado-pago" [ngClass]="pt.estado">{{ textoEstadoPago[pt.estado] }}</span>
+                            </div>
+                            <div class="small mt-1">
+                                Monto a transferir: <strong>{{ pt.monto | currency:'ARS' }}</strong>
+                                <span *ngIf="pt.descuento > 0" class="text-muted"> · incluye {{ pt.porcentaje }}% de descuento (−{{ pt.descuento | currency:'ARS' }})</span>
+                            </div>
+                            <div *ngIf="!pt.comprobantes?.length" class="small text-muted mt-1">Todavía no subió el comprobante.</div>
+                            <ul *ngIf="pt.comprobantes?.length" class="comprobantes">
+                                <li *ngFor="let c of pt.comprobantes">
+                                    📎 {{ c.nombre }} <span class="text-muted">· {{ c.fecha | date:'dd/MM/yyyy HH:mm' }} · {{ textoTamano(c.tamano) }}</span>
+                                    <button type="button" class="btn btn-link btn-sm p-0 ms-2" (click)="verComprobante(c)">Ver</button>
+                                </li>
+                            </ul>
+                            <div *ngIf="pt.estado === 'rechazado'" class="small text-danger mt-1">Rechazado: {{ pt.motivoRechazo }}</div>
+                            <div *ngIf="pt.verificadoPor?.nombre" class="small text-muted mt-1">
+                                {{ pt.estado === 'aprobado' ? 'Confirmado' : 'Revisado' }} por {{ pt.verificadoPor?.nombre }} · {{ pt.verificadoEn | date:'dd/MM/yyyy HH:mm' }}
+                            </div>
+                            <div *ngIf="activeTab === 1 && pt.estado !== 'aprobado'" class="d-flex gap-2 mt-2 flex-wrap">
+                                <button type="button" class="btn btn-success btn-sm" (click)="confirmarPago(pedidoEncontrado)" [disabled]="resolviendoPago">✅ Pago recibido</button>
+                                <button type="button" class="btn btn-outline-danger btn-sm" (click)="rechazarPago(pedidoEncontrado)" [disabled]="resolviendoPago || pt.estado === 'rechazado'">❌ Rechazar</button>
+                            </div>
+                        </div>
                         <div *ngIf="totalEnDolares(pedidoEncontrado)" class="aviso-total-dolares">
                             <i class="fas fa-exclamation-triangle"></i>
                             Este pedido quedó guardado con el total en dólares ({{ pedidoEncontrado.total }}). Se muestra recalculado en pesos.

@@ -11,6 +11,9 @@ import { MatTabChangeEvent } from '@angular/material/tabs';
 import { InfoEmpresaService } from 'src/app/shared/services/info-empresa.service';
 import { AuditoriaService } from 'src/app/shared/services/auditoria.service';
 import { Cotizacion, precioItemEnPesos, totalConCarrito, totalPedidoEnPesos, totalQuedoEnDolares } from 'src/app/shared/utils/total-pedido';
+import { PagoPedidoError, PagoPedidosService } from 'src/app/shared/services/pago-pedidos.service';
+import { ComprobantePago, TEXTO_ESTADO_PAGO, textoTamano } from 'src/app/shared/utils/pago-web';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-pedidos',
@@ -42,6 +45,11 @@ showTablaPedido: boolean = true;
   showFormAgregarCliente: boolean = false
   showTablaVerCliente: boolean = false
   dolar: number = 0;           // 0 hasta que carga la cotización (antes 1: pasaba los USD "a pesos" sin convertir)
+  // 💳 Pagos por transferencia
+  soloPorVerificar = false;
+  resolviendoPago = false;
+  readonly textoEstadoPago = TEXTO_ESTADO_PAGO;
+  readonly textoTamano = textoTamano;
   corrigiendo = false;
 
   @ViewChild('paginatorPendientes') paginatorPendientes!: MatPaginator;
@@ -50,7 +58,7 @@ showTablaPedido: boolean = true;
 
 
 
-  constructor(private pedidosService: PedidosService, private toastService: ToastService, private cdRef: ChangeDetectorRef, private dialog: MatDialog, private firestore: Firestore, private infoEmpresaService: InfoEmpresaService, private auditoria: AuditoriaService) {
+  constructor(private pedidosService: PedidosService, private toastService: ToastService, private cdRef: ChangeDetectorRef, private dialog: MatDialog, private firestore: Firestore, private infoEmpresaService: InfoEmpresaService, private auditoria: AuditoriaService, private pagoPedidos: PagoPedidosService) {
 
     this.datasourcePedidosPendientes = new MatTableDataSource(this.pedidosPendientes);
     this.datasourcePedidosFinalizados = new MatTableDataSource(this.pedidosFinalizados);
@@ -177,8 +185,13 @@ showTablaPedido: boolean = true;
   getPedidos() {
     this.pedidosService.getPedidosPorTipo('Pedidos Pendientes').subscribe(data => {
       this.pedidosPendientes = data.sort((a, b) => b.nroPedido - a.nroPedido);
-      this.datasourcePedidosPendientes = new MatTableDataSource(this.pedidosPendientes);
+      this.datasourcePedidosPendientes = new MatTableDataSource(this.pendientesVisibles);
       this.datasourcePedidosPendientes.paginator = this.paginatorPendientes;
+      // El pedido abierto se actualiza (ej. llegó un comprobante o se confirmó el pago)
+      if (this.pedidoEncontrado && this.activeTab === 1) {
+        const actual = this.pedidosPendientes.find(p => p.id === this.pedidoEncontrado.id);
+        if (actual) this.pedidoEncontrado = { ...this.pedidoEncontrado, pagoTransferencia: (actual as any).pagoTransferencia };
+      }
       this.cdRef.detectChanges();
     });
 
@@ -390,6 +403,77 @@ showTablaPedido: boolean = true;
     } else {
       window.print();
       this.cerrarModalImpresion();
+    }
+  }
+
+  // =====================================================
+  // 💳 PAGOS POR TRANSFERENCIA
+  // =====================================================
+
+  get pendientesVisibles(): Pedido[] {
+    return this.soloPorVerificar
+      ? this.pedidosPendientes.filter((p: any) => p.pagoTransferencia?.estado === 'por-verificar')
+      : this.pedidosPendientes;
+  }
+
+  get cantidadPorVerificar(): number {
+    return this.pedidosPendientes.filter((p: any) => p.pagoTransferencia?.estado === 'por-verificar').length;
+  }
+
+  alternarPorVerificar() {
+    this.soloPorVerificar = !this.soloPorVerificar;
+    this.datasourcePedidosPendientes = new MatTableDataSource(this.pendientesVisibles);
+    this.datasourcePedidosPendientes.paginator = this.paginatorPendientes;
+    this.cdRef.detectChanges();
+  }
+
+  async verComprobante(c: ComprobantePago) {
+    const ventana = window.open('', '_blank');   // se abre ya (si no, el navegador la bloquea)
+    try {
+      const url = await this.pagoPedidos.urlComprobante(c);
+      if (ventana) ventana.location.href = url; else window.open(url, '_blank');
+    } catch (e: any) {
+      ventana?.close();
+      console.error('No se pudo abrir el comprobante', e);
+      this.toastService.toastMessage('No se pudo abrir el comprobante. ' + (e?.message || ''), 'red', 4000);
+    }
+  }
+
+  async confirmarPago(pedido: any) {
+    if (this.resolviendoPago) return;
+    const r = await Swal.fire({
+      title: `¿Confirmar el pago del pedido #${pedido.nroPedido}?`,
+      html: `Transferencia por <strong>${new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(pedido.pagoTransferencia?.monto || pedido.total || 0)}</strong>.<br><small>El cliente lo ve como "Pago confirmado".</small>`,
+      icon: 'question', showCancelButton: true, confirmButtonText: 'Sí, recibí el pago', cancelButtonText: 'Cancelar'
+    });
+    if (!r.isConfirmed) return;
+    await this.resolverPago(() => this.pagoPedidos.confirmar(pedido), 'Pago confirmado');
+  }
+
+  async rechazarPago(pedido: any) {
+    if (this.resolviendoPago) return;
+    const r = await Swal.fire({
+      title: `Rechazar el pago del pedido #${pedido.nroPedido}`,
+      input: 'text',
+      inputLabel: 'Motivo (lo ve el cliente)',
+      inputPlaceholder: 'Ej: no nos llegó la transferencia / el monto no coincide',
+      inputValidator: v => !String(v || '').trim() ? 'Escribí el motivo' : null,
+      showCancelButton: true, confirmButtonText: 'Rechazar', cancelButtonText: 'Cancelar', confirmButtonColor: '#d33'
+    });
+    if (!r.isConfirmed) return;
+    await this.resolverPago(() => this.pagoPedidos.rechazar(pedido, String(r.value || '')), 'Pago rechazado');
+  }
+
+  private async resolverPago(accion: () => Promise<void>, ok: string) {
+    this.resolviendoPago = true;
+    try {
+      await accion();
+      this.toastService.toastMessage(ok, 'green', 2500);
+    } catch (e: any) {
+      console.error(e);
+      this.toastService.toastMessage(e instanceof PagoPedidoError ? e.message : 'No se pudo guardar. ' + (e?.message || ''), 'red', 4000);
+    } finally {
+      this.resolviendoPago = false;
     }
   }
 

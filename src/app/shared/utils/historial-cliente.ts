@@ -22,6 +22,8 @@ export interface CompraHistorial {
   estado: EstadoCompra;
   items: { nombre: string; cantidad: number }[];
   detalles: string[];          // entrega, forma de pago, etc.
+  /** 💳 Pedido web con pago por transferencia pendiente: link para ver el pago / subir el comprobante */
+  linkPago?: string | null;
 }
 
 /** Colecciones de pedidos web → estado que ve el cliente */
@@ -88,8 +90,21 @@ export function compraDePedido(p: any, estado: EstadoCompra): CompraHistorial {
     total: num(p?.total),
     estado,
     items: itemsDeCarrito(p?.carrito),
-    detalles: [entrega && `Entrega: ${entrega}`, pago && `Pago: ${pago}`].filter(Boolean) as string[]
+    detalles: [entrega && `Entrega: ${entrega}`, pago && `Pago: ${pago}`, textoPagoTransferencia(p?.pagoTransferencia)].filter(Boolean) as string[],
+    linkPago: estado === 'pendiente' && p?.pagoTransferencia && p.pagoTransferencia.estado !== 'aprobado' && p?.id ? `/pedido/${p.id}` : null
   };
+}
+
+/** Estado del pago por transferencia para el detalle de la compra */
+function textoPagoTransferencia(pt: any): string | null {
+  if (!pt?.estado) return null;
+  const t: Record<string, string> = {
+    'esperando': 'Transferencia: falta el comprobante',
+    'por-verificar': 'Transferencia: comprobante por verificar',
+    'aprobado': 'Transferencia: pago confirmado',
+    'rechazado': 'Transferencia: pago rechazado' + (pt.motivoRechazo ? ` (${pt.motivoRechazo})` : '')
+  };
+  return t[pt.estado] || null;
 }
 
 export function compraDeVenta(v: any, moneda: (n: number) => string): CompraHistorial {

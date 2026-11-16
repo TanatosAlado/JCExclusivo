@@ -69,6 +69,12 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/ConfiguracionTasador/publico).data.get('habilitado', false) == true;
     }
 
+    // 🌐 "Cotizá tu reparación" habilitado por el admin (Gestiones → Cotizador de reparaciones)
+    function cotizadorReparacionesPublico() {
+      return exists(/databases/$(database)/documents/ConfiguracionReparaciones/publico)
+        && get(/databases/$(database)/documents/ConfiguracionReparaciones/publico).data.get('habilitado', false) == true;
+    }
+
     // Campos que cambian en un update
     function cambios() {
       return request.resource.data.diff(resource.data).affectedKeys();
@@ -340,8 +346,32 @@ service cloud.firestore {
         && request.resource.data.modelo.size() <= 80
         && request.resource.data.respuestas is list
         && request.resource.data.respuestas.size() <= 60
-        && request.resource.data.keys().hasOnly(['modeloId', 'modelo', 'capacidad', 'precioBase', 'respuestas', 'descuentos',
+        && request.resource.data.keys().hasOnly(['modeloId', 'modelo', 'capacidad', 'precioBase', 'respuestas', 'bateria', 'descuentos',
              'totalUSD', 'cotizacion', 'totalARS', 'fecha', 'origen', 'usuario', 'cajero']);
+    }
+    // 🔧 Cotizador de reparaciones: modelos con sus repuestos vinculados (los clientes ven los activos si está habilitado)
+    match /ModelosReparacion/{id} {
+      allow read: if esAdmin() || (resource.data.get('activo', false) == true && cotizadorReparacionesPublico());
+    }
+    // Plantilla (rubros) e interruptor de la web: los lee cualquiera; los cambia el permiso Cotizador
+    match /ConfiguracionReparaciones/{id} {
+      allow read: if true;
+      allow create, update: if tienePermiso('cotizador')
+        && ((id == 'publico' && request.resource.data.habilitado is bool)
+          || (id == 'plantilla' && request.resource.data.rubros is list && request.resource.data.rubros.size() <= 30));
+    }
+    // Historial de cotizaciones de reparación: el cliente en la web solo agrega la suya (sin datos personales)
+    match /CotizacionesReparacion/{id} {
+      allow create: if cotizadorReparacionesPublico()
+        && request.resource.data.origen == 'web'
+        && request.resource.data.usuario == null
+        && request.resource.data.total is number
+        && request.resource.data.modelo is string
+        && request.resource.data.modelo.size() <= 80
+        && request.resource.data.items is list
+        && request.resource.data.items.size() <= 30
+        && request.resource.data.keys().hasOnly(['modeloId', 'modelo', 'tipoPrecio', 'items', 'subtotal', 'descuento', 'total',
+             'dolar', 'fecha', 'origen', 'usuario', 'cajero']);
     }
     // Interruptor de "Cotizá tu usado" (lo lee cualquiera; lo cambia el permiso Tasador)
     match /ConfiguracionTasador/{id} {
@@ -557,6 +587,9 @@ service cloud.firestore {
     match /{coleccion}/{id} {
       // Consulta pública del estado de una reparación (link/QR con el id de la orden)
       allow get: if coleccion in ['Ordenes Pendientes', 'Ordenes Finalizadas'];
+      // "Mi cuenta" (mayoristas): cada cliente lista sus propias reparaciones
+      allow read: if coleccion in ['Ordenes Pendientes', 'Ordenes Finalizadas']
+        && logueado() && resource.data.get('idCliente', '') == request.auth.uid;
 
       // Número de pedido: se lee y se avanza de a 1
       allow read: if coleccion == 'Contador Pedidos';
@@ -568,9 +601,26 @@ service cloud.firestore {
       allow read: if coleccion in ['Pedidos Pendientes', 'Pedidos Finalizados', 'Pedidos Eliminados']
         && logueado() && resource.data.clienteId == request.auth.uid;
 
-      // Checkout: crear el pedido
+      // Checkout: crear el pedido (si paga por transferencia, el pago arranca "esperando" y sin comprobantes)
       allow create: if coleccion == 'Pedidos Pendientes'
-        && request.resource.data.estado == 'pendiente';
+        && request.resource.data.estado == 'pendiente'
+        && (!('pagoTransferencia' in request.resource.data)
+          || (request.resource.data.pagoTransferencia.estado == 'esperando'
+            && request.resource.data.pagoTransferencia.comprobantes.size() == 0));
+
+      // 💳 Link del pedido (/pedido/:id): quien tiene el link ve el pedido y su pago
+      allow get: if coleccion in ['Pedidos Pendientes', 'Pedidos Finalizados'];
+
+      // 💳 Subir el comprobante (cliente o invitado con el link): solo se agrega UN comprobante y el pago
+      // pasa a "por verificar". No puede tocar el monto, el descuento ni confirmar el pago.
+      allow update: if coleccion == 'Pedidos Pendientes'
+        && cambios().hasOnly(['pagoTransferencia'])
+        && resource.data.pagoTransferencia.estado in ['esperando', 'por-verificar', 'rechazado']
+        && request.resource.data.pagoTransferencia.diff(resource.data.pagoTransferencia).affectedKeys()
+             .hasOnly(['estado', 'comprobantes', 'ultimoComprobante'])
+        && request.resource.data.pagoTransferencia.estado == 'por-verificar'
+        && request.resource.data.pagoTransferencia.comprobantes.size() == resource.data.pagoTransferencia.comprobantes.size() + 1
+        && request.resource.data.pagoTransferencia.comprobantes.size() <= 10;
     }
   }
 }

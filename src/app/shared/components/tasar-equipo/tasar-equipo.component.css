@@ -46,3 +46,11 @@
 @media (max-width: 480px) {
   .pregunta { grid-template-columns: 1fr auto; }
 }
+
+/* 🔋 Batería */
+.pregunta.bateria { margin-bottom: 4px; }
+.pregunta.bateria select { width: 170px; }
+@media (max-width: 480px) {
+  .pregunta.bateria { grid-template-columns: 1fr; }
+  .pregunta.bateria select { width: 100%; }
+}

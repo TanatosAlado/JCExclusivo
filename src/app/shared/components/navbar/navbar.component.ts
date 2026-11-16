@@ -14,6 +14,7 @@ import { permisosDe } from 'src/app/core/secciones';
 import { AvisoMayoristaService } from '../../services/aviso-mayorista.service';
 import { DetalleOrdenComponent } from 'src/app/modules/admin/views/taller/components/detalle-orden/detalle-orden.component';
 import { TasadorService } from 'src/app/modules/admin/services/tasador.service';
+import { CotizadorReparacionesService } from 'src/app/modules/admin/services/cotizador-reparaciones.service';
 
 @Component({
   selector: 'app-navbar',
@@ -36,6 +37,7 @@ export class NavbarComponent implements OnDestroy {
   usrAdmin: boolean = false;
   /** 🌐 "Cotizá tu usado": el link aparece solo si el admin lo habilitó */
   cotizaHabilitado = false;
+  cotizaReparacionHabilitado = false;
   /** Tiene permiso para Despacho (el link solo se muestra si lo tiene) */
   usrDespacho: boolean = false;
   searchTerm: string = '';
@@ -53,7 +55,8 @@ export class NavbarComponent implements OnDestroy {
              private clientesService:ClientesService,
              private authService: AuthService,
              private avisoMayorista: AvisoMayoristaService,
-             private tasador: TasadorService) {
+             private tasador: TasadorService,
+             private cotizadorReparaciones: CotizadorReparacionesService) {
 
               // Al cambiar de página se cierran los paneles laterales (menú mobile / carrito).
               // Bootstrap no se entera de la navegación de Angular y quedaban abiertos con el fondo gris.
@@ -66,6 +69,7 @@ export class NavbarComponent implements OnDestroy {
 
   ngOnInit(): void {
     this.tasador.publicoHabilitado().then(h => this.cotizaHabilitado = h).catch(() => this.cotizaHabilitado = false);
+    this.cotizadorReparaciones.publicoHabilitado().then(h => this.cotizaReparacionHabilitado = h).catch(() => this.cotizaReparacionHabilitado = false);
     const clienteRaw = localStorage.getItem('clienteActual');
     const cliente = clienteRaw ? JSON.parse(clienteRaw) : null;
     if (cliente && cliente.id !== 'invitado') {

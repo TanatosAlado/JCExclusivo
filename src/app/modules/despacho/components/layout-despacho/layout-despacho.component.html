@@ -73,6 +73,15 @@
           </div>
 
           <div class="grupo-acciones">
+            <span class="grupo-titulo">Taller</span>
+            <div class="grupo-botones">
+              <button type="button" class="accion" (click)="abrirCotizadorReparacion()" title="Cotizar una reparación y armar la orden del taller">
+                <span class="ico">🧮</span> Cotizar reparación
+              </button>
+            </div>
+          </div>
+
+          <div class="grupo-acciones">
             <span class="grupo-titulo">Caja</span>
             <div class="grupo-botones">
               <button type="button" class="accion" (click)="abrirBuscadorTickets()" title="Buscar, reimprimir o anular tickets">
@@ -893,6 +902,10 @@
           <tr *ngIf="resumenCierre.cobrosCuotas" class="small">
             <td>Cobros de cuotas del crédito <span class="text-muted">(incluidos en los medios de arriba)</span></td>
             <td class="text-end">{{ resumenCierre.cobrosCuotas | currency }}</td>
+          </tr>
+          <tr *ngIf="resumenCierre.descuentosCuotas" class="small text-muted">
+            <td>Descuentos en cuotas del crédito <span class="text-muted">(no ingresan a la caja)</span></td>
+            <td class="text-end">−{{ resumenCierre.descuentosCuotas | currency }}</td>
           </tr>
         </tbody>
       </table>
@@ -1782,11 +1795,19 @@
       <ng-container *ngIf="cuModo === 'cobro'">
       <table *ngIf="!cuCargandoDetalle" class="table table-sm mt-2 mb-2 tabla-pendientes">
         <thead>
-          <tr><th>Cuota</th><th>Vence</th><th class="text-end">Falta</th><th class="text-end">Se paga</th></tr>
+          <tr><th class="col-check"></th><th>Cuota</th><th>Vence</th><th class="text-end">Falta</th><th class="text-end">Se paga</th></tr>
         </thead>
         <tbody>
           <tr *ngFor="let q of cuCredito.cuotas" [class.text-muted]="estadoCuota(q).estado === 'pagada'"
-              [class.table-success]="cuAplicadoA(q.numero) > 0 && cuAplicadoA(q.numero) >= faltaCuota(q) - 0.004">
+              [class.table-success]="cuAplicadoA(q.numero) > 0 && cuAplicadoA(q.numero) >= faltaCuota(q) - 0.004"
+              [class.fila-tildable]="cuPuedeCambiar(q.numero)" (click)="cuAlternar(q.numero)">
+            <td class="col-check">
+              <input *ngIf="estadoCuota(q).estado !== 'pagada'" type="checkbox" class="form-check-input m-0"
+                [checked]="cuTildada(q.numero)" [disabled]="!cuPuedeCambiar(q.numero)"
+                [title]="cuEsObligatoria(q.numero) ? 'Se paga sí o sí (vencida o del mes)' : cuPuedeCambiar(q.numero) ? '' : 'Las cuotas de más se eligen desde la última para atrás'"
+                (click)="$event.stopPropagation(); cuAlternar(q.numero)" [attr.aria-label]="'Cuota ' + q.numero">
+              <i *ngIf="cuEsObligatoria(q.numero)" class="fas fa-lock candado" title="Obligatoria"></i>
+            </td>
             <td class="small">
               {{ q.numero }}/{{ cuCredito.cantidadCuotas }}
               <ng-container [ngSwitch]="estadoCuota(q).estado">
@@ -1804,19 +1825,48 @@
       </table>
 
       <ng-container *ngIf="!cuCargandoDetalle && cuSituacion as s">
+        <div class="small text-muted mb-2">
+          🔒 Las vencidas y la del mes se pagan sí o sí. Para pagar más cuotas, tildalas desde la última para atrás.
+        </div>
         <div class="row g-2 align-items-end">
           <div class="col-sm-5">
             <label class="form-label small mb-1" for="cuMonto">Paga de cuotas</label>
-            <input id="cuMonto" type="number" min="0" step="0.01" class="form-control form-control-lg" [(ngModel)]="cuMonto">
+            <input id="cuMonto" type="number" min="0" step="0.01" class="form-control form-control-lg"
+              [ngModel]="cuMontoValor || null" (ngModelChange)="cambiarMontoCuotas($event)">
           </div>
-          <div class="col-sm-7 d-flex gap-2 flex-wrap">
-            <button type="button" class="btn btn-sm btn-outline-secondary" *ngIf="s.montoVencido > 0" (click)="cuMonto = s.montoVencido">Lo vencido</button>
-            <button type="button" class="btn btn-sm btn-outline-secondary" *ngIf="s.aPagarHoy > 0 && s.aPagarHoy !== s.montoVencido" (click)="cuMonto = s.aPagarHoy">A pagar hoy</button>
-            <button type="button" class="btn btn-sm btn-outline-secondary" *ngIf="s.proxima && !s.aPagarHoy" (click)="cuMonto = faltaCuota(s.proxima)">Próxima cuota</button>
-            <button type="button" class="btn btn-sm btn-outline-secondary" (click)="cuMonto = s.saldo">Todo</button>
+          <div class="col-sm-7 small">
+            <div>{{ cuSeleccion.length }} cuota{{ cuSeleccion.length === 1 ? '' : 's' }} tildada{{ cuSeleccion.length === 1 ? '' : 's' }}:
+              <strong>{{ cuTotalSeleccion | currency }}</strong>
+              <ng-container *ngIf="cuDescuentoValor > 0 && !cuDescuentoInvalido"> − descuento {{ cuDescuentoValor | currency }}</ng-container>
+            </div>
+            <button *ngIf="cuMontoEditado" type="button" class="btn btn-link btn-sm p-0" (click)="volverAlMontoSugerido()">
+              Volver a {{ cuMontoSugerido | currency }}
+            </button>
           </div>
         </div>
-        <div *ngIf="cuMonto && cuMonto > s.saldo + 0.009" class="text-danger small mt-1">El monto no puede superar lo que debe.</div>
+
+        <!-- Descuento: solo pagando 2 cuotas o más -->
+        <div *ngIf="cuSeleccion.length >= 2" class="descuento-efectivo mt-2" [class.con-error]="!!cuDescuentoInvalido">
+          <label for="cuDescuento" class="small mb-0">Descuento por pagar {{ cuSeleccion.length }} cuotas</label>
+          <div class="paga-con">
+            <span class="input-group-text">$</span>
+            <input id="cuDescuento" type="number" min="0" step="0.01" class="form-control form-control-sm"
+              [ngModel]="cuDescuento" (ngModelChange)="cambiarDescuentoCuotas($event)" placeholder="0">
+          </div>
+          <div *ngIf="cuDescuentoInvalido" class="text-danger small w-100">{{ cuDescuentoInvalido }}</div>
+        </div>
+
+        <!-- Qué pasa con lo que paga -->
+        <div *ngIf="cuImputacion.error && cuMontoValor > 0" class="text-danger small mt-1">{{ cuImputacion.error }}</div>
+        <div *ngIf="!cuImputacion.error && cuImputacion.sobrante > 0.009" class="text-danger small mt-1">
+          El monto no puede superar lo que debe ({{ s.saldo | currency }}).
+        </div>
+        <div *ngIf="!cuImputacion.error && cuImputacion.excedente > 0.004 && cuImputacion.sobrante <= 0.009" class="small text-success mt-1">
+          Paga {{ cuImputacion.excedente | currency }} de más: se descuenta{{ cuExcedenteEn.includes(',') ? 'n' : '' }} de la cuota {{ cuExcedenteEn }} (desde la última).
+        </div>
+        <div *ngIf="!cuImputacion.error && cuMontoValor > 0 && cuImputacion.aplicado < cuTotalSeleccion - 0.009" class="small text-warning-emphasis mt-1">
+          Paga menos que las cuotas tildadas: se aplica a la más vieja y el resto queda pendiente en esa cuota.
+        </div>
 
         <!-- Recargo por atraso: se calcula solo (1% por día corrido) y el cajero lo puede cambiar o borrar -->
         <div class="descuento-efectivo mt-2" [class.con-error]="cuRecargoInvalido">
@@ -1875,8 +1925,14 @@
           </div>
 
           <div class="resumen-descuento" *ngIf="cuTotal > 0">
-            <div class="d-flex justify-content-between small text-muted" *ngIf="cuRecargoValor && !cuRecargoInvalido">
-              <span>Cuotas</span><span>{{ cuMonto | currency }}</span>
+            <div class="d-flex justify-content-between small text-muted" *ngIf="cuDescuentoValor > 0 && !cuDescuentoInvalido">
+              <span>Cuotas tildadas</span><span>{{ cuTotalSeleccion | currency }}</span>
+            </div>
+            <div class="d-flex justify-content-between small text-success" *ngIf="cuDescuentoValor > 0 && !cuDescuentoInvalido">
+              <span>Descuento</span><span>−{{ cuDescuentoValor | currency }}</span>
+            </div>
+            <div class="d-flex justify-content-between small text-muted" *ngIf="(cuRecargoValor && !cuRecargoInvalido) || cuDescuentoValor > 0">
+              <span>Paga de cuotas</span><span>{{ cuMontoValor | currency }}</span>
             </div>
             <div class="d-flex justify-content-between small text-muted" *ngIf="cuRecargoValor && !cuRecargoInvalido">
               <span>Recargo</span><span>{{ cuRecargoValor | currency }}</span>
@@ -1990,6 +2046,21 @@
         </div>
       </div>
     </ng-container>
+  </div>
+</div>
+
+<!-- 🔧 Cotizador de reparaciones -->
+<div *ngIf="mostrarCotizadorRep" class="tasador-overlay" (click)="mostrarCotizadorRep = false">
+  <div class="tasador-modal" (click)="$event.stopPropagation()" role="dialog" aria-label="Cotizar reparación">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h4 class="m-0">🧮 Cotizar reparación</h4>
+      <button type="button" class="btn-close" (click)="mostrarCotizadorRep = false" aria-label="Cerrar"></button>
+    </div>
+    <div *ngIf="cargandoCotizadorRep" class="small text-muted"><span class="spinner-border spinner-border-sm"></span> Cargando modelos…</div>
+    <app-cotizar-reparacion *ngIf="!cargandoCotizadorRep" [modelos]="modelosReparacion" [plantilla]="plantillaReparaciones"
+      [tipoPrecio]="tipoPrecio" [dolar]="dolar" [mostrarSinStock]="true" [permitirDescuento]="true"
+      textoBoton="Generar orden del taller" textoBotonSecundario="Solo cotizar"
+      (usar)="generarOrdenDesdeCotizacion($event)" (usarSecundario)="soloCotizacionReparacion($event)" (cancelar)="mostrarCotizadorRep = false"></app-cotizar-reparacion>
   </div>
 </div>
 

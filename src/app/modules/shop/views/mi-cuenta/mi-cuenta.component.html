@@ -42,6 +42,10 @@
         <i class="fas fa-mobile-alt"></i> Estado de los créditos
         <span *ngIf="hayCreditosAtrasados" class="marca-deuda" title="Tenés cuotas vencidas"></span>
       </button>
+      <button *ngIf="cliente?.esMayorista" type="button" role="tab" [class.activa]="pestana === 'reparaciones'" (click)="pestana = 'reparaciones'">
+        <i class="fas fa-tools"></i> Reparaciones
+        <span *ngIf="reparacionesListas" class="marca-lista" title="Tenés equipos listos para retirar">{{ reparacionesListas }}</span>
+      </button>
       <button type="button" role="tab" [class.activa]="pestana === 'datos'" (click)="pestana = 'datos'">
         <i class="fas fa-id-card"></i> Mis datos
       </button>
@@ -95,6 +99,7 @@
             </ul>
             <p *ngFor="let d of c.detalles" class="dato">{{ d }}</p>
             <p *ngIf="!c.items.length && !c.detalles.length" class="dato">Sin más detalle.</p>
+            <a *ngIf="c.linkPago" [routerLink]="c.linkPago" class="btn btn-outline-dark btn-sm mt-1">💳 Ver el pago / subir comprobante</a>
           </div>
         </li>
       </ul>
@@ -313,6 +318,60 @@
             </ul>
           </div>
         </div>
+      </ng-container>
+    </div>
+
+    <!-- ================= 🔧 REPARACIONES (mayoristas, solo para ver) ================= -->
+    <div *ngIf="pestana === 'reparaciones'" class="panel">
+      <div *ngIf="cargandoReparaciones" class="estado-carga chico">
+        <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
+        <span>Buscando tus reparaciones…</span>
+      </div>
+      <div *ngIf="!cargandoReparaciones && errorReparaciones" class="aviso error">
+        <i class="fas fa-exclamation-circle"></i> {{ errorReparaciones }}
+        <button type="button" class="btn btn-sm btn-outline-secondary ms-auto" (click)="cargarReparaciones()">Reintentar</button>
+      </div>
+
+      <ng-container *ngIf="!cargandoReparaciones && !errorReparaciones">
+        <div class="rep-vistas" role="tablist" aria-label="Reparaciones">
+          <button type="button" role="tab" [class.activa]="vistaReparaciones === 'curso'" [attr.aria-selected]="vistaReparaciones === 'curso'"
+            (click)="vistaReparaciones = 'curso'">En curso <span class="cuenta">{{ reparacionesEnCurso.length }}</span></button>
+          <button type="button" role="tab" [class.activa]="vistaReparaciones === 'historial'" [attr.aria-selected]="vistaReparaciones === 'historial'"
+            (click)="vistaReparaciones = 'historial'">Historial <span class="cuenta">{{ reparacionesHistorial.length }}</span></button>
+        </div>
+
+        <ng-container *ngFor="let lista of [vistaReparaciones === 'curso' ? reparacionesEnCurso : reparacionesHistorial]">
+          <div *ngIf="!lista.length" class="vacio-filtro">
+            {{ vistaReparaciones === 'curso' ? 'No tenés equipos en reparación.' : 'Todavía no hay reparaciones entregadas.' }}
+          </div>
+          <div *ngFor="let r of lista" class="rep-tarjeta" [ngClass]="'rep-' + r.estado">
+            <div class="rep-cabecera">
+              <span class="rep-icono"><i class="fas" [ngClass]="r.estado === 'lista' ? 'fa-check' : r.estado === 'entregada' ? 'fa-box-open' : 'fa-tools'"></i></span>
+              <span class="rep-titulo">
+                <strong>{{ r.equipo }}{{ r.color ? ' · ' + r.color : '' }}</strong>
+                <small>Orden {{ r.numero ? 'N° ' + r.numero : '' }}{{ r.imei ? ' · IMEI ' + r.imei : '' }}</small>
+              </span>
+              <span class="rep-estado" [ngSwitch]="r.estado">
+                <span *ngSwitchCase="'en-reparacion'" class="badge bg-warning text-dark">En reparación</span>
+                <span *ngSwitchCase="'lista'" class="badge bg-success">Listo para retirar</span>
+                <span *ngSwitchCase="'entregada'" class="badge bg-secondary">Entregado</span>
+              </span>
+            </div>
+            <p *ngIf="r.motivo" class="rep-motivo">{{ r.motivo }}</p>
+            <div class="rep-datos">
+              <span *ngIf="r.fechaIngreso"><i class="far fa-calendar"></i> Ingresó {{ r.fechaIngreso | date:'dd/MM/yyyy' }}</span>
+              <span *ngIf="r.estado === 'lista' && r.fechaListo"><i class="fas fa-check"></i> Listo desde {{ r.fechaListo | date:'dd/MM/yyyy' }}</span>
+              <span *ngIf="r.fechaEntrega"><i class="fas fa-box-open"></i> Entregado {{ r.fechaEntrega | date:'dd/MM/yyyy' }}</span>
+              <span *ngIf="r.presupuesto"><i class="fas fa-receipt"></i> {{ r.estado === 'entregada' ? 'Total' : 'Presupuesto' }} {{ r.presupuesto | currency:'ARS':'symbol-narrow':'1.0-0' }}</span>
+              <span *ngIf="r.esGarantia" class="text-primary"><i class="fas fa-shield-alt"></i> Reingreso por garantía</span>
+              <span *ngIf="r.garantiaHasta" [class.text-success]="r.enGarantia" [class.text-muted]="!r.enGarantia">
+                <i class="fas fa-shield-alt"></i> {{ r.enGarantia ? 'En garantía hasta' : 'Garantía vencida el' }} {{ r.garantiaHasta | date:'dd/MM/yyyy' }}
+              </span>
+            </div>
+            <a class="rep-link" [routerLink]="['/consulta', r.id]">Ver el estado de la orden <i class="fas fa-chevron-right"></i></a>
+          </div>
+        </ng-container>
+        <p class="nota mt-2"><i class="fas fa-info-circle"></i> Es solo para consultar. Si no ves una reparación, consultanos en el local.</p>
       </ng-container>
     </div>
 

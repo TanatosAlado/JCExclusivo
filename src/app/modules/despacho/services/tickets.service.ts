@@ -941,6 +941,10 @@ export class TicketsService {
     if (venta.descuentoPuntos > 0) {
       lineasDescuento.push(`Canje de ${venta.puntosUsados} puntos: -${$(venta.descuentoPuntos)}`);
     }
+    if (venta.descuentoCuotas > 0) {
+      const n = (venta.cuotaCredito?.seleccion || []).length;
+      lineasDescuento.push(`Descuento${n > 1 ? ` por pagar ${n} cuotas` : ' en las cuotas'}: -${$(venta.descuentoCuotas)}`);
+    }
     if (venta.descuentoEquipos > 0) {
       lineasDescuento.push(`Descuento equipos (${venta.porcentajeDescuentoEquipos}%): -${$(venta.descuentoEquipos)}`);
     }

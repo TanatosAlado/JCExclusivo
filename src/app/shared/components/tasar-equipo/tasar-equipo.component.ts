@@ -1,8 +1,8 @@
 import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
-import { ModeloTasador, RespuestaSiNo, ResultadoTasacion, calcularTasacion, textoUSD } from '../../utils/tasador';
+import { ModeloTasador, OpcionBateria, OPCIONES_BATERIA, RespuestaSiNo, ResultadoTasacion, calcularTasacion, textoUSD } from '../../utils/tasador';
 
 /**
- * 🧮 Tasación de un equipo usado: modelo → capacidad → preguntas Sí/No → valor en USD (y en pesos).
+ * 🧮 Tasación de un equipo usado: modelo → capacidad → 🔋 batería → preguntas Sí/No → valor en USD (y en pesos).
  * Se usa en Despacho (Plan canje) y en Gestiones → Tasador (para probar).
  */
 @Component({
@@ -30,6 +30,8 @@ export class TasarEquipoComponent implements OnChanges {
   modeloId: string | null = null;
   capacidad: string | null = null;
   respuestas: { [preguntaId: string]: RespuestaSiNo } = {};
+  bateria: OpcionBateria | null = null;
+  readonly opcionesBateria = OPCIONES_BATERIA;
   readonly textoUSD = textoUSD;
 
   ngOnChanges(cambios: SimpleChanges): void {
@@ -52,6 +54,7 @@ export class TasarEquipoComponent implements OnChanges {
   elegirModelo(m: ModeloTasador) {
     this.modeloId = m.id || null;
     this.respuestas = {};
+    this.bateria = null;
     // Si tiene una sola capacidad, queda elegida
     this.capacidad = (m.capacidades || []).length === 1 ? m.capacidades[0].capacidad : null;
   }
@@ -60,6 +63,7 @@ export class TasarEquipoComponent implements OnChanges {
     this.modeloId = null;
     this.capacidad = null;
     this.respuestas = {};
+    this.bateria = null;
   }
 
   responder(preguntaId: string, r: RespuestaSiNo) {
@@ -72,7 +76,7 @@ export class TasarEquipoComponent implements OnChanges {
   }
 
   get calculo() {
-    return calcularTasacion(this.modelo, this.capacidad, this.respuestas, this.cotizacion);
+    return calcularTasacion(this.modelo, this.capacidad, this.respuestas, this.cotizacion, this.bateria);
   }
 
   confirmar() {
@@ -83,5 +87,6 @@ export class TasarEquipoComponent implements OnChanges {
 
   reiniciar() {
     this.respuestas = {};
+    this.bateria = null;
   }
 }

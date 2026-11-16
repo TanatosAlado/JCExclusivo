@@ -567,3 +567,12 @@ a{
   color: #6b4a00;
   font-size: 0.92rem;
 }
+
+/* 💳 Pagos por transferencia */
+.estado-pago { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 600; background: #eceef2; color: #444; white-space: nowrap; }
+.estado-pago.esperando { background: #fff3cd; color: #7a5200; }
+.estado-pago.por-verificar { background: #cff4fc; color: #055160; }
+.estado-pago.aprobado { background: #d1e7dd; color: #0f5132; }
+.estado-pago.rechazado { background: #f8d7da; color: #842029; }
+.panel-pago { margin-top: 14px; padding: 12px 14px; border: 1px solid #b6effb; border-radius: 12px; background: #f4fcff; }
+.panel-pago .comprobantes { list-style: none; padding: 0; margin: 6px 0 0; font-size: 0.88rem; }

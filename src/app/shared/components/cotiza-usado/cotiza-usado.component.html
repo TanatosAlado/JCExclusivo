@@ -28,7 +28,7 @@
         <button *ngIf="numeroWhatsapp" type="button" class="btn btn-success" (click)="consultar()">
           <i class="fab fa-whatsapp"></i> Quiero canjearlo
         </button>
-        <a routerLink="/productos" class="btn btn-outline-dark">Ver equipos</a>
+        <a routerLink="/productos" [queryParams]="{ rubro: rubroEquipos }" class="btn btn-outline-dark">Ver equipos</a>
         <button type="button" class="btn btn-link" (click)="otra()">Cotizar otro equipo</button>
       </div>
       <p class="aclaracion">* Valor estimado según tus respuestas. El precio final se confirma al revisar el equipo en el local.</p>
@@ -38,7 +38,7 @@
     <div *ngIf="!resultado" class="tarjeta">
       <div *ngIf="!modelos.length" class="text-center text-muted py-4">Por ahora no hay equipos para cotizar. ¡Volvé pronto!</div>
       <ng-container *ngFor="let v of [vuelta]">
-        <app-tasar-equipo *ngIf="modelos.length" [modelos]="modelos" [cotizacion]="null" [mostrarValor]="false" textoBoton="Ver cuánto me dan"
+        <app-tasar-equipo *ngIf="modelos.length" [modelos]="modelos" [cotizacion]="null" [mostrarValor]="false" textoBoton="Cotizá tu equipo"
           (usar)="alCotizar($event)" (cancelar)="otra()"></app-tasar-equipo>
       </ng-container>
     </div>

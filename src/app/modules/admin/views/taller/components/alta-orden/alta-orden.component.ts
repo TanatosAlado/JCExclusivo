@@ -1,10 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, Inject, OnInit, Optional } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Orden } from '../../../../models/orden.model';
 import { OrdenesService } from 'src/app/modules/admin/services/ordenes.service';
 import { ClientesService } from 'src/app/shared/services/clientes.service';
 import { ToastService } from 'src/app/shared/services/toast.service';
-import { MatDialog, MatDialogRef } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { ComprobanteOrdenComponent } from '../comprobante-orden/comprobante-orden.component';
 import { collection, Firestore, getDocs, query, where } from '@angular/fire/firestore';
 import { BuscadorClientesService, ClienteEncontrado } from 'src/app/shared/services/buscador-clientes.service';
@@ -39,7 +39,9 @@ export class AltaOrdenComponent {
     private dialog: MatDialog,
     private dialogRef: MatDialogRef<AltaOrdenComponent>,
     private firestore: Firestore,
-    private buscadorClientes: BuscadorClientesService
+    private buscadorClientes: BuscadorClientesService,
+    /** Opcional: datos para precargar (ej. desde el cotizador de reparaciones de Despacho) */
+    @Optional() @Inject(MAT_DIALOG_DATA) private datos: { precarga?: { equipo?: string; motivoIngreso?: string; manoObra?: number | null; repuestos?: number | null; observaciones?: string } } | null
   ) { }
 
   /** Presupuesto total = mano de obra + repuestos */
@@ -66,6 +68,18 @@ export class AltaOrdenComponent {
       garantia: [false],
       observaciones: ['']
     });
+
+    // 🔧 Precarga (cotizador de reparaciones): equipo, qué se repara y el presupuesto
+    const pre = this.datos?.precarga;
+    if (pre) {
+      this.ordenForm.patchValue({
+        equipo: pre.equipo || '',
+        motivoIngreso: pre.motivoIngreso || '',
+        manoObra: pre.manoObra ?? null,
+        repuestos: pre.repuestos ?? null,
+        observaciones: pre.observaciones || ''
+      });
+    }
 
     this.ordenForm.get('dniCliente')?.valueChanges.subscribe(() => {
       this.errorCliente = null;

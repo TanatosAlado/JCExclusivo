@@ -969,3 +969,9 @@
   padding: 16px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
 }
+
+/* ☑️ Cobro de cuotas eligiendo cuáles */
+.tabla-pendientes .col-check { width: 34px; text-align: center; white-space: nowrap; }
+.tabla-pendientes .col-check .candado { font-size: 0.65rem; color: #8a8f98; margin-left: 3px; }
+.tabla-pendientes tr.fila-tildable { cursor: pointer; }
+.tabla-pendientes tr.fila-tildable:hover td { background: #f3f7ff; }

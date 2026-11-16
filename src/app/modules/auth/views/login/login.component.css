@@ -295,3 +295,8 @@ background-color: var(--color-primario);
 .recovery-card button {
   width: 100%;
 }
+/* Mientras ingresa: nada más se puede tocar */
+.modal-container.ocupado { cursor: progress; }
+.modal-container.ocupado a.deshabilitado,
+a.deshabilitado { pointer-events: none; opacity: 0.5; cursor: default; }
+.botonesRojos[disabled] { opacity: 0.85; }

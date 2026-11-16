@@ -1,0 +1,79 @@
+<section class="pedido container py-4">
+  <div *ngIf="cargando" class="text-center text-muted py-5"><span class="spinner-border spinner-border-sm"></span> Cargando tu pedido…</div>
+  <div *ngIf="!cargando && error" class="tarjeta text-center py-5">
+    <p class="mb-3">{{ error }}</p>
+    <a routerLink="/productos" class="btn btn-dark">Ver productos</a>
+  </div>
+
+  <ng-container *ngIf="!cargando && !error && pedido as p">
+    <div class="tarjeta">
+      <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+        <div>
+          <h1>Pedido #{{ p.nroPedido }}</h1>
+          <div class="small text-muted">{{ p.fecha }} · {{ p.entrega }}</div>
+        </div>
+        <span class="badge" [class.bg-success]="entregado" [class.bg-warning]="!entregado" [class.text-dark]="!entregado">
+          {{ entregado ? 'Entregado' : 'En preparación' }}
+        </span>
+      </div>
+
+      <ul class="items">
+        <li *ngFor="let i of p.carrito"><span class="cant">{{ i.cantidad }}×</span> {{ i.nombre }}</li>
+      </ul>
+      <div class="total">Total <strong>{{ p.total | currency:'ARS':'symbol-narrow':'1.0-2' }}</strong></div>
+      <div *ngIf="pago?.descuento" class="small text-success text-end">Incluye {{ pago?.porcentaje }}% de descuento por transferencia (−{{ pago?.descuento | currency:'ARS':'symbol-narrow':'1.0-2' }})</div>
+    </div>
+
+    <!-- 💳 Pago por transferencia -->
+    <div *ngIf="pago as pg; else sinTransferencia" class="tarjeta">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h2 class="m-0">Pago por transferencia</h2>
+        <span class="estado-pago" [ngClass]="pg.estado">{{ textoEstado[pg.estado] }}</span>
+      </div>
+
+      <div *ngIf="pg.estado === 'rechazado'" class="alert alert-danger py-2 small mt-2 mb-0">
+        <strong>No pudimos confirmar el pago.</strong> {{ pg.motivoRechazo }}<br>Podés subir otro comprobante o escribirnos.
+      </div>
+      <div *ngIf="pg.estado === 'aprobado'" class="alert alert-success py-2 small mt-2 mb-0">✅ ¡Listo! Recibimos tu pago.</div>
+      <div *ngIf="subidoRecien && pg.estado === 'por-verificar'" class="alert alert-info py-2 small mt-2 mb-0">Recibimos tu comprobante. Te avisamos cuando verifiquemos el pago.</div>
+
+      <ng-container *ngIf="pg.estado === 'esperando' || pg.estado === 'rechazado'">
+        <p class="mt-3 mb-2">Transferí <strong>{{ pg.monto | currency:'ARS':'symbol-narrow':'1.0-2' }}</strong> a:</p>
+        <div class="qr-bloque" *ngIf="destino.alias || destino.cvu">
+          <div>
+            <p *ngIf="destino.alias" class="m-0"><strong>Alias:</strong> {{ destino.alias }}
+              <button type="button" class="btn btn-link btn-sm p-0 ms-1" (click)="copiar(destino.alias || '')">Copiar</button></p>
+            <p *ngIf="destino.cvu" class="m-0"><strong>CVU:</strong> {{ destino.cvu }}
+              <button type="button" class="btn btn-link btn-sm p-0 ms-1" (click)="copiar(destino.cvu || '')">Copiar</button></p>
+            <p *ngIf="destino.titular" class="m-0"><strong>Titular:</strong> {{ destino.titular }}</p>
+            <p *ngIf="destino.dni" class="m-0"><strong>DNI:</strong> {{ destino.dni }}</p>
+            <small class="text-muted">Transferí el monto exacto desde la app de tu banco o billetera.</small>
+          </div>
+        </div>
+      </ng-container>
+
+      <div *ngIf="pg.comprobantes?.length" class="mt-3">
+        <div class="small fw-bold mb-1">Comprobantes enviados</div>
+        <ul class="comprobantes">
+          <li *ngFor="let c of pg.comprobantes">📎 {{ c.nombre }} <span class="text-muted">· {{ c.fecha | date:'dd/MM/yyyy HH:mm' }} · {{ textoTamano(c.tamano) }}</span></li>
+        </ul>
+      </div>
+
+      <div *ngIf="puedeSubir" class="subir mt-3">
+        <label class="fw-bold d-block mb-1" for="comprobantePedido">{{ pg.comprobantes?.length ? 'Subir otro comprobante' : 'Subir el comprobante' }}</label>
+        <div class="d-flex gap-2 flex-wrap align-items-center">
+          <input #inputArchivo id="comprobantePedido" type="file" accept="image/*,application/pdf" class="form-control form-control-sm archivo"
+            (change)="elegir($event)" [disabled]="subiendo">
+          <button type="button" class="btn btn-dark btn-sm" (click)="subir(inputArchivo)" [disabled]="!archivo || subiendo">
+            <span *ngIf="subiendo" class="spinner-border spinner-border-sm me-1"></span>{{ subiendo ? 'Subiendo…' : 'Enviar comprobante' }}
+          </button>
+        </div>
+        <small class="text-muted d-block mt-1">Foto (JPG, PNG) o PDF, hasta 5 MB.</small>
+        <div *ngIf="errorArchivo" class="text-danger small mt-1">{{ errorArchivo }}</div>
+      </div>
+    </div>
+    <ng-template #sinTransferencia>
+      <div class="tarjeta small text-muted">Forma de pago: {{ p.pago }}</div>
+    </ng-template>
+  </ng-container>
+</section>

@@ -16,7 +16,7 @@ import { AuditoriaService, UsuarioRegistro } from 'src/app/shared/services/audit
 import { CajeroVenta, nombreCajero } from 'src/app/modules/admin/services/cajeros.service';
 import { PagoVenta, metodoResumen, limpiarDetalle, METODOS_SIN_DINERO } from './pagos';
 import {
-  AplicacionCuota, CuotaCredito, imputarCuotas, revertirCuotas, saldoCuotas, PLANES_INICIALES, PlanCuotas, validarPlanes,
+  AplicacionCuota, CuotaCredito, imputarCuotas, imputarCobroCuotas, revertirCuotas, saldoCuotas, PLANES_INICIALES, PlanCuotas, validarPlanes,
   BloqueoCredito, CartaDocumento, DatosCreditoManual, validarCreditoManual, fechaCorta, calcularRefinanciacion, reimputarPagos
 } from './credito-casa';
 
@@ -73,6 +73,7 @@ export interface PagoCredito {
   fecha: string;
   importe: number;          // capital que cancela (se aplica a las cuotas)
   recargo: number;          // recargo por mora (no baja la deuda)
+  descuento?: number;       // descuento en las cuotas (baja la deuda pero no entra a la caja)
   cobrado: number;          // importe + recargo (lo que entró a la caja)
   pagos: PagoVenta[];
   aplicaciones: AplicacionCuota[];
@@ -198,8 +199,11 @@ export class CreditosService {
    * Cobra cuotas en una sola transacción:
    *  ticket (Ventas 'cobrocuota', entra a la caja) + cuotas y saldo del crédito + pago del crédito
    *  + contador de la caja + auditoría.
-   * @param importe lo que se aplica a las cuotas (la más vieja primero)
+   * @param importe lo que paga el cliente por las cuotas (sin el recargo)
    * @param recargo recargo por mora (opcional, lo decide el cajero: entra a la caja pero no baja la deuda)
+   * @param opciones cuotas tildadas (las vencidas y la del mes van siempre; las de más, desde la última)
+   *   y descuento en $ (con 2 o más tildadas: baja lo que se cobra, las cuotas quedan pagas enteras).
+   *   Lo que paga de más se descuenta de la última cuota sin tildar, hacia atrás.
    */
   async cobrar(
     caja: any,
@@ -208,7 +212,8 @@ export class CreditosService {
     recargo: number,
     pagosIngresados: { metodo: string; monto: number; detalle?: string }[],
     cajero: CajeroVenta | null,
-    efectivo: { efectivoRecibido: number | null; vuelto: number | null } = { efectivoRecibido: null, vuelto: null }
+    efectivo: { efectivoRecibido: number | null; vuelto: number | null } = { efectivoRecibido: null, vuelto: null },
+    opciones: { seleccion?: number[] | null; descuento?: number | null } = {}
   ): Promise<{ venta: any; saldoRestante: number; aplicaciones: AplicacionCuota[]; cancelado: boolean }> {
 
     const usuario = this.auditoria.getUsuarioActual();
@@ -216,11 +221,14 @@ export class CreditosService {
     if (!caja?.id) throw new CreditoError('No hay una caja abierta.');
     if (!cajero?.id) throw new CreditoError('Elegí el cajero que cobra.');
 
-    const capital = r2(importe);
+    const pagaCuotas = r2(importe);                 // lo que entra por las cuotas
+    const descuento = r2(opciones?.descuento || 0);
+    const capital = r2(pagaCuotas + descuento);     // lo que baja la deuda
     const mora = r2(recargo);
-    if (!(capital > 0)) throw new CreditoError('El monto a pagar tiene que ser mayor a 0.');
+    if (!(pagaCuotas > 0)) throw new CreditoError('El monto a pagar tiene que ser mayor a 0.');
     if (mora < 0) throw new CreditoError('El recargo no puede ser negativo.');
-    const cobrado = r2(capital + mora);
+    if (descuento < 0) throw new CreditoError('El descuento no puede ser negativo.');
+    const cobrado = r2(pagaCuotas + mora);
 
     const pagos: PagoVenta[] = (pagosIngresados || []).map(p => ({
       metodo: p.metodo as any,
@@ -250,9 +258,10 @@ export class CreditosService {
       entidadId: ventaRef.id,
       descripcion: `Cobro de cuotas del crédito de la casa por $${cobrado.toFixed(2)}` +
         (mora > 0 ? ` (incluye $${mora.toFixed(2)} de recargo por mora)` : '') +
+        (descuento > 0 ? ` (con $${descuento.toFixed(2)} de descuento en las cuotas)` : '') +
         ` (${pagos.length === 1 ? pagos[0].metodo : pagos.map(p => `${p.metodo} $${p.monto.toFixed(2)}`).join(' + ')})` +
         ` · cobró ${nombreCajero(cajero)}`,
-      extra: { creditoId, capital, recargo: mora, cobrado, pagos: pagos.map(p => `${p.metodo}: ${p.monto}${p.detalle ? ` (${p.detalle})` : ''}`) }
+      extra: { creditoId, capital, descuento, recargo: mora, cobrado, seleccion: opciones?.seleccion || null, pagos: pagos.map(p => `${p.metodo}: ${p.monto}${p.detalle ? ` (${p.detalle})` : ''}`) }
     });
     const descripcionBase = registro?.descripcion || '';
 
@@ -280,8 +289,9 @@ export class CreditosService {
         throw new CreditoError(`El monto supera lo que debe el cliente (${this.moneda(saldoActual)}).`);
       }
 
-      // ---------- Imputación (la cuota más vieja primero, con los datos actuales) ----------
-      const imp = imputarCuotas(credito.cuotas || [], capital);
+      // ---------- Imputación (tildadas + lo que sobra a la última, con los datos actuales) ----------
+      const imp = imputarCobroCuotas(credito.cuotas || [], opciones?.seleccion || null, pagaCuotas, descuento, new Date());
+      if (imp.error) throw new CreditoError(imp.error);
       if (imp.sobrante > 0.009) {
         throw new CreditoError('El crédito cambió mientras se cobraba. Volvé a abrirlo e intentá de nuevo.');
       }
@@ -309,7 +319,8 @@ export class CreditosService {
           },
           ...(mora > 0 ? [{ productoId: null, tipo: 'recargo', nombre: 'Recargo por pago fuera de término', cantidad: 1, precioUnitario: mora, subtotal: mora }] : [])
         ],
-        subtotal: cobrado,
+        subtotal: r2(capital + mora),
+        descuentoCuotas: descuento,        // descuento en las cuotas (no entra a la caja)
         total: cobrado,                    // entra a la caja
         metodoPago: metodoResumen(pagos),
         pagos,
@@ -325,6 +336,9 @@ export class CreditosService {
           ventaCredito: credito.ventaId,
           nroTicketCredito: credito.nroTicket ?? null,
           capital,
+          descuento,
+          excedente: imp.excedente,          // lo que pagó de más (se descontó de la última cuota)
+          seleccion: imp.seleccion,
           recargo: mora,
           aplicaciones,
           cuotas: imp.cuotas.map(c => ({ numero: c.numero, importe: c.importe, pagado: c.pagado, hasta: c.hasta })),
@@ -341,6 +355,7 @@ export class CreditosService {
         nroTicket,
         fecha,
         importe: capital,
+        descuento,
         recargo: mora,
         cobrado,
         pagos,

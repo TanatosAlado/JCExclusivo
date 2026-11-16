@@ -1,0 +1,43 @@
+<div *ngIf="visible" class="campana">
+  <button type="button" class="boton-campana" (click)="alternar($event)" [attr.aria-expanded]="abierta"
+    [attr.aria-label]="cantidad ? cantidad + ' aviso(s) pendiente(s)' : 'Sin avisos pendientes'" title="Avisos">
+    <i class="fas fa-bell" [class.con-avisos]="cantidad > 0"></i>
+    <span *ngIf="cantidad > 0" class="contador">{{ cantidad > 99 ? '99+' : cantidad }}</span>
+  </button>
+
+  <div *ngIf="abierta" class="panel-avisos" role="dialog" aria-label="Avisos">
+    <div class="cabecera">
+      <strong>Avisos</strong>
+      <small class="text-muted">{{ cantidad ? cantidad + ' pendiente' + (cantidad === 1 ? '' : 's') : 'Nada pendiente' }}</small>
+    </div>
+    <div *ngIf="!cantidad" class="vacio">🎉 No hay pedidos pendientes.</div>
+    <button *ngFor="let a of lista; trackBy: trackAviso" type="button" class="aviso" (click)="ir(a)">
+      <span class="icono" [class.mayorista]="a.tipo === 'mayorista'">
+        <i class="fas" [ngClass]="a.tipo === 'pedido' ? 'fa-shopping-bag' : 'fa-store'"></i>
+      </span>
+      <span class="texto">
+        <span class="titulo">{{ a.titulo }}</span>
+        <span class="detalle">{{ a.detalle }}</span>
+      </span>
+      <small class="cuando">{{ haceCuanto(a.fecha) }}</small>
+    </button>
+    <div *ngIf="cantidad > lista.length" class="mas">y {{ cantidad - lista.length }} más…</div>
+    <div class="pie">
+      <button type="button" class="btn btn-sm btn-dark w-100" (click)="ir(null)">Ver pedidos</button>
+    </div>
+  </div>
+</div>
+
+<!-- Aviso flotante cuando entra algo nuevo -->
+<div class="flotantes" aria-live="polite">
+  <div *ngFor="let a of flotantes; trackBy: trackAviso" class="flotante" role="status" (click)="ir(a)">
+    <span class="icono" [class.mayorista]="a.tipo === 'mayorista'">
+      <i class="fas" [ngClass]="a.tipo === 'pedido' ? 'fa-shopping-bag' : 'fa-store'"></i>
+    </span>
+    <span class="texto">
+      <span class="titulo">{{ a.etiqueta }}</span>
+      <span class="detalle">{{ a.tipo === 'pedido' ? a.titulo + ' · ' : '' }}{{ a.detalle }}</span>
+    </span>
+    <button type="button" class="cerrar" (click)="cerrarFlotante(a, $event)" aria-label="Cerrar aviso">×</button>
+  </div>
+</div>

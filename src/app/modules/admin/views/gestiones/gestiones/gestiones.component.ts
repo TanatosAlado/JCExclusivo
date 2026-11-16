@@ -73,6 +73,12 @@ export class GestionesComponent {
       ruta: '/gestiones/tasador',
     },
     {
+      titulo: 'Cotizador de reparaciones',
+      descripcion: 'Rubros, calidades y precios en USD por modelo para cotizar reparaciones (Despacho y web)',
+      icono: 'fas fa-tools',
+      ruta: '/gestiones/cotizador-reparaciones',
+    },
+    {
       titulo: 'Pedidos',
       descripcion: 'Gestión de pedidos',
       icono: 'fas fa-shopping-cart',

@@ -38,6 +38,10 @@ import { CardCategoriasComponent } from './components/card-categorias/card-categ
 import { TasarEquipoComponent } from './components/tasar-equipo/tasar-equipo.component';
 import { CotizaUsadoComponent } from './components/cotiza-usado/cotiza-usado.component';
 import { PaletaColoresComponent } from './components/paleta-colores/paleta-colores.component';
+import { CotizarReparacionComponent } from './components/cotizar-reparacion/cotizar-reparacion.component';
+import { CotizaReparacionComponent } from './components/cotiza-reparacion/cotiza-reparacion.component';
+import { CampanaAvisosComponent } from './components/campana-avisos/campana-avisos.component';
+import { PedidoPagoComponent } from './components/pedido-pago/pedido-pago.component';
 
 
 
@@ -54,7 +58,11 @@ import { PaletaColoresComponent } from './components/paleta-colores/paleta-color
     CardCategoriasComponent,
     TasarEquipoComponent,
     CotizaUsadoComponent,
-    PaletaColoresComponent
+    PaletaColoresComponent,
+    CotizarReparacionComponent,
+    CotizaReparacionComponent,
+    CampanaAvisosComponent,
+    PedidoPagoComponent
   ],
   imports: [
     CommonModule,
@@ -124,6 +132,7 @@ import { PaletaColoresComponent } from './components/paleta-colores/paleta-color
     EstiloMarquesinaComponent,
     CardCategoriasComponent,
     TasarEquipoComponent,
+    CotizarReparacionComponent,
     PaletaColoresComponent
     
  ],

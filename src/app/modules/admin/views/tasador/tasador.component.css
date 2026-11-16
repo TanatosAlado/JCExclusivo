@@ -53,3 +53,11 @@
   background: #f8f9fb;
 }
 .publico.activo { border-style: solid; border-color: #b7e0c4; background: #f2fbf5; }
+
+/* 🔋 Batería */
+.bateria-tasador { display: flex; flex-wrap: wrap; gap: 8px; }
+.bateria-tasador .opcion {
+  display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; min-width: 160px;
+  border: 1px solid #e3e6eb; border-radius: 10px; background: #fafbfc;
+}
+.bateria-tasador .monto { max-width: 150px; }

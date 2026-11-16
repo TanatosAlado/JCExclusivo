@@ -19,6 +19,10 @@ import { esItemEquipo, precioListaEquipo, totalCarritoWeb, subtotalesCarrito, de
 import { AnalyticsService } from 'src/app/shared/services/analytics.service';
 import { itemAnalytics } from 'src/app/shared/utils/analytics-tienda';
 import { disponibleParaRetiro } from 'src/app/modules/admin/models/sucursal.model';
+import { PagoPedidosService } from 'src/app/shared/services/pago-pedidos.service';
+import {
+  DatosTransferencia, EntregaWeb, MetodoPagoWeb, OpcionPagoWeb, datosTransferencia, errorComprobante, opcionesPagoWeb, pagoTransferenciaInicial, textoPagoPedido, textoTamano
+} from 'src/app/shared/utils/pago-web';
 
 /** Sucursal de la que se descuenta stock por defecto (envíos a domicilio) */
 const SUCURSAL_CENTRAL_ID = 'GtVWr5IHmosOOB8l6u6j';
@@ -138,6 +142,15 @@ export class CheckoutComponent {
   montoParaActivar: number = 50000; // Monto mínimo para activar el modo mayorista
   montoMinimoFuturasCompras: number = 0; // Monto mínimo mayorista luego de activado
 
+  // 💳 Pago por transferencia (minoristas e invitados)
+  archivoComprobante: File | null = null;
+  errorArchivo: string | null = null;
+  pedidoConfirmadoId: string | null = null;
+  metodoConfirmado: string | null = null;
+  totalConfirmado = 0;
+  comprobanteConfirmado: 'ok' | 'error' | null = null;
+  readonly textoTamano = textoTamano;
+
   procesando: boolean = false; // evita doble envío del pedido
   actualizandoPrecios: boolean = false; // mientras se verifican precios al entrar
   private preciosVerificados: boolean = false;
@@ -151,7 +164,7 @@ export class CheckoutComponent {
    dolar: number = 0;
    private cotizacionCargada = false;
 
-  constructor(private analytics: AnalyticsService, private infoEmpresaService: InfoEmpresaService, private firestore: Firestore, private fb: FormBuilder, private clienteService: ClientesService, public pedidoService: PedidosService, public generalService: GeneralService, private contadorService: ContadorService, private router: Router, private carritoService: CarritoService, private puntosService: VouchersPuntosService, private sucursalesService: SucursalesService) {
+  constructor(private analytics: AnalyticsService, private infoEmpresaService: InfoEmpresaService, private firestore: Firestore, private fb: FormBuilder, private clienteService: ClientesService, public pedidoService: PedidosService, public generalService: GeneralService, private contadorService: ContadorService, private router: Router, private carritoService: CarritoService, private puntosService: VouchersPuntosService, private sucursalesService: SucursalesService, private pagoPedidos: PagoPedidosService) {
 
     this.formCheckout = this.fb.group({
       user: ['', [Validators.required]],
@@ -402,14 +415,21 @@ export class CheckoutComponent {
       this.formCheckout.get('domicilioEntrega')?.setValidators(Validators.required);
     } else {
       this.facturacionEnvio = false;
-      this.showOpcionesPago = false;
-      this.showAlertaPago = true;
+      // 💳 Retiro: los minoristas eligen transferencia (con descuento) o pagar al retirar. Los mayoristas, como siempre.
+      this.showOpcionesPago = !cliente.esMayorista;
+      this.showAlertaPago = !!cliente.esMayorista;
+      this.opcionPagoSeleccionada = '';
+      this.pagoTocado = false;
       this.direccionEditable = false;
 
       // Para retiro en sucursal, el domicilio NO es obligatorio
       this.formCheckout.get('domicilioEntrega')?.clearValidators();
       this.formCheckout.get('domicilioEntrega')?.setValue('');
     }
+
+    // Si hay una sola forma de pago (envío minorista: transferencia), queda elegida
+    const opciones = this.opcionesPago;
+    if (opciones.length === 1) this.opcionPagoSeleccionada = opciones[0].valor;
 
     // Actualizamos estado
     ['user', 'mail', 'telefono', 'domicilioEntrega'].forEach(campo => {
@@ -487,10 +507,27 @@ export class CheckoutComponent {
     const envioCompra = this.radioButtonSeleccionado === 'domicilio' ? 'Envío' : 'Retiro en sucursal';
 
     try {
-      const { nroPedido } = await this.createPedido();
+      const metodo = this.opcionPagoSeleccionada;
+      const totalPagar = this.getTotal();
+      const { nroPedido, pedidoId } = await this.createPedido();
 
       this.nroPedidoConfirmado = nroPedido;
+      this.pedidoConfirmadoId = pedidoId;
+      this.metodoConfirmado = metodo || null;
+      this.totalConfirmado = totalPagar;
+      this.comprobanteConfirmado = null;
       this.abrirModal();
+
+      // 💳 Comprobante elegido en el checkout: se sube ahora (si falla, el pedido igual quedó y lo puede subir después)
+      if (metodo === 'transferencia' && this.archivoComprobante) {
+        try {
+          await this.pagoPedidos.subirComprobante(pedidoId, this.archivoComprobante, { estado: 'esperando', comprobantes: [] } as any);
+          this.comprobanteConfirmado = 'ok';
+        } catch (e) {
+          console.error('No se pudo subir el comprobante', e);
+          this.comprobanteConfirmado = 'error';
+        }
+      }
       this.analytics.compra({ nroPedido, valor: totalCompra, items: itemsCompra, cupon: cuponCompra, envio: envioCompra });
 
     } catch (error: any) {
@@ -560,11 +597,16 @@ export class CheckoutComponent {
 
     if (this.radioButtonSeleccionado === 'domicilio') {
       direccion = this.formCheckout.get('domicilioEntrega')?.value;
-      pago =
-        this.opcionPagoSeleccionada === 'efectivo'
-          ? 'Efectivo'
-          : 'Transferencia';
     }
+    if (this.showOpcionesPago && this.opcionPagoSeleccionada) {
+      pago = textoPagoPedido(this.opcionPagoSeleccionada as MetodoPagoWeb, this.radioButtonSeleccionado as EntregaWeb);
+    }
+    // 💳 Transferencia (minoristas / invitados): con su descuento y el estado del pago
+    const pagoTransferencia = !esMayorista && this.opcionPagoSeleccionada === 'transferencia'
+      ? pagoTransferenciaInicial(this.porcentajeAplicado,
+          this.calcularTotales(cliente, this.usarPuntos, this.valorMonetarioPorPunto, this.cuponAplicado).descuentoTransferencia, total,
+          this.transferenciaMinorista)
+      : null;
 
     const sucursalADescontar =
       this.radioButtonSeleccionado === 'local' && this.sucursalSeleccionada
@@ -742,7 +784,9 @@ export class CheckoutComponent {
         clienteId: cliente.id,
         cupon: this.cuponAplicado ? { id: this.cuponAplicado.id, codigo: this.cuponAplicado.codigo ?? null } : null,
         puntosUsados: puntosGastados,
-        puntosGanados: puntosGanados
+        puntosGanados: puntosGanados,
+        metodoPago: this.showOpcionesPago ? (this.opcionPagoSeleccionada || null) : null,
+        ...(pagoTransferencia ? { pagoTransferencia } : {})
       });
       tx.set(pedidoRef, unPedido);
 
@@ -943,9 +987,11 @@ export class CheckoutComponent {
   }
 
   //FUNCION PARA CERRAR MODAL FIN DE PEDIDO
-  cerrarModal() {
+  cerrarModal(irAlPedido = false) {
     this.mostrarModal = false;
-    this.router.navigate(['inicio']);
+    this.archivoComprobante = null;
+    if (irAlPedido && this.pedidoConfirmadoId) this.router.navigate(['/pedido', this.pedidoConfirmadoId]);
+    else this.router.navigate(['inicio']);
     this.carritoService.actualizarCantidadProductos(this.clienteEncontrado);
 
     // 🟡 Por si es invitado, volvemos a limpiar el carrito
@@ -1101,8 +1147,91 @@ export class CheckoutComponent {
       cupon: cuponAplicado,
       usarPuntos,
       puntosCliente: Number(cliente?.puntos) || 0,
-      valorPunto: valorMonetarioPorPunto
+      valorPunto: valorMonetarioPorPunto,
+      descuentoTransferencia: this.porcentajeAplicado
     });
+  }
+
+  // =====================================================
+  // 💳 PAGO
+  // =====================================================
+
+  /** % de descuento por transferencia configurado en Gestiones → Empresa */
+  get porcentajeTransferencia(): number {
+    const p = Number(this.infoEmpresa?.descuentoEnTransferencia) || 0;
+    return p > 0 ? Math.min(p, 100) : 0;
+  }
+
+  /** % que se aplica ahora (solo minoristas / invitados que eligen transferencia) */
+  get porcentajeAplicado(): number {
+    return !this.clienteEncontrado?.esMayorista && this.opcionPagoSeleccionada === 'transferencia' ? this.porcentajeTransferencia : 0;
+  }
+
+  /**
+   * Opciones de pago. Se devuelve SIEMPRE la misma lista mientras no cambien los datos: si se armara una
+   * lista nueva en cada repaso, los radios (con ngModel) se recreaban, ngModel pedía otro repaso y la
+   * pantalla quedaba en un bucle infinito (se tildaba al elegir la entrega).
+   */
+  get opcionesPago(): OpcionPagoWeb[] {
+    const entrega = this.radioButtonSeleccionado === 'domicilio' || this.radioButtonSeleccionado === 'local' ? this.radioButtonSeleccionado : '';
+    const clave = `${!!this.clienteEncontrado?.esMayorista}|${entrega}|${this.porcentajeTransferencia}`;
+    if (this.cacheOpcionesPago?.clave !== clave) {
+      this.cacheOpcionesPago = { clave, lista: opcionesPagoWeb(!!this.clienteEncontrado?.esMayorista, entrega as EntregaWeb | '', this.porcentajeTransferencia) };
+    }
+    return this.cacheOpcionesPago.lista;
+  }
+  private cacheOpcionesPago: { clave: string; lista: OpcionPagoWeb[] } | null = null;
+
+  trackOpcionPago(_: number, o: OpcionPagoWeb) {
+    return o.valor;
+  }
+
+  /** $ que se descuentan por transferencia (para mostrar en el resumen) */
+  get descuentoTransferenciaActual(): number {
+    if (!this.clienteEncontrado || !this.porcentajeAplicado) return 0;
+    return this.calcularTotales(this.clienteEncontrado, this.usarPuntos, this.valorMonetarioPorPunto, this.cuponAplicado).descuentoTransferencia;
+  }
+
+  /** A dónde transfieren los minoristas / invitados (alias minorista de Gestiones → Empresa) */
+  get transferenciaMinorista(): DatosTransferencia {
+    return datosTransferencia(this.infoEmpresa, false);
+  }
+
+  /** A dónde transfieren los mayoristas (alias mayorista y CVU) */
+  get transferenciaMayorista(): DatosTransferencia {
+    return datosTransferencia(this.infoEmpresa, true);
+  }
+
+  get hayDatosTransferencia(): boolean {
+    const t = this.transferenciaMinorista;
+    return !!(t.alias || t.cvu);
+  }
+
+  elegirComprobante(ev: Event) {
+    const input = ev.target as HTMLInputElement;
+    const archivo = input.files?.[0] || null;
+    this.errorArchivo = archivo ? errorComprobante(archivo) : null;
+    this.archivoComprobante = archivo && !this.errorArchivo ? archivo : null;
+    if (this.errorArchivo) input.value = '';
+  }
+
+  quitarComprobante(input?: HTMLInputElement) {
+    this.archivoComprobante = null;
+    this.errorArchivo = null;
+    if (input) input.value = '';
+  }
+
+  copiar(texto: string | undefined, que: string) {
+    if (!texto) return;
+    navigator.clipboard?.writeText(texto).then(
+      () => Swal.fire({ toast: true, position: 'top', icon: 'success', title: `${que} copiado`, showConfirmButton: false, timer: 1500 }),
+      () => Swal.fire({ toast: true, position: 'top', icon: 'error', title: 'No se pudo copiar', showConfirmButton: false, timer: 1500 })
+    );
+  }
+
+  /** Link del pedido (ver el pago y subir el comprobante después) */
+  get linkPedido(): string {
+    return this.pedidoConfirmadoId ? `${location.origin}/pedido/${this.pedidoConfirmadoId}` : '';
   }
 
   /** ¿Hay equipos en el carrito? (para aclarar que no llevan cupón ni puntos) */

@@ -7,7 +7,7 @@
     <div class="lista-modelos">
       <button *ngFor="let m of modelosFiltrados" type="button" class="modelo" (click)="elegirModelo(m)">
         <strong>{{ m.nombre }}</strong>
-        <small>{{ m.capacidades.length }} capacidad{{ m.capacidades.length > 1 ? 'es' : '' }} · {{ m.preguntas.length }} pregunta{{ m.preguntas.length === 1 ? '' : 's' }}</small>
+        <small>{{ m.capacidades.length }} capacidad{{ m.capacidades.length > 1 ? 'es' : '' }} · {{ m.preguntas.length + 1 }} pregunta{{ m.preguntas.length + 1 === 1 ? '' : 's' }}</small>
       </button>
       <div *ngIf="!modelosFiltrados.length" class="small text-muted p-2">
         {{ modelos.length ? 'No hay modelos con ese nombre.' : 'Todavía no hay modelos cargados en el tasador (Gestiones → Tasador).' }}
@@ -32,7 +32,14 @@
 
     <!-- 3. Preguntas -->
     <ng-container *ngIf="capacidad">
-      <div *ngIf="!m.preguntas.length" class="small text-muted mb-2">Este modelo no tiene preguntas: se toma al precio de la capacidad.</div>
+      <!-- 🔋 Salud de la batería (siempre) -->
+      <div class="pregunta bateria" [class.respondida]="bateria">
+        <label class="texto mb-0" for="tasarBateria"><span class="num">🔋</span> Salud (vida útil) de la batería</label>
+        <select id="tasarBateria" class="form-select form-select-sm" [(ngModel)]="bateria">
+          <option [ngValue]="null" disabled>Elegí…</option>
+          <option *ngFor="let o of opcionesBateria" [ngValue]="o.valor">{{ o.texto }}</option>
+        </select>
+      </div>
       <div class="preguntas">
         <div *ngFor="let p of m.preguntas; let i = index" class="pregunta" [class.respondida]="respuestas[p.id]">
           <span class="texto"><span class="num">{{ i + 1 }}.</span> {{ p.texto }}</span>
@@ -61,7 +68,7 @@
     </ng-container>
 
     <div class="d-flex justify-content-between align-items-center mt-3">
-      <button type="button" class="btn btn-link btn-sm p-0" *ngIf="capacidad && m.preguntas.length" (click)="reiniciar()">Volver a empezar</button>
+      <button type="button" class="btn btn-link btn-sm p-0" *ngIf="capacidad" (click)="reiniciar()">Volver a empezar</button>
       <span class="flex-grow-1"></span>
       <button type="button" class="btn btn-outline-secondary btn-sm me-2" (click)="cancelar.emit()">Cancelar</button>
       <button type="button" class="btn btn-primary btn-sm" [disabled]="!calculo.resultado || !calculo.completa" (click)="confirmar()">

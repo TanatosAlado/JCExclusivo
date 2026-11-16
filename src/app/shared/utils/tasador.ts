@@ -20,11 +20,27 @@ export interface PreguntaTasador {
   descuento: number;              // USD
 }
 
+/** 🔋 Salud (vida útil) de la batería: siempre estas 3 opciones */
+export type OpcionBateria = 'mas90' | 'entre85y90' | 'menos85';
+
+export const OPCIONES_BATERIA: { valor: OpcionBateria; texto: string }[] = [
+  { valor: 'mas90', texto: 'Más del 90%' },
+  { valor: 'entre85y90', texto: 'Entre 85% y 90%' },
+  { valor: 'menos85', texto: 'Menos del 85%' }
+];
+
+/** Descuento en USD por la batería (por modelo). Con más del 90% no se descuenta. */
+export interface BateriaTasador {
+  entre85y90: number;
+  menos85: number;
+}
+
 export interface ModeloTasador {
   id?: string;
   nombre: string;                 // 'iPhone 17 Pro Max'
   activo: boolean;
   capacidades: CapacidadTasador[];
+  bateria?: BateriaTasador;       // los modelos viejos no lo tienen: se toma 0
   preguntas: PreguntaTasador[];
   orden?: number;
   actualizado?: any;
@@ -42,7 +58,8 @@ export interface ResultadoTasacion {
   capacidad: string;
   precioBase: number;                         // USD
   respuestas: { pregunta: string; respuesta: RespuestaSiNo; descuento: number }[];
-  descuentos: number;                         // USD (total)
+  bateria: { opcion: OpcionBateria; texto: string; descuento: number } | null;
+  descuentos: number;                         // USD (total, batería incluida)
   totalUSD: number;
   cotizacion: number | null;                  // $ por USD (si se pasó a pesos)
   totalARS: number | null;
@@ -58,9 +75,28 @@ export function idPregunta(): string {
   return 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 }
 
+/** Texto de una opción de batería */
+export function textoBateria(o: OpcionBateria | null | undefined): string {
+  return OPCIONES_BATERIA.find(x => x.valor === o)?.texto || '';
+}
+
+/** Descuentos de batería del modelo (0 si no los tiene cargados) */
+export function bateriaDe(m: ModeloTasador | null | undefined): BateriaTasador {
+  return {
+    entre85y90: Math.max(0, Number(m?.bateria?.entre85y90) || 0),
+    menos85: Math.max(0, Number(m?.bateria?.menos85) || 0)
+  };
+}
+
+/** USD que descuenta la opción de batería elegida */
+export function descuentoBateria(m: ModeloTasador | null | undefined, o: OpcionBateria | null | undefined): number {
+  const b = bateriaDe(m);
+  return o === 'entre85y90' ? b.entre85y90 : o === 'menos85' ? b.menos85 : 0;
+}
+
 /** Modelo vacío para el formulario */
 export function modeloVacio(): ModeloTasador {
-  return { nombre: '', activo: true, capacidades: [{ capacidad: '', precio: null as any }], preguntas: [] };
+  return { nombre: '', activo: true, capacidades: [{ capacidad: '', precio: null as any }], bateria: { entre85y90: null as any, menos85: null as any }, preguntas: [] };
 }
 
 /** Limpia y revisa un modelo antes de guardarlo. Devuelve el modelo limpio o el primer error. */
@@ -84,6 +120,13 @@ export function validarModelo(m: ModeloTasador): { modelo: ModeloTasador | null;
   if (!capacidades.length) return err('Cargá al menos una capacidad con su precio.');
   if (capacidades.length > MAX_CAPACIDADES_TASADOR) return err(`Hasta ${MAX_CAPACIDADES_TASADOR} capacidades por modelo.`);
 
+  // 🔋 Batería: montos en USD (vacío = 0)
+  const montoBateria = (v: any) => (v === null || v === undefined || String(v) === '') ? 0 : Number(v);
+  const b85 = montoBateria(m.bateria?.entre85y90);
+  const bMenos = montoBateria(m.bateria?.menos85);
+  if (!(b85 >= 0) || !(bMenos >= 0)) return err('Los descuentos de la batería tienen que ser 0 o más.');
+  const bateria: BateriaTasador = { entre85y90: r2(b85), menos85: r2(bMenos) };
+
   const preguntas: PreguntaTasador[] = [];
   for (const [i, p] of (m.preguntas || []).entries()) {
     const texto = String(p?.texto || '').trim().replace(/\s+/g, ' ');
@@ -103,7 +146,7 @@ export function validarModelo(m: ModeloTasador): { modelo: ModeloTasador | null;
   if (preguntas.length > MAX_PREGUNTAS_TASADOR) return err(`Hasta ${MAX_PREGUNTAS_TASADOR} preguntas por modelo.`);
 
   return {
-    modelo: { ...(m.id ? { id: m.id } : {}), nombre, activo: m.activo !== false, capacidades, preguntas, orden: Number(m.orden) || 0 },
+    modelo: { ...(m.id ? { id: m.id } : {}), nombre, activo: m.activo !== false, capacidades, bateria, preguntas, orden: Number(m.orden) || 0 },
     error: null
   };
 }
@@ -118,18 +161,21 @@ export function usdAPesos(usd: number, cotizacion: number): number {
 /**
  * Calcula la tasación con las respuestas dadas.
  * @param respuestas por id de pregunta
- * @returns el resultado, cuántas preguntas faltan responder y si ya está completa
+ * @param bateria opción elegida de salud de batería (es obligatoria: si falta, cuenta como pregunta sin responder)
+ * @returns el resultado, cuántas preguntas faltan responder (batería incluida) y si ya está completa
  */
 export function calcularTasacion(
   modelo: ModeloTasador | null,
   capacidad: string | null,
   respuestas: { [preguntaId: string]: RespuestaSiNo | undefined },
-  cotizacion: number | null = null
+  cotizacion: number | null = null,
+  bateria: OpcionBateria | null = null
 ): { resultado: ResultadoTasacion | null; faltan: number; completa: boolean } {
   if (!modelo) return { resultado: null, faltan: 0, completa: false };
   const cap = (modelo.capacidades || []).find(c => c.capacidad === capacidad) || null;
   const preguntas = modelo.preguntas || [];
-  const faltan = preguntas.filter(p => respuestas?.[p.id] !== 'si' && respuestas?.[p.id] !== 'no').length;
+  const bat = OPCIONES_BATERIA.some(o => o.valor === bateria) ? bateria : null;
+  const faltan = preguntas.filter(p => respuestas?.[p.id] !== 'si' && respuestas?.[p.id] !== 'no').length + (bat ? 0 : 1);
   if (!cap) return { resultado: null, faltan, completa: false };
 
   const resp = preguntas
@@ -138,7 +184,10 @@ export function calcularTasacion(
       const r = respuestas[p.id] as RespuestaSiNo;
       return { pregunta: p.texto, respuesta: r, descuento: r === p.descuentaSi ? r2(p.descuento) : 0 };
     });
-  const descuentos = r2(resp.reduce((a, x) => a + x.descuento, 0));
+  const bateriaRes: ResultadoTasacion['bateria'] = bat
+    ? { opcion: bat, texto: textoBateria(bat), descuento: r2(descuentoBateria(modelo, bat)) }
+    : null;
+  const descuentos = r2(resp.reduce((a, x) => a + x.descuento, 0) + (bateriaRes?.descuento || 0));
   const totalUSD = Math.max(0, r2(cap.precio - descuentos));
   const cot = Number(cotizacion) > 0 ? Number(cotizacion) : null;
   return {
@@ -148,6 +197,7 @@ export function calcularTasacion(
       capacidad: cap.capacidad,
       precioBase: cap.precio,
       respuestas: resp,
+      bateria: bateriaRes,
       descuentos,
       totalUSD,
       cotizacion: cot,

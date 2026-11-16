@@ -42,44 +42,74 @@
     </div>
 
     <div *ngIf="showOpcionesPago">
-
-
       <h3>Opciones de Pago</h3>
       <div class="opciones-envio">
-        <label>
-          <input type="radio" name="efectivo" [(ngModel)]="opcionPagoSeleccionada" value="efectivo" />
-          <span class="texto-opcion">Efectivo</span>
+        <label *ngFor="let o of opcionesPago; trackBy: trackOpcionPago" class="opcion-pago">
+          <input type="radio" name="pago" [(ngModel)]="opcionPagoSeleccionada" [value]="o.valor" />
+          <span class="texto-opcion">{{ o.texto }}</span>
+          <small *ngIf="o.detalle" class="detalle-opcion">{{ o.detalle }}</small>
         </label>
 
-        <!-- <label>
-          <input type="radio" name="efectivo" [(ngModel)]="opcionPagoSeleccionada" value="transferencia" />
-          <span class="texto-opcion">Transferencia</span>
-        </label> -->
-        <label>
-          <input type="radio" name="efectivo" [(ngModel)]="opcionPagoSeleccionada" value="qr" />
-          <span class="texto-opcion">Transferencia / QR</span>
-        </label>
+        <!-- 💳 Transferencia (minoristas / invitados): datos, monto exacto y comprobante -->
+        <div class="pago-transferencia" *ngIf="opcionPagoSeleccionada === 'transferencia'">
+          <h4>Transferí {{ getTotal() | currency:'ARS':'symbol-narrow':'1.0-2' }}</h4>
+          <p *ngIf="descuentoTransferenciaActual > 0" class="ahorro">
+            🎉 Ahorrás {{ descuentoTransferenciaActual | currency:'ARS':'symbol-narrow':'1.0-2' }} con el {{ porcentajeAplicado }}% por transferencia
+            <small *ngIf="hayEquiposEnCarrito">(los equipos van a precio de lista)</small>
+          </p>
 
-        <!-- Inicio Datos de Pago -->
+          <div class="qr-bloque" *ngIf="hayDatosTransferencia; else sinDatosTransferencia">
+            <div class="qr-datos">
+              <p *ngIf="transferenciaMinorista.alias"><strong>Alias:</strong> {{ transferenciaMinorista.alias }}
+                <button type="button" class="btn-copiar" (click)="copiar(transferenciaMinorista.alias || '', 'Alias')">Copiar</button></p>
+              <p *ngIf="transferenciaMinorista.cvu"><strong>CVU:</strong> {{ transferenciaMinorista.cvu }}
+                <button type="button" class="btn-copiar" (click)="copiar(transferenciaMinorista.cvu || '', 'CVU')">Copiar</button></p>
+              <p *ngIf="transferenciaMinorista.titular"><strong>Titular:</strong> {{ transferenciaMinorista.titular }}</p>
+              <p *ngIf="transferenciaMinorista.dni"><strong>DNI:</strong> {{ transferenciaMinorista.dni }}</p>
+              <p><strong>Monto:</strong> {{ getTotal() | currency:'ARS':'symbol-narrow':'1.0-2' }}</p>
+            </div>
+          </div>
+          <ng-template #sinDatosTransferencia>
+            <p class="small text-muted">Te enviamos los datos para transferir apenas confirmes el pedido.</p>
+          </ng-template>
+          <small class="d-block mt-1">Desde la app de tu banco o billetera, transferí al alias o CVU por el monto exacto.
+            <ng-container *ngIf="transferenciaMinorista.titular"> Antes de confirmar, verificá que la cuenta destino esté a nombre de <strong>{{ transferenciaMinorista.titular }}</strong>.</ng-container></small>
+
+          <!-- Comprobante (opcional) -->
+          <div class="comprobante">
+            <label class="fw-bold d-block mb-1" for="archivoComprobante">📎 Comprobante (opcional)</label>
+            <p class="small text-muted mb-2">Si ya transferiste, subí la foto o el PDF. Si no, confirmá igual y lo subís después con el link de tu pedido.</p>
+            <input #inputComprobante id="archivoComprobante" type="file" accept="image/*,application/pdf" (change)="elegirComprobante($event)"
+              [disabled]="procesando" class="form-control form-control-sm">
+            <div *ngIf="archivoComprobante" class="archivo-elegido">
+              ✅ {{ archivoComprobante.name }} · {{ textoTamano(archivoComprobante.size) }}
+              <button type="button" class="btn btn-link btn-sm p-0 ms-2" (click)="quitarComprobante(inputComprobante)" [disabled]="procesando">Quitar</button>
+            </div>
+            <div *ngIf="errorArchivo" class="error-message"><span>{{ errorArchivo }}</span></div>
+          </div>
+        </div>
+
+        <!-- Mayoristas: transferencia / QR como siempre -->
         <div class="qr-pago-container" *ngIf="opcionPagoSeleccionada === 'qr' && infoEmpresa">
           <h4>Transferencia bancaria sin comisiones</h4>
-          <p>Escaneá este código QR desde tu app bancaria para hacer la transferencia.</p>
+          <p>Transferí desde la app de tu banco o billetera al alias o CVU.</p>
 
           <div class="qr-bloque">
-            <img [src]="generarQR(infoEmpresa.alias || infoEmpresa.cvu)" alt="QR de pago" />
 
             <div class="qr-datos">
-              <p><strong>Alias:</strong> {{ infoEmpresa.alias }}</p>
-              <p><strong>CVU:</strong> {{ infoEmpresa.cvu }}</p>
+              <p><strong>Alias:</strong> {{ transferenciaMayorista.alias }}</p>
+              <p><strong>CVU:</strong> {{ transferenciaMayorista.cvu }}</p>
+              <p *ngIf="transferenciaMayorista.titular"><strong>Titular:</strong> {{ transferenciaMayorista.titular }}</p>
+              <p *ngIf="transferenciaMayorista.dni"><strong>DNI:</strong> {{ transferenciaMayorista.dni }}</p>
               <p><strong>Total a pagar:</strong> {{ getTotal() | currency }}</p>
 
-              <button (click)="copiarCVU(infoEmpresa.cvu!)">
+              <button (click)="copiarCVU(transferenciaMayorista.cvu || '')">
                 📋 Copiar CVU
               </button>
             </div>
           </div>
 
-          <small>Importante: el QR no tiene monto predefinido, debés ingresarlo manualmente al transferir.</small>
+          <small>Ingresá el monto total al transferir.</small>
         </div>
 
         <div class="error-message" *ngIf="pagoTocado && !opcionPagoSeleccionada && showOpcionesPago">
@@ -280,6 +310,15 @@
           </div>
         </div>
 
+        <!-- Sección: Descuento por transferencia -->
+        <div *ngIf="descuentoTransferenciaActual > 0" class="card mb-3" style="max-width: 500px; margin: auto;">
+          <div class="card-body">
+            <small class="text-success">
+              Descuento por transferencia ({{ porcentajeAplicado }}%, solo productos): −{{ descuentoTransferenciaActual | currency }}
+            </small>
+          </div>
+        </div>
+
         <!-- Sección: Total a pagar -->
         <div class="card mb-3" style="max-width: 500px; margin: auto;">
           <div class="card-body d-flex justify-content-between align-items-center">
@@ -315,6 +354,27 @@
   <div class="modal-content">
     <h2>¡Gracias por su compra! Nro Pedido: {{ nroPedidoConfirmado }}</h2>
     <p>Su pedido ha sido procesado con éxito.</p>
+
+    <!-- 💳 Transferencia: datos, estado del comprobante y link para subirlo después -->
+    <div *ngIf="metodoConfirmado === 'transferencia'" class="fin-transferencia">
+      <p class="m-0"><strong>Transferí {{ totalConfirmado | currency:'ARS':'symbol-narrow':'1.0-2' }}</strong>
+        <ng-container *ngIf="transferenciaMinorista.alias"> al alias <strong>{{ transferenciaMinorista.alias }}</strong></ng-container>
+        <ng-container *ngIf="!transferenciaMinorista.alias && transferenciaMinorista.cvu"> al CVU <strong>{{ transferenciaMinorista.cvu }}</strong></ng-container>
+        <ng-container *ngIf="transferenciaMinorista.titular"> (a nombre de {{ transferenciaMinorista.titular }}{{ transferenciaMinorista.dni ? ', DNI ' + transferenciaMinorista.dni : '' }})</ng-container>
+      </p>
+      <p *ngIf="archivoComprobante && comprobanteConfirmado === null" class="small m-0 mt-1">
+        <span class="spinner-border spinner-border-sm me-1"></span> Subiendo el comprobante…
+      </p>
+      <p *ngIf="comprobanteConfirmado === 'ok'" class="small text-success m-0 mt-1">✅ Recibimos tu comprobante. Te avisamos cuando verifiquemos el pago.</p>
+      <p *ngIf="comprobanteConfirmado === 'error'" class="small text-danger m-0 mt-1">No pudimos subir el comprobante. Probá de nuevo desde el link de abajo.</p>
+      <p *ngIf="!archivoComprobante" class="small m-0 mt-1">Cuando transfieras, subí el comprobante desde el link de tu pedido.</p>
+      <button *ngIf="pedidoConfirmadoId" type="button" class="btn btn-outline-dark btn-sm mt-2" (click)="cerrarModal(true)">
+        Ver mi pedido y el pago
+      </button>
+      <p class="small text-muted mt-2 mb-0">Guardá este link: <span class="link-pedido">{{ linkPedido }}</span>
+        <button type="button" class="btn btn-link btn-sm p-0 ms-1" (click)="copiar(linkPedido, 'Link')">Copiar</button></p>
+    </div>
+
     <button (click)="cerrarModal()">Cerrar</button>
   </div>
 </div>

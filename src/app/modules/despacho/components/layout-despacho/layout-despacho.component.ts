@@ -13,7 +13,8 @@ import {
 } from '../../services/pagos';
 import {
   CalculoCredito, DatosCanje, MAX_DETALLE_CANJE, calcularCredito, PLANES_INICIALES, PlanCuotas, conInteres, datosFaltantes, mesCuota, textoVencimiento, validarCanje,
-  SituacionCredito, situacionCredito, estadoCuota, faltaCuota, imputarCuotas, estaBloqueado, ultimaCarta, fechaCorta,
+  SituacionCredito, situacionCredito, estadoCuota, faltaCuota, imputarCobroCuotas, cuotasObligatorias, alternarCuota,
+  puedeTildarCuota, puedeDestildarCuota, CobroCuotas, estaBloqueado, ultimaCarta, fechaCorta,
   RECARGO_DIARIO, recargoPorAtraso, recargoRefinanciacion, calcularRefinanciacion, CalculoRefinanciacion
 } from '../../services/credito-casa';
 import { Credito, CreditoError, CreditosService, PagoCredito } from '../../services/creditos.service';
@@ -43,6 +44,9 @@ import {
 } from 'src/app/modules/admin/services/equipos.service';
 import { cotizacionEquipos } from 'src/app/shared/utils/equipos-tienda';
 import { TasadorService } from 'src/app/modules/admin/services/tasador.service';
+import { CotizadorReparacionesService } from 'src/app/modules/admin/services/cotizador-reparaciones.service';
+import { CotizacionReparacion, ModeloReparacion, PlantillaReparaciones, textoPesos as textoPesosRep } from 'src/app/shared/utils/cotizador-reparaciones';
+import { AltaOrdenComponent } from 'src/app/modules/admin/views/taller/components/alta-orden/alta-orden.component';
 import { ModeloTasador, ResultadoTasacion, textoUSD } from 'src/app/shared/utils/tasador';
 
 interface ClientePOS {
@@ -220,6 +224,11 @@ export class LayoutDespachoComponent implements OnInit, OnDestroy {
   canjeEquipo: DatosEquipoCanje = this.canjeEquipoVacio();
   // 🧮 Tasador (Plan canje)
   mostrarTasador = false;
+  // 🔧 Cotizador de reparaciones
+  mostrarCotizadorRep = false;
+  cargandoCotizadorRep = false;
+  modelosReparacion: ModeloReparacion[] = [];
+  plantillaReparaciones: PlantillaReparaciones | null = null;
   modelosTasador: ModeloTasador[] = [];
   cargandoTasador = false;
   canjeTasacion: ResultadoTasacion | null = null;   // la última tasación usada (se muestra al lado del importe)
@@ -307,7 +316,8 @@ export class LayoutDespachoComponent implements OnInit, OnDestroy {
     private cuentasCorrientes: CuentaCorrienteService,
     private equiposService: EquiposService,
     private creditos: CreditosService,
-    private tasador: TasadorService
+    private tasador: TasadorService,
+    private cotizadorReparaciones: CotizadorReparacionesService
   ) { }
 
 
@@ -2871,7 +2881,10 @@ abrirCaja(sucursalIdExistente?: string) {
   cuCredito: Credito | null = null;                   // crédito elegido
   cuPagosAnteriores: PagoCredito[] = [];
   cuCargandoDetalle = false;
-  cuMonto: number | null = null;                      // lo que se aplica a las cuotas
+  cuMonto: number | null = null;                      // lo que escribió el cajero (si cambió el sugerido)
+  cuMontoEditado = false;                             // false = el total de las tildadas menos el descuento
+  cuSeleccion: number[] = [];                         // ☑️ cuotas tildadas (las obligatorias siempre)
+  cuDescuento: number | null = null;                  // $ de descuento (con 2 o más tildadas)
   cuRecargo: number | null = null;                    // recargo por mora: lo que escribió el cajero
   cuRecargoEditado = false;                           // false = se usa el calculado (1% por día corrido)
   readonly recargoDiario = RECARGO_DIARIO;
@@ -2951,6 +2964,9 @@ abrirCaja(sucursalIdExistente?: string) {
     this.limpiarRefinanciacion();
     if (!conservar) {
       this.cuMonto = null;
+      this.cuMontoEditado = false;
+      this.cuSeleccion = [];
+      this.cuDescuento = null;
       this.cuRecargo = null;
       this.cuRecargoEditado = false;
       this.cuLineas = [{ metodo: null, monto: null }];
@@ -2965,9 +2981,8 @@ abrirCaja(sucursalIdExistente?: string) {
       if (actual) this.cuCredito = actual;
       this.cuPagosAnteriores = pagos;
       if (!conservar && this.cuCredito) {
-        // Sugerido: lo vencido + la cuota del mes; si no, la próxima cuota
-        const s = situacionCredito(this.cuCredito);
-        this.cuMonto = s.aPagarHoy > 0 ? s.aPagarHoy : (s.proxima ? faltaCuota(s.proxima) : null);
+        // Tildadas de entrada: lo vencido + la cuota del mes; si está al día, la próxima cuota
+        this.cuSeleccion = cuotasObligatorias(this.cuCredito.cuotas || [], new Date());
       }
     } catch (err: any) {
       console.error('Error leyendo el crédito:', err);
@@ -3151,7 +3166,7 @@ abrirCaja(sucursalIdExistente?: string) {
   /** Lo que paga el cliente: cuotas + recargo */
   get cuTotal(): number {
     const recargo = this.cuRecargoInvalido ? 0 : Number(this.cuRecargoValor) || 0;
-    return Math.round(((Number(this.cuMonto) || 0) + recargo) * 100) / 100;
+    return Math.round((this.cuMontoValor + recargo) * 100) / 100;
   }
 
   /** Reparto entre los medios (sin descuentos) */
@@ -3159,10 +3174,93 @@ abrirCaja(sucursalIdExistente?: string) {
     return calcularPagos(this.cuTotal, this.cuLineas, () => 0);
   }
 
-  /** A qué cuotas se aplica el pago (la más vieja primero) */
-  get cuImputacion() {
-    const monto = Number(this.cuMonto) || 0;
-    return imputarCuotas(this.cuCredito?.cuotas || [], monto > 0 ? monto : 0);
+  // ---------- ☑️ Cuotas tildadas ----------
+
+  get cuObligatorias(): number[] {
+    return cuotasObligatorias(this.cuCredito?.cuotas || [], new Date());
+  }
+
+  cuEsObligatoria(numero: number): boolean {
+    return this.cuObligatorias.includes(numero);
+  }
+
+  cuTildada(numero: number): boolean {
+    return this.cuSeleccion.includes(numero);
+  }
+
+  /** ¿El check se puede tocar? (las de más se suman/sacan desde la última) */
+  cuPuedeCambiar(numero: number): boolean {
+    const cuotas = this.cuCredito?.cuotas || [];
+    if (this.cuCobrando || this.cuEsObligatoria(numero)) return false;
+    return this.cuTildada(numero)
+      ? puedeDestildarCuota(cuotas, this.cuSeleccion, numero, new Date())
+      : puedeTildarCuota(cuotas, this.cuSeleccion, numero, new Date());
+  }
+
+  cuAlternar(numero: number) {
+    if (!this.cuPuedeCambiar(numero)) return;
+    this.cuSeleccion = alternarCuota(this.cuCredito?.cuotas || [], this.cuSeleccion, numero, new Date());
+    if (this.cuSeleccion.length < 2) this.cuDescuento = null;
+    this.cuMontoEditado = false;        // el monto vuelve al total de las tildadas
+    this.cuMonto = null;
+  }
+
+  /** Lo que falta de las tildadas */
+  get cuTotalSeleccion(): number {
+    const cuotas = this.cuCredito?.cuotas || [];
+    return Math.round(this.cuSeleccion.reduce((a, n) => a + faltaCuota(cuotas.find(c => c.numero === n)), 0) * 100) / 100;
+  }
+
+  get cuDescuentoValor(): number {
+    if (this.cuSeleccion.length < 2) return 0;
+    const d = Number(this.cuDescuento);
+    return d > 0 ? Math.round(d * 100) / 100 : 0;
+  }
+
+  get cuDescuentoInvalido(): string | null {
+    if (this.cuSeleccion.length < 2 || this.cuDescuento === null || this.cuDescuento === undefined || String(this.cuDescuento) === '') return null;
+    const d = Number(this.cuDescuento);
+    if (!(d >= 0)) return 'El descuento no puede ser negativo.';
+    if (d >= this.cuTotalSeleccion - 0.004) return 'El descuento no puede ser igual o mayor al total de las cuotas.';
+    return null;
+  }
+
+  cambiarDescuentoCuotas(v: any) {
+    this.cuDescuento = v === '' || v === undefined ? null : v;
+    this.cuMontoEditado = false;        // el monto se recalcula con el descuento
+    this.cuMonto = null;
+  }
+
+  /** Lo que paga por las cuotas: el total de las tildadas menos el descuento, salvo que el cajero lo cambie */
+  get cuMontoSugerido(): number {
+    return Math.max(0, Math.round((this.cuTotalSeleccion - this.cuDescuentoValor) * 100) / 100);
+  }
+
+  get cuMontoValor(): number {
+    if (!this.cuMontoEditado) return this.cuMontoSugerido;
+    const m = Number(this.cuMonto);
+    return m > 0 ? Math.round(m * 100) / 100 : 0;
+  }
+
+  cambiarMontoCuotas(v: any) {
+    this.cuMonto = v === '' || v === undefined ? null : v;
+    this.cuMontoEditado = true;
+  }
+
+  volverAlMontoSugerido() {
+    this.cuMonto = null;
+    this.cuMontoEditado = false;
+  }
+
+  /** A qué cuotas se aplica el pago (tildadas, y lo que sobra desde la última) */
+  get cuImputacion(): CobroCuotas {
+    return imputarCobroCuotas(this.cuCredito?.cuotas || [], this.cuSeleccion, this.cuMontoValor,
+      this.cuDescuentoInvalido ? 0 : this.cuDescuentoValor, new Date());
+  }
+
+  /** La cuota (sin tildar) a la que va lo que paga de más */
+  get cuExcedenteEn(): string {
+    return this.cuImputacion.aplicaciones.filter(a => !this.cuSeleccion.includes(a.numero)).map(a => a.numero).reverse().join(', ');
   }
 
   cuAplicadoA(numero: number): number {
@@ -3190,22 +3288,27 @@ abrirCaja(sucursalIdExistente?: string) {
   get cuCobroValido(): boolean {
     if (!this.cuCredito || this.cuCargandoDetalle || this.cuPagos.error || !this.cajeroSeleccionado(this.cuCajeroId)) return false;
     if (this.cuRecargoInvalido || this.cuFaltaEfectivo > 0) return false;
-    const monto = Number(this.cuMonto);
-    return monto > 0 && monto <= (this.cuSituacion?.saldo || 0) + 0.009;
+    if (this.cuDescuentoInvalido) return false;
+    const imp = this.cuImputacion;
+    if (imp.error || imp.sobrante > 0.009) return false;
+    const monto = this.cuMontoValor;
+    return monto > 0 && imp.aplicado <= (this.cuSituacion?.saldo || 0) + 0.009;
   }
 
   async confirmarCobroCuota() {
     if (!this.cajaActiva || !this.cuCobroValido || this.cuCobrando || !this.cuCredito) return;
 
     const credito = this.cuCredito;
-    const monto = Math.round(Number(this.cuMonto) * 100) / 100;
+    const monto = this.cuMontoValor;
+    const descuento = this.cuDescuentoValor;
+    const seleccion = [...this.cuSeleccion];
     const recargo = this.cuRecargoInvalido ? 0 : Math.round((Number(this.cuRecargoValor) || 0) * 100) / 100;
     const pagos = conDetalleTarjeta(this.cuPagos.pagos, this.cuDetalleTarjeta);
     const cajero = this.cajeroSeleccionado(this.cuCajeroId) as Cajero;
     const texto = pagos.length === 1
       ? nombreMetodo(pagos[0].metodo) + this.textoOperacion(pagos[0])
       : pagos.map(p => `${nombreMetodo(p.metodo)} ${this.formatearMoneda(p.monto)}${this.textoOperacion(p)}`).join(' + ');
-    const restante = Math.round(((this.cuSituacion?.saldo || 0) - monto) * 100) / 100;
+    const restante = Math.round(((this.cuSituacion?.saldo || 0) - monto - descuento) * 100) / 100;
     const cuotas = this.cuImputacion.aplicaciones
       .map(a => `Cuota ${a.numero}: ${this.formatearMoneda(a.importe)}${a.pendienteNuevo > 0.004 ? ` (queda ${this.formatearMoneda(a.pendienteNuevo)})` : ''}`)
       .join('<br>');
@@ -3214,6 +3317,7 @@ abrirCaja(sucursalIdExistente?: string) {
       title: 'Confirmar cobro de cuotas',
       html: `Crédito de <strong>${this.escaparHtml(credito.cliente?.nombre)}</strong><br>
              <small>${cuotas}</small><br>
+             ${descuento > 0 ? `<small>Descuento en las cuotas: −${this.formatearMoneda(descuento)}</small><br>` : ''}
              ${recargo > 0 ? `<small>Recargo fuera de término: ${this.formatearMoneda(recargo)}</small><br>` : ''}
              <span style="font-size:22px">${this.formatearMoneda(monto + recargo)}</span><br><small>${texto}</small><br>
              <small>Cobra: <strong>${this.escaparHtml(nombreCajero(cajero))}</strong></small><br>
@@ -3232,7 +3336,8 @@ abrirCaja(sucursalIdExistente?: string) {
     try {
       const res = await this.creditos.cobrar(
         this.cajaActiva, credito.id, monto, recargo, pagos, cajeroParaVenta(cajero),
-        { efectivoRecibido: this.cuVuelto !== null ? this.cuPagaCon : null, vuelto: this.cuVuelto }
+        { efectivoRecibido: this.cuVuelto !== null ? this.cuPagaCon : null, vuelto: this.cuVuelto },
+        { seleccion, descuento }
       );
       this.mostrarCobroCuota = false;
 
@@ -3615,6 +3720,63 @@ abrirCaja(sucursalIdExistente?: string) {
     this.mostrarErrorPago = false;
     const cajero = this.cajeroSeleccionado(this.cajeroId);
     this.tasador.registrar(r, 'despacho', cajero ? cajeroParaVenta(cajero) : null);
+  }
+
+  // =====================================================
+  // 🔧 COTIZADOR DE REPARACIONES → orden del taller
+  // =====================================================
+
+  async abrirCotizadorReparacion() {
+    this.mostrarCotizadorRep = true;
+    if (this.cargandoCotizadorRep) return;
+    this.cargandoCotizadorRep = true;
+    try {
+      // Siempre se recarga: los precios pueden haber cambiado
+      const [plantilla, modelos] = await Promise.all([this.cotizadorReparaciones.plantilla(), this.cotizadorReparaciones.modelos(true)]);
+      this.plantillaReparaciones = plantilla;
+      this.modelosReparacion = modelos;
+    } catch (e) {
+      console.error('Error cargando el cotizador de reparaciones', e);
+      Swal.fire('No se pudo abrir el cotizador', 'Revisá la conexión e intentá de nuevo.', 'warning');
+      this.mostrarCotizadorRep = false;
+    } finally {
+      this.cargandoCotizadorRep = false;
+    }
+  }
+
+  /** Arma la orden del taller con lo cotizado (el cajero completa el cliente, el IMEI, etc.). Los repuestos los carga el técnico. */
+  generarOrdenDesdeCotizacion(r: CotizacionReparacion) {
+    this.mostrarCotizadorRep = false;
+    const cajero = this.cajeroSeleccionado(this.cajeroId);
+    const detalle = r.items.map(i => `${i.rubro} (${i.etiqueta})`).join(' + ');
+    const obs = `Cotización (precio ${r.tipoPrecio}): ${r.items.map(i => `${i.rubro}: ${i.producto} ${textoPesosRep(i.precio)}`).join(' + ')}` +
+      (r.descuento > 0 ? ` · descuento ${textoPesosRep(r.descuento)}` : '') +
+      ` · total repuestos ${textoPesosRep(r.total)} · falta sumar la mano de obra`;
+    const ref = this.dialog.open(AltaOrdenComponent, {
+      width: '90vw',
+      maxWidth: '600px',
+      height: 'auto',
+      maxHeight: '90vh',
+      panelClass: 'custom-dialog-container',
+      data: { precarga: { equipo: r.modelo, motivoIngreso: detalle, repuestos: r.total > 0 ? r.total : null, manoObra: null, observaciones: obs } }
+    });
+    ref.afterClosed().subscribe(orden => {
+      this.cotizadorReparaciones.registrar(r, 'despacho', cajero ? cajeroParaVenta(cajero) : null, !!orden);
+    });
+  }
+
+  /** Solo cotizar (sin orden): queda en el historial */
+  soloCotizacionReparacion(r: CotizacionReparacion) {
+    this.mostrarCotizadorRep = false;
+    const cajero = this.cajeroSeleccionado(this.cajeroId);
+    this.cotizadorReparaciones.registrar(r, 'despacho', cajero ? cajeroParaVenta(cajero) : null, false);
+    Swal.fire({
+      title: textoPesosRep(r.total),
+      html: `${r.modelo} · precio ${r.tipoPrecio}<br><small>${r.items.map(i => `${i.rubro} (${i.etiqueta}): ${textoPesosRep(i.precio)}`).join('<br>')}` +
+        (r.descuento > 0 ? `<br>Descuento: −${textoPesosRep(r.descuento)}` : '') + '</small>' +
+        '<br><small><strong>🛠️ Falta sumar la mano de obra.</strong></small>',
+      icon: 'info'
+    });
   }
 
   private canjeEquipoVacio(): DatosEquipoCanje {

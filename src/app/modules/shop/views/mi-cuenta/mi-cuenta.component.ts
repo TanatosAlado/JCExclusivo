@@ -4,10 +4,11 @@ import { Subscription } from 'rxjs';
 import { AuthService } from 'src/app/modules/auth/services/auth.service';
 import { CompraHistorial, TEXTO_ESTADO, TipoCompra } from 'src/app/shared/utils/historial-cliente';
 import { EstadoCuentaCliente, MIN_LARGO_CLAVE, MiCuentaError, MiCuentaService, MovimientoCliente } from '../../services/mi-cuenta.service';
+import { ReparacionCliente, separarReparaciones } from 'src/app/shared/utils/reparaciones-cliente';
 import { CreditoCliente, CuotaCliente, RECARGO_DIARIO_CLIENTE, resumenCreditosCliente } from 'src/app/shared/utils/creditos-cliente';
 import { errorDatosSolicitud, estadoSolicitud, formatearCuit, puedePedirMayorista } from 'src/app/shared/utils/solicitud-mayorista';
 
-type Pestana = 'compras' | 'cuenta' | 'creditos' | 'datos' | 'clave';
+type Pestana = 'compras' | 'cuenta' | 'creditos' | 'reparaciones' | 'datos' | 'clave';
 type Filtro = 'todas' | 'web' | 'local';
 
 /**
@@ -47,6 +48,12 @@ export class MiCuentaComponent implements OnInit, OnDestroy {
   creditosAbiertos = new Set<string>();
   verTerminados = false;
   readonly recargoDiario = RECARGO_DIARIO_CLIENTE;
+
+  // 🔧 Reparaciones (solo mayoristas; solo para ver)
+  reparaciones: ReparacionCliente[] = [];
+  cargandoReparaciones = false;
+  errorReparaciones: string | null = null;
+  vistaReparaciones: 'curso' | 'historial' = 'curso';
 
   // Datos
   telefono = '';
@@ -103,6 +110,7 @@ export class MiCuentaComponent implements OnInit, OnDestroy {
       this.cargarCompras();
       this.cargarCuenta();
       this.cargarCreditos();
+      if (this.cliente?.esMayorista) this.cargarReparaciones();
     } catch (err: any) {
       this.error = err instanceof MiCuentaError ? err.message : 'No pudimos cargar tu cuenta. Probá de nuevo.';
       console.error(err);
@@ -137,6 +145,33 @@ export class MiCuentaComponent implements OnInit, OnDestroy {
     } finally {
       this.cargandoCreditos = false;
     }
+  }
+
+  async cargarReparaciones() {
+    this.cargandoReparaciones = true;
+    this.errorReparaciones = null;
+    try {
+      this.reparaciones = await this.miCuenta.obtenerReparaciones();
+      // Si no hay nada en curso, se abre directo el historial
+      if (!this.reparacionesEnCurso.length && this.reparacionesHistorial.length) this.vistaReparaciones = 'historial';
+    } catch (err) {
+      console.error(err);
+      this.errorReparaciones = 'No pudimos cargar tus reparaciones. Probá de nuevo.';
+    } finally {
+      this.cargandoReparaciones = false;
+    }
+  }
+
+  get reparacionesEnCurso(): ReparacionCliente[] {
+    return separarReparaciones(this.reparaciones).enCurso;
+  }
+
+  get reparacionesHistorial(): ReparacionCliente[] {
+    return separarReparaciones(this.reparaciones).historial;
+  }
+
+  get reparacionesListas(): number {
+    return this.reparaciones.filter(r => r.estado === 'lista').length;
   }
 
   get resumenCreditos() {

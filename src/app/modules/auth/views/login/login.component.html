@@ -1,7 +1,7 @@
 <div class="overlay">
-  <div class="modal-container fadeInDown ">
+  <div class="modal-container fadeInDown " [class.ocupado]="ocupado" [attr.aria-busy]="!!ocupado">
     <div class="cerrar-modal fadeIn first">
-      <button mat-icon-button (click)="cerrar()">
+      <button mat-icon-button (click)="cerrar()" [disabled]="!!ocupado" aria-label="Cerrar">
         <mat-icon>close</mat-icon>
       </button>
     </div>
@@ -18,8 +18,9 @@
     <form #loginForm="ngForm">
       <mat-form-field class="fadeIn second" appearance="outline" color="accent">
         <mat-label>Usuario</mat-label>
-        <input matInput type="text" name="usuario" [(ngModel)]="usuario" (ngModelChange)="resetLoginFail()" required />
-        <button *ngIf="usuario" matSuffix mat-icon-button (click)="usuario=''">
+        <input matInput type="text" name="usuario" [(ngModel)]="usuario" (ngModelChange)="resetLoginFail()" required
+          [readonly]="!!ocupado" (keyup.enter)="login()" />
+        <button *ngIf="usuario" matSuffix mat-icon-button type="button" (click)="usuario=''" [disabled]="!!ocupado" aria-label="Borrar usuario">
           <mat-icon style="color: #666;">close</mat-icon>
         </button>
       </mat-form-field>
@@ -27,8 +28,8 @@
       <mat-form-field class="fadeIn second" appearance="outline" color="accent">
         <mat-label>Contraseña</mat-label>
         <input matInput type="password" name="contrasena" [(ngModel)]="contrasena" (ngModelChange)="resetLoginFail()"
-          required />
-        <button *ngIf="contrasena" matSuffix mat-icon-button (click)="contrasena=''">
+          required [readonly]="!!ocupado" (keyup.enter)="login()" />
+        <button *ngIf="contrasena" matSuffix mat-icon-button type="button" (click)="contrasena=''" [disabled]="!!ocupado" aria-label="Borrar contraseña">
           <mat-icon style="color: #666;">close</mat-icon>
         </button>
       </mat-form-field>
@@ -37,7 +38,8 @@
 
         <a
           class="link-recuperacion"
-          (click)="mostrarRecuperacion = !mostrarRecuperacion"
+          [class.deshabilitado]="!!ocupado"
+          (click)="alternarRecuperacion()"
         >
           ¿Olvidaste tu contraseña?
         </a>
@@ -61,6 +63,7 @@
               type="email"
               [(ngModel)]="emailRecuperacion"
               name="emailRecuperacion"
+              [readonly]="!!ocupado"
             />
 
           </mat-form-field>
@@ -69,9 +72,10 @@
             mat-stroked-button
             color="primary"
             type="button"
+            [disabled]="!!ocupado"
             (click)="recuperarContrasena()"
           >
-            Enviar correo de recuperación
+            {{ ocupado === 'recuperar' ? 'Enviando…' : 'Enviar correo de recuperación' }}
           </button>
 
         </div>
@@ -80,18 +84,19 @@
 
       <mat-hint *ngIf="loginFail" class="text-danger">{{ mensajeError }}</mat-hint>
 
-      <button class="fadeIn third" mat-raised-button type="button" (click)="login()" [disabled]="!loginForm.form.valid"
+      <button class="fadeIn third" mat-raised-button type="button" (click)="login()" [disabled]="!loginForm.form.valid || !!ocupado"
         [ngClass]="loginForm.form.valid ? 'botonesRojos' : ''">
-        Ingresar
+        <span *ngIf="ocupado === 'ingresar'" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+        {{ ocupado === 'ingresar' ? 'Ingresando…' : 'Ingresar' }}
       </button>
 
-      <button class="fadeIn third" mat-stroked-button color="primary" (click)="continuarComoInvitado()">
-        Continuar como invitado
+      <button class="fadeIn third" mat-stroked-button color="primary" type="button" (click)="continuarComoInvitado()" [disabled]="!!ocupado">
+        {{ ocupado === 'invitado' ? 'Entrando…' : 'Continuar como invitado' }}
       </button>
     </form>
 
     <div class="registro-link fadeIn third ">
-      <p>¿No tienes una cuenta? <a (click)="abrirRegistro()">Regístrate</a></p>
+      <p>¿No tienes una cuenta? <a (click)="abrirRegistro()" [class.deshabilitado]="!!ocupado">Regístrate</a></p>
     </div>
   </div>
 </div>

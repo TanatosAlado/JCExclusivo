@@ -1,0 +1,51 @@
+<section class="cotiza container py-4">
+  <div class="encabezado text-center mb-3">
+    <h1>🔧 Cotizá tu reparación</h1>
+    <p class="text-muted m-0">Elegí tu equipo, qué hay que reparar y el repuesto, y mirá cuánto salen los repuestos.</p>
+  </div>
+
+  <div *ngIf="esAdmin && !habilitado && !cargando" class="alert alert-warning py-2 small text-center">
+    👀 <strong>Vista previa:</strong> los clientes todavía no ven esta página. Se habilita en Gestiones → Cotizador de reparaciones.
+  </div>
+
+  <div *ngIf="cargando" class="text-center text-muted py-5"><span class="spinner-border spinner-border-sm"></span> Cargando…</div>
+
+  <div *ngIf="!cargando && !puedeVer" class="tarjeta text-center py-5">
+    <p class="mb-3">Esta sección todavía no está disponible.</p>
+    <a routerLink="/productos" class="btn btn-dark">Ver productos</a>
+  </div>
+
+  <div *ngIf="error" class="alert alert-danger py-2 small">{{ error }}</div>
+
+  <ng-container *ngIf="!cargando && puedeVer && !error">
+    <!-- Resultado -->
+    <div *ngIf="resultado as r" class="tarjeta resultado">
+      <div class="text-center">
+        <div class="small text-muted">{{ r.modelo }}</div>
+        <div class="valor">{{ textoPesos(r.total) }}</div>
+        <div class="small text-muted">en repuestos</div>
+      </div>
+      <div class="detalle">
+        <div *ngFor="let i of r.items" class="d-flex justify-content-between small">
+          <span>{{ i.rubro }} · {{ i.etiqueta }}</span><span>{{ textoPesos(i.precio) }}</span>
+        </div>
+      </div>
+      <div class="d-flex flex-wrap justify-content-center gap-2 mt-3">
+        <button *ngIf="numeroWhatsapp" type="button" class="btn btn-success" (click)="consultar()">
+          <i class="fab fa-whatsapp"></i> Quiero repararlo
+        </button>
+        <button type="button" class="btn btn-link" (click)="otra()">Cotizar otra reparación</button>
+      </div>
+      <p class="aviso-mano text-center">🛠️ {{ avisoManoDeObra }}</p>
+      <p class="aclaracion text-center">* Precio estimado. El valor final se confirma al revisar el equipo en el local.</p>
+    </div>
+
+    <div *ngIf="!resultado" class="tarjeta">
+      <div *ngIf="!modelos.length" class="text-center text-muted py-4">Por ahora no hay equipos para cotizar. ¡Volvé pronto!</div>
+      <ng-container *ngFor="let v of [vuelta]">
+        <app-cotizar-reparacion *ngIf="modelos.length" [modelos]="modelos" [plantilla]="plantilla" [tipoPrecio]="tipoPrecio" [dolar]="dolar"
+          textoBoton="Cotizá tu reparación" (usar)="alCotizar($event)" (cancelar)="otra()"></app-cotizar-reparacion>
+      </ng-container>
+    </div>
+  </ng-container>
+</section>
